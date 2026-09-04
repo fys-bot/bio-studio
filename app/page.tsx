@@ -6,10 +6,10 @@ type Task = { id:string; title:string; goal:string; status:string; progress:numb
 type TimelineEvent = { id:number; phase:string; title:string; detail:string; state:'done'|'active'|'idle'|'error'; time:string };
 
 const seedEvents: TimelineEvent[] = [
- {id:1,phase:'01',title:'Intent detected',detail:'bulk RNA-seq · treated vs control · candidate genes',state:'done',time:'0.3s'},
- {id:2,phase:'02',title:'Query rewrite',detail:'organism=human · deliverable=publication-ready',state:'done',time:'0.5s'},
- {id:3,phase:'03',title:'Retrieval & rerank',detail:'Project files 2 · Skills 3 · Literature 12',state:'active',time:'1.2s'},
- {id:4,phase:'04',title:'Grounding plan',detail:'DESeq2 parameters bound to 4 evidence items',state:'idle',time:'—'},
+ {id:1,phase:'01',title:'识别研究意图',detail:'bulk RNA-seq · 处理组 vs 对照组 · 候选基因',state:'done',time:'0.3s'},
+ {id:2,phase:'02',title:'重写分析问题',detail:'物种=人类 · 交付物=可发表结果',state:'done',time:'0.5s'},
+ {id:3,phase:'03',title:'检索与证据重排',detail:'项目文件 2 · 技能包 3 · 文献 12',state:'active',time:'1.2s'},
+ {id:4,phase:'04',title:'绑定分析依据',detail:'DESeq2 参数已绑定 4 条证据',state:'idle',time:'—'},
 ];
 
 export default function Home() {

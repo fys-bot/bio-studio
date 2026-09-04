@@ -19,3 +19,15 @@ API routes require the `bioflow_session` HttpOnly cookie issued by `/api/auth/lo
 ## Scope
 
 The main demo is a bulk RNA-seq workflow with RAG evidence events, streaming code output, deterministic failure/retry, artifact lineage, responsive layout, and a lightweight 3D structure preview fallback.
+### 访问 404 或 `Cannot find module './682.js'`
+
+如果 3000/3001 端口被旧的 Next 进程占用，浏览器可能打开旧实例并返回 404。先关闭项目目录下的旧进程，再启动生产预览：
+
+```bash
+lsof -tiTCP:3000 -sTCP:LISTEN | xargs kill
+lsof -tiTCP:3001 -sTCP:LISTEN | xargs kill
+npm run build
+npm run start
+```
+
+默认访问 `http://127.0.0.1:3000`。若端口仍被占用，可执行 `PORT=3010 npm run start`，访问 `http://127.0.0.1:3010`。

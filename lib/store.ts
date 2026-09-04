@@ -17,7 +17,7 @@ const initialNodes = [
 type State = { task: any; events: RunEvent[]; running:boolean; cancelled:boolean; nextEvent:number };
 const g = globalThis as typeof globalThis & { __bioflow?:State };
 const statePath=path.join(process.cwd(),'data','state.json');
-const defaultState=():State=>({ task:{ id:'task_demo_rnaseq', title:'RNA-seq differential expression', goal:'Compare treated vs control and identify candidate genes', status:'running', progress:42, nodes:initialNodes, edges:[['input','qc'],['input','design'],['qc','de'],['design','de'],['de','volcano'],['de','report']], artifacts:[], clarification:{status:'answered',answers:{format:'Count matrix',comparison:'Treated vs control',organism:'Human',deliverable:'Exploratory'}} }, events:[], running:false, cancelled:false, nextEvent:1 });
+const defaultState=():State=>({ task:{ id:'task_demo_rnaseq', title:'RNA-seq differential expression', goal:'Compare treated vs control and identify candidate genes', status:'clarifying', progress:0, nodes:initialNodes.map((n:any)=>({...n,status:n.id==='input'?'succeeded':'blocked',detail:n.id==='input'?n.detail:'Awaiting plan approval'})), edges:[['input','qc'],['input','design'],['qc','de'],['design','de'],['de','volcano'],['de','report']], artifacts:[], clarification:{status:'pending',answers:{}} }, events:[], running:false, cancelled:false, nextEvent:1 });
 function persist(s:State){ try { fs.mkdirSync(path.dirname(statePath),{recursive:true}); fs.writeFileSync(statePath,JSON.stringify(s,null,2)); } catch { /* read-only deploys use process memory */ } }
 function state(): State { if (!g.__bioflow) { try { g.__bioflow=JSON.parse(fs.readFileSync(statePath,'utf8')) as State; } catch { g.__bioflow=defaultState(); } } return g.__bioflow; }
 

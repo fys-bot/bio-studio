@@ -6,18 +6,18 @@ export type NodeStatus = 'succeeded' | 'running' | 'blocked' | 'failed' | 'queue
 export type RunEvent = { id:number; runId:string; type:string; nodeId?:string; payload:Record<string,unknown>; createdAt:string };
 
 const initialNodes = [
-  { id:'input', label:'Read count matrix', kind:'input', status:'succeeded' as NodeStatus, x:50, y:220, detail:'counts.csv · 24 samples' },
-  { id:'qc', label:'Quality check', kind:'analysis', status:'succeeded' as NodeStatus, x:280, y:120, detail:'2 warnings resolved' },
-  { id:'design', label:'Design matrix', kind:'gate', status:'failed' as NodeStatus, x:280, y:320, detail:'Missing condition column', error:'Map metadata.condition before retry' },
-  { id:'de', label:'DESeq2 analysis', kind:'analysis', status:'blocked' as NodeStatus, x:540, y:220, detail:'Waiting for upstream' },
-  { id:'volcano', label:'Volcano plot', kind:'artifact', status:'blocked' as NodeStatus, x:800, y:120, detail:'SVG + interactive chart' },
-  { id:'report', label:'Research report', kind:'artifact', status:'blocked' as NodeStatus, x:800, y:320, detail:'Methods, results, evidence' },
+  { id:'input', label:'读取 RNA-seq 计数矩阵', kind:'input', status:'succeeded' as NodeStatus, x:50, y:220, detail:'counts.csv · 24 个样本' },
+  { id:'qc', label:'样本质量控制', kind:'analysis', status:'succeeded' as NodeStatus, x:280, y:120, detail:'2 个警告已处理' },
+  { id:'design', label:'构建设计矩阵', kind:'gate', status:'failed' as NodeStatus, x:280, y:320, detail:'缺少 condition 列', error:'请映射 metadata.condition 后重试' },
+  { id:'de', label:'DESeq2 差异表达', kind:'analysis', status:'blocked' as NodeStatus, x:540, y:220, detail:'等待上游步骤完成' },
+  { id:'volcano', label:'火山图 · 显著基因', kind:'artifact', status:'blocked' as NodeStatus, x:800, y:120, detail:'SVG + 交互式图表' },
+  { id:'report', label:'科研分析报告', kind:'artifact', status:'blocked' as NodeStatus, x:800, y:320, detail:'方法、结果与证据' },
 ];
 
 type State = { task: any; events: RunEvent[]; running:boolean; cancelled:boolean; nextEvent:number };
 const g = globalThis as typeof globalThis & { __bioflow?:State };
 const statePath=path.join(process.cwd(),'data','state.json');
-const defaultState=():State=>({ task:{ id:'task_demo_rnaseq', title:'RNA-seq differential expression', goal:'Compare treated vs control and identify candidate genes', status:'clarifying', progress:0, nodes:initialNodes.map((n:any)=>({...n,status:n.id==='input'?'succeeded':'blocked',detail:n.id==='input'?n.detail:'Awaiting plan approval'})), edges:[['input','qc'],['input','design'],['qc','de'],['design','de'],['de','volcano'],['de','report']], artifacts:[], clarification:{status:'pending',answers:{}} }, events:[], running:false, cancelled:false, nextEvent:1 });
+const defaultState=():State=>({ task:{ id:'task_demo_rnaseq', title:'RNA-seq 差异表达分析', goal:'比较处理组与对照组，识别候选差异基因', status:'clarifying', progress:0, nodes:initialNodes.map((n:any)=>({...n,status:n.id==='input'?'succeeded':'blocked',detail:n.id==='input'?n.detail:'等待计划审批'})), edges:[['input','qc'],['input','design'],['qc','de'],['design','de'],['de','volcano'],['de','report']], artifacts:[], clarification:{status:'pending',answers:{}} }, events:[], running:false, cancelled:false, nextEvent:1 });
 function persist(s:State){ try { fs.mkdirSync(path.dirname(statePath),{recursive:true}); fs.writeFileSync(statePath,JSON.stringify(s,null,2)); } catch { /* read-only deploys use process memory */ } }
 function state(): State { if (!g.__bioflow) { try { g.__bioflow=JSON.parse(fs.readFileSync(statePath,'utf8')) as State; } catch { g.__bioflow=defaultState(); } } return g.__bioflow; }
 

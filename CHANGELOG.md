@@ -30,6 +30,28 @@
 - `npm run typecheck` 通过。
 - `npm run build` 通过。
 
+## 2026-09-05（第七轮）
+
+### 服务端代码流式事件
+
+#### 产品与交互
+
+- 将 Code Inspector 的代码生成过程纳入 Agent 运行事件链，代码不再只依赖前端本地模拟。
+- 节点重试时先清空旧代码，再按服务端事件增量渲染新的分析脚本。
+- 代码 Artifact 会和 DESeq2 节点、运行日志、结果产物保持同一条血缘链。
+
+#### 技术实现
+
+- `lib/store.ts` 新增 `emitCode`，通过 `code.delta` 事件逐字符发布分析脚本。
+- 前端 SSE `onmessage` 处理 `code.delta`，增量更新 `codeText`。
+- 重试接口增加 `artifact_code` 产物记录。
+- 保留前端首轮 Demo 代码输出作为无事件时的可用降级展示。
+
+#### 验证
+
+- `npm run typecheck` 通过。
+- `npm run build` 通过。
+
 #### 已知限制
 
 - 当前 Store 为单进程 Demo 持久层，生产环境需替换为 SQLite/Postgres。

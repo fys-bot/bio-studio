@@ -8,7 +8,9 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. The demo uses a deterministic server-side runner. No external API key is required.
+Open http://127.0.0.1:3000 (or http://localhost:3000). The demo uses a deterministic server-side runner. No external API key is required.
+
+If the browser shows a blank page, confirm the terminal still has `npm run dev` running. A blank `localhost:3000` tab usually means the local Next server is not listening. For file-watcher limits, use `npm run dev:poll`.
 
 ## Security
 

@@ -47,6 +47,29 @@
 - 重试接口增加 `artifact_code` 产物记录。
 - 保留前端首轮 Demo 代码输出作为无事件时的可用降级展示。
 
+## 2026-09-05（第八轮）
+
+### RAG Evidence Pipeline 服务端事件化
+
+#### 产品与交互
+
+- Agent 运行时新增意图识别、检索启动、检索命中、证据重排和 grounding 事件。
+- Evidence Pipeline 根据 SSE 实时事件更新阶段状态，不再只依赖静态种子数据。
+- 检索阶段展示项目文件、Skills 和文献命中数量。
+- Grounding 阶段展示已绑定的统计参数，强化“证据影响计划”的可解释性。
+- Code Inspector 与 Evidence Pipeline 现在共享同一条服务端事件流。
+
+#### 技术实现
+
+- `lib/store.ts` 在工作流启动时发布 `intent.detected`、`retrieval.started`、`retrieval.hit`、`evidence.reranked` 和 `grounding.bound`。
+- 前端 EventSource 增加事件类型映射，根据服务端 payload 更新 Evidence 卡片。
+- 保持统一事件游标和任务快照同步机制。
+
+#### 验证
+
+- `npm run typecheck` 通过。
+- `npm run build` 通过。
+
 #### 验证
 
 - `npm run typecheck` 通过。

@@ -2,6 +2,39 @@
 
 本文件记录 BioFlow Studio 每次可交付改动，提交代码时同步更新。
 
+## 2026-09-04（第二轮）
+
+### 运行闭环与鉴权增强
+
+#### 产品与交互
+
+- 将任务节点状态从前端临时状态迁移为服务端运行状态。
+- 增加真实的运行器状态推进：启动、节点运行、失败、局部重试、完成和取消。
+- 增加 Evidence Pipeline、运行日志、结果 Artifact 和 SSE 事件的统一关联。
+- 增加 Results Inspector：火山图指标、产物列表和结果血缘回溯。
+- 增加取消运行入口，明确取消是异步请求并保持状态反馈。
+
+#### 技术实现
+
+- 新增 `lib/store.ts`，集中管理 Demo 任务快照、事件游标、节点运行和 Artifact 状态。
+- 新增 `/api/runs/[runId]/events` SSE 事件接口，支持 `after` 游标增量读取。
+- 新增 `/api/runs/[runId]/cancel` 取消接口。
+- 新增 `/api/runs/[runId]/nodes/[nodeId]/retry` 节点局部重试接口。
+- 前端通过 EventSource 监听运行事件，并在事件到达后重新同步服务端任务快照。
+- 会话 Cookie 改为带过期时间的 HMAC 签名 Token，并设置 HttpOnly、SameSite=Strict。
+- 所有写操作 API 增加同源 Origin 校验。
+- 增加 `results` Artifact viewer 和内嵌 SVG 火山图 Demo。
+
+#### 验证
+
+- `npm run typecheck` 通过。
+- `npm run build` 通过。
+
+#### 已知限制
+
+- 当前 Store 为单进程 Demo 持久层，生产环境需替换为 SQLite/Postgres。
+- SSE 运行器为确定性 Mock，不执行真实 RNA-seq 计算。
+
 ## 2026-09-04
 
 ### 初始版本：搭建可解释科研 Agent 工作台

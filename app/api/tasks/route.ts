@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isAuthorized } from '@/lib/auth';
+import { snapshot } from '@/lib/store';
 
 const nodes = [
   { id:'input', label:'Read count matrix', kind:'input', status:'succeeded', x:50, y:220, detail:'counts.csv · 24 samples' },
@@ -13,5 +14,5 @@ const edges = [['input','qc'],['input','design'],['qc','de'],['design','de'],['d
 
 export async function GET() {
   if (!isAuthorized()) return NextResponse.json({ error:'Unauthorized' }, { status:401 });
-  return NextResponse.json({ task:{ id:'task_demo_rnaseq', title:'RNA-seq differential expression', goal:'Compare treated vs control and identify candidate genes', status:'running', progress:42, nodes, edges, artifacts:[] } });
+  return NextResponse.json({ task: snapshot() });
 }

@@ -124,6 +124,31 @@
 
 - 不再追求一比一复刻 Biomni 布局；改为借鉴其研究工作台气质，并把 Agent 证据链和结果血缘作为差异化能力。
 
+## 2026-09-05（第六轮）
+
+### 工作台可调布局交互
+
+#### 产品与交互
+
+- 左侧任务/数据栏支持横向拖拽调整宽度，范围 210–390px。
+- 右侧 Evidence/Logs/Code/Results 检查器支持横向拖拽调整宽度，范围 260–520px。
+- 上方 Evidence Pipeline 支持纵向拖拽调整高度，范围 70–220px。
+- 拖拽过程中显示边界高亮，避免用户不知道当前可操作区域。
+- 统一处理 `pointerdown / pointermove / pointerup`，支持触控板、鼠标和触摸输入。
+- 拖拽时禁用文本选择，避免误选页面内容；移动端继续使用 Inspector 抽屉，不强制显示桌面分隔线。
+
+#### 技术实现
+
+- `app/page.tsx` 新增 `sidebarWidth`、`inspectorWidth`、`evidenceHeight` 和 `resizing` UI 状态。
+- 使用 CSS Grid 内联变量实时更新三栏宽度。
+- 新增左侧、右侧和水平 splitter 元素与统一 `startResize` 处理器。
+- 增加最小/最大尺寸约束和 `touch-action: none`。
+
+#### 验证
+
+- `npm run typecheck` 通过。
+- `npm run build` 通过。
+
 ## 2026-09-05（白屏问题修复）
 
 ### 本地启动与演示状态修复

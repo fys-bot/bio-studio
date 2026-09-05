@@ -21,6 +21,13 @@ API routes require the `bioflow_session` HttpOnly cookie issued by `/api/auth/lo
 ## Scope
 
 The main demo is a bulk RNA-seq workflow with RAG evidence events, streaming code output, deterministic failure/retry, artifact lineage, responsive layout, and a lightweight 3D structure preview fallback.
+
+## 面试材料
+
+- [产品逆向分析](./analysis.md)
+- [需求拆解与技术方案](./outputs/需求拆解与技术方案.md)
+- [AI 使用说明](./docs/AI使用说明.md)
+- [演示脚本](./docs/演示脚本.md)
 ### 访问 404 或 `Cannot find module './682.js'`
 
 如果 3000/3001 端口被旧的 Next 进程占用，浏览器可能打开旧实例并返回 404。先关闭项目目录下的旧进程，再启动生产预览：

@@ -8,6 +8,8 @@ cp .env.example .env.local
 npm run dev
 ```
 
+推荐使用 Node.js 20 LTS（仓库已提供 `.nvmrc`）。Next.js 14 在 Node.js 24 下可能出现 `semver.default.lt is not a function`，请先执行 `nvm use`。
+
 Open http://127.0.0.1:3000 (or http://localhost:3000). The demo uses a deterministic server-side runner. No external API key is required.
 
 If the browser shows a blank page, confirm the terminal still has `npm run dev` running. A blank `localhost:3000` tab usually means the local Next server is not listening. For file-watcher limits, use `npm run dev:poll`.

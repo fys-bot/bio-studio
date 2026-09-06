@@ -86,6 +86,9 @@ export default function Home() {
   const [agentReplies, setAgentReplies] = useState<string[]>([]);
   const [running, setRunning] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [submittingAnswers, setSubmittingAnswers] = useState(false);
+  const [approvingPlan, setApprovingPlan] = useState(false);
+  const [cancellingRun, setCancellingRun] = useState(false);
   const [answers, setAnswers] = useState<ClarificationAnswers>({
     format: "",
     comparison: "",
@@ -376,21 +379,28 @@ export default function Home() {
     notify(`已创建任务：${name}`);
   };
   const submitClarifications = async () => {
-    if (Object.values(answers).some((v) => !v)) return;
+    if (submittingAnswers || Object.values(answers).some((v) => !v)) return;
+    setSubmittingAnswers(true);
     try {
       const response = await bioflowApi.submitClarifications({ answers });
       setTask(response.task);
     } catch {
       notify("澄清信息提交失败，请检查服务状态");
+    } finally {
+      setSubmittingAnswers(false);
     }
   };
   const approvePlan = async () => {
+    if (approvingPlan) return;
+    setApprovingPlan(true);
     try {
       const response = await bioflowApi.approvePlan();
       setTask(response.task);
       notify("分析计划已批准，等待运行");
     } catch {
       notify("分析计划审批失败，请检查服务状态");
+    } finally {
+      setApprovingPlan(false);
     }
   };
   const runDemo = async () => {
@@ -448,6 +458,8 @@ export default function Home() {
     );
   };
   const cancel = async () => {
+    if (cancellingRun) return;
+    setCancellingRun(true);
     try {
       await bioflowApi.cancelRun("run_demo_001");
       const taskResponse = await bioflowApi.getTask();
@@ -455,8 +467,9 @@ export default function Home() {
       setRunning(false);
       notify("运行已取消");
     } catch {
-      setRunning(false);
       notify("取消失败，请稍后重试");
+    } finally {
+      setCancellingRun(false);
     }
   };
   const startResize = (
@@ -675,8 +688,12 @@ export default function Home() {
               工具
             </button>
             {task.status === "running" && (
-              <button className="secondary danger" onClick={cancel}>
-                取消
+              <button
+                className="secondary danger"
+                onClick={cancel}
+                disabled={cancellingRun}
+              >
+                {cancellingRun ? "取消中…" : "取消"}
               </button>
             )}
             <button className="primary" onClick={runDemo}>
@@ -741,6 +758,7 @@ export default function Home() {
           <ClarificationCard
             answers={answers}
             activeQuestion={activeQuestion}
+            submitting={submittingAnswers}
             onActiveQuestionChange={setActiveQuestion}
             onAnswer={(key, value, index) => {
               setAnswers((current) => ({ ...current, [key]: value }));
@@ -779,8 +797,12 @@ export default function Home() {
               >
                 查看证据
               </button>
-              <button className="primary" onClick={approvePlan}>
-                批准并执行 →
+              <button
+                className="primary"
+                onClick={approvePlan}
+                disabled={approvingPlan}
+              >
+                {approvingPlan ? "审批中…" : "批准并执行 →"}
               </button>
             </div>
           </div>

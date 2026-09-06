@@ -222,7 +222,7 @@ export function InspectorDrawer({
             <div className="error-card">
               <b>⚠ 校验未通过</b>
               <p>{selectedNode.error}</p>
-              <button className="primary full" onClick={onRetry}>
+              <button className="primary full" onClick={onRetry} disabled={retrying}>
                 {retrying ? "重试中…" : "映射 condition 并重试"}
               </button>
             </div>
@@ -265,7 +265,7 @@ assert "condition" in metadata.columns
 `}
             </code>
           </pre>
-          <button className="primary full" onClick={onRunDemo}>
+          <button className="primary full" onClick={onRunDemo} disabled={running}>
             {running ? "代码生成中…" : "运行代码"}
           </button>
         </div>

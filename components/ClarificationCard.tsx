@@ -66,6 +66,7 @@ export const clarificationQuestions: readonly ClarificationQuestion[] = [
 type ClarificationCardProps = {
   answers: ClarificationAnswers;
   activeQuestion: number;
+  submitting?: boolean;
   onActiveQuestionChange: (index: number) => void;
   onAnswer: (key: ClarificationKey, value: string, index: number) => void;
   onSubmit: () => void;
@@ -74,6 +75,7 @@ type ClarificationCardProps = {
 export function ClarificationCard({
   answers,
   activeQuestion,
+  submitting = false,
   onActiveQuestionChange,
   onAnswer,
   onSubmit,
@@ -92,9 +94,10 @@ export function ClarificationCard({
         <span className="gate-progress">已完成 {completed} / 4</span>
       </div>
       <div className="question-nav">
-        {clarificationQuestions.map((item, index) => (
-          <button
-            key={item.key}
+          {clarificationQuestions.map((item, index) => (
+            <button
+              key={item.key}
+              disabled={submitting}
             className={`${activeQuestion === index ? "active" : ""} ${
               answers[item.key] ? "answered" : ""
             }`}
@@ -115,6 +118,7 @@ export function ClarificationCard({
           {question.options.map(([value, hint]) => (
             <button
               key={value}
+              disabled={submitting}
               className={answers[question.key] === value ? "selected" : ""}
               onClick={() => onAnswer(question.key, value, activeQuestion)}
             >
@@ -136,9 +140,9 @@ export function ClarificationCard({
         <button
           className="primary"
           onClick={onSubmit}
-          disabled={Object.values(answers).some((value) => !value)}
+          disabled={submitting || Object.values(answers).some((value) => !value)}
         >
-          生成分析计划 →
+          {submitting ? "提交中…" : "生成分析计划 →"}
         </button>
       </div>
     </div>

@@ -5,6 +5,33 @@ type ApiErrorPayload = {
   error?: string;
 };
 
+export type ApiErrorCode =
+  | "UNAUTHORIZED"
+  | "FORBIDDEN"
+  | "NOT_FOUND"
+  | "VALIDATION"
+  | "SERVER"
+  | "NETWORK";
+
+export class ApiClientError extends Error {
+  readonly status: number;
+  readonly code: ApiErrorCode;
+  readonly retryable: boolean;
+
+  constructor(
+    message: string,
+    status: number,
+    code: ApiErrorCode,
+    retryable: boolean,
+  ) {
+    super(message);
+    this.name = "ApiClientError";
+    this.status = status;
+    this.code = code;
+    this.retryable = retryable;
+  }
+}
+
 export type LoginResponse = {
   authenticated: boolean;
 };
@@ -25,23 +52,72 @@ export type ClarificationPayload = {
 /**
  * 前端 API 适配层：统一错误转换、JSON 解析和请求方法，页面不再直接拼接接口细节。
  */
+const retryDelayMs = 180;
+
+const classifyStatus = (status: number): ApiErrorCode => {
+  if (status === 401) return "UNAUTHORIZED";
+  if (status === 403) return "FORBIDDEN";
+  if (status === 404) return "NOT_FOUND";
+  if (status >= 400 && status < 500) return "VALIDATION";
+  return "SERVER";
+};
+
+const toUserMessage = (code: ApiErrorCode, fallback: string) => {
+  if (code === "UNAUTHORIZED") return "登录状态已失效，请刷新页面";
+  if (code === "FORBIDDEN") return "当前操作没有权限";
+  if (code === "NOT_FOUND") return "请求的演示资源不存在";
+  if (code === "NETWORK") return "服务暂时不可用，请稍后重试";
+  return fallback;
+};
+
+const wait = (durationMs: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, durationMs));
+
 async function requestJson<ResponsePayload extends object>(
   path: string,
   init?: RequestInit,
 ): Promise<ResponsePayload> {
-  const response = await fetch(path, init);
-  const payload = (await response.json().catch(() => ({}))) as
-    | ResponsePayload
-    | ApiErrorPayload;
+  const method = (init?.method || "GET").toUpperCase();
+  const maxAttempts = method === "GET" ? 2 : 1;
 
-  if (!response.ok) {
-    const message = "error" in payload && payload.error
-      ? payload.error
-      : `请求失败（${response.status}）`;
-    throw new Error(message);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(path, init);
+      const payload = (await response.json().catch(() => ({}))) as
+        | ResponsePayload
+        | ApiErrorPayload;
+
+      if (!response.ok) {
+        const code = classifyStatus(response.status);
+        const serverMessage = "error" in payload && payload.error
+          ? payload.error
+          : `请求失败（${response.status}）`;
+        throw new ApiClientError(
+          toUserMessage(code, serverMessage),
+          response.status,
+          code,
+          response.status >= 500,
+        );
+      }
+
+      return payload as ResponsePayload;
+    } catch (error) {
+      const normalizedError = error instanceof ApiClientError
+        ? error
+        : new ApiClientError(
+            "服务暂时不可用，请稍后重试",
+            0,
+            "NETWORK",
+            true,
+          );
+      if (!normalizedError.retryable || attempt === maxAttempts) {
+        throw normalizedError;
+      }
+      await wait(retryDelayMs * attempt);
+    }
   }
 
-  return payload as ResponsePayload;
+  throw new ApiClientError("服务暂时不可用，请稍后重试", 0, "NETWORK", true);
 }
 
 const jsonHeaders = {

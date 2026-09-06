@@ -34,6 +34,11 @@ export class ApiClientError extends Error {
   }
 }
 
+/** 将 API 错误统一转换为可直接展示给研究人员的中文提示。 */
+export function getApiErrorMessage(error: unknown, fallback: string) {
+  return error instanceof ApiClientError ? error.message : fallback;
+}
+
 export type LoginResponse = {
   authenticated: boolean;
 };

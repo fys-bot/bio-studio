@@ -13,7 +13,7 @@ import { ConversationPanel } from "@/components/ConversationPanel";
 import { InspectorDrawer, type InspectorTab } from "@/components/InspectorDrawer";
 import { WorkspaceModal, type WorkspaceModalState } from "@/components/WorkspaceModal";
 import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
-import { bioflowApi } from "@/lib/api-client";
+import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
 import type { DataFileProfile, ResearchTask, WorkflowNodeState } from "@/lib/domain";
 type TimelineEvent = {
   id: number;
@@ -204,8 +204,8 @@ export default function Home() {
         setLayoutReady(true);
         setLayoutSaveState("saved");
         setAuthed(true);
-      } catch {
-        setToast("工作区初始化失败，请检查服务状态");
+      } catch (error) {
+        setToast(getApiErrorMessage(error, "工作区初始化失败，请检查服务状态"));
       }
     })();
   }, []);
@@ -344,8 +344,8 @@ export default function Home() {
       setTask(taskResponse.task);
       setConfigOpen(false);
       notify("演示配置已应用");
-    } catch {
-      notify("配置保存失败，请检查服务状态");
+    } catch (error) {
+      notify(getApiErrorMessage(error, "配置保存失败，请检查服务状态"));
     }
     setConfigSaving(false);
   };
@@ -451,7 +451,7 @@ ${task?.goal || config.goal}
         setDataProfiles(response.task.dataProfiles ?? []);
         notify(`${file.name} 结构检查完成`);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "文件结构解析失败";
+        const message = getApiErrorMessage(error, "文件结构解析失败");
         uploadFailures.push(`${file.name}：${message}`);
         notify(`${file.name} 解析失败`);
       } finally {
@@ -480,8 +480,8 @@ ${task?.goal || config.goal}
     try {
       const response = await bioflowApi.submitClarifications({ answers });
       setTask(response.task);
-    } catch {
-      notify("澄清信息提交失败，请检查服务状态");
+    } catch (error) {
+      notify(getApiErrorMessage(error, "澄清信息提交失败，请检查服务状态"));
     } finally {
       setSubmittingAnswers(false);
     }
@@ -493,8 +493,8 @@ ${task?.goal || config.goal}
       const response = await bioflowApi.approvePlan();
       setTask(response.task);
       notify("分析计划已批准，等待运行");
-    } catch {
-      notify("分析计划审批失败，请检查服务状态");
+    } catch (error) {
+      notify(getApiErrorMessage(error, "分析计划审批失败，请检查服务状态"));
     } finally {
       setApprovingPlan(false);
     }
@@ -518,9 +518,9 @@ ${task?.goal || config.goal}
     notify("工作流已开始运行");
     try {
       await bioflowApi.startRun();
-    } catch {
+    } catch (error) {
       setRunning(false);
-      notify("启动失败，请检查服务状态");
+      notify(getApiErrorMessage(error, "启动失败，请检查服务状态"));
       return;
     }
   };
@@ -530,9 +530,9 @@ ${task?.goal || config.goal}
     try {
       await bioflowApi.retryNode("run_demo_001", "design");
       setTimeout(() => setRetrying(false), 1300);
-    } catch {
+    } catch (error) {
       setRetrying(false);
-      notify("节点重试失败，请检查服务状态");
+      notify(getApiErrorMessage(error, "节点重试失败，请检查服务状态"));
     }
   };
   const sendMessage = () => {
@@ -562,8 +562,8 @@ ${task?.goal || config.goal}
       setRunning(false);
       setCodeStreaming(false);
       notify("运行已取消");
-    } catch {
-      notify("取消失败，请稍后重试");
+    } catch (error) {
+      notify(getApiErrorMessage(error, "取消失败，请稍后重试"));
     } finally {
       setCancellingRun(false);
     }
@@ -663,9 +663,9 @@ ${task?.goal || config.goal}
       setLayoutVersionCount(response.layout.versions.length);
       setLayoutSaveState("saved");
       notify(`已保存 ${response.version.name}`);
-    } catch {
+    } catch (error) {
       setLayoutSaveState("error");
-      notify("布局版本保存失败，请稍后重试");
+      notify(getApiErrorMessage(error, "布局版本保存失败，请稍后重试"));
     } finally {
       setCreatingLayoutVersion(false);
     }

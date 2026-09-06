@@ -1,44 +1,73 @@
 # BioFlow Studio
 
-Agentic research workspace prototype for the Biomni reverse-engineering assignment.
+面向生命科学研究的 Agent 工作台 Demo：将 RNA-seq 科研问题转成可解释、可审批、可恢复的分析流程。
+
+## 快速开始
 
 ```bash
+nvm use
 npm install
 cp .env.example .env.local
 npm run dev
 ```
 
-推荐使用 Node.js 20 LTS（仓库已提供 `.nvmrc`）。Next.js 14 在 Node.js 24 下可能出现 `semver.default.lt is not a function`，请先执行 `nvm use`。
+打开 [http://127.0.0.1:3000](http://127.0.0.1:3000)。项目推荐 Node.js 20 LTS；Next.js 14 在 Node.js 24 下可能出现 `semver.default.lt is not a function`，请先执行 `nvm use`。
 
-Open http://127.0.0.1:3000 (or http://localhost:3000). The demo uses a deterministic server-side runner. No external API key is required.
+`npm run dev` 默认使用 3000 端口，并在启动前执行“优雅终止 → 等待释放 → 必要时强制终止”的端口回收。如果 3000 被其他服务占用，可用 `PORT=3014 npm run dev` 临时启动。
+
+## 一次完整演示
+
+1. 展开执行轨迹，展示意图识别、RAG 检索、证据重排和参数绑定。
+2. 点击“上传”，选择 `demo-data/sample_metadata.tsv`，查看样本数、字段类型、缺失值和 `condition` 分组建议。
+3. 将建议应用到分析上下文，补完四步澄清，生成并审批分析计划。
+4. 展开画布，拖拽节点、平移、缩放、Shift+点击连线；观察自动保存，点击“保存版本”，刷新确认布局恢复。
+5. 运行失败恢复链路，查看 SSE 日志和代码流，执行局部重试。
+6. 查看火山图、候选基因、Artifact 血缘、报告下载和 3D 结构残基联动。
 
 ## 可配置演示
 
 进入页面后点击“配置”，可以现场切换工作流名称、研究目标、样本数、基因数、运行等待时间，以及“失败恢复链路 / 全成功链路”。配置通过受保护的 `/api/demo/config` 保存到服务端演示状态，下一次运行会使用新参数，不需要修改代码。
 
-`npm run dev` 会默认使用 3000 端口，并在启动前尝试释放占用该端口的本地监听进程；如果当前沙箱不允许终止其他进程，请使用 `PORT=3014 npm run dev` 临时启动。
-
 ## 冒烟回归
 
-服务启动后可执行 `npm run smoke`，自动验证登录鉴权、澄清、计划审批、SSE 事件流和取消运行。开发演示需要从初始状态开始时，先登录并调用 `POST /api/tasks`（同源请求），即可重置为“待补充信息”；生产预览会关闭这个重置接口。
+服务启动后执行：
 
-## 演示验收清单
+```bash
+npm run smoke -- http://127.0.0.1:3000
+```
 
-1. 首屏发送问题，展开“查看执行轨迹”，确认意图识别、检索、证据重排和参数绑定。
-2. 在四步澄清卡片中选择 Count 矩阵、处理组 vs 对照组、人类、可发表结果，生成并批准分析计划。
-3. 打开分析计划，拖拽节点、平移画布、缩放、重置；按住 Shift 点击两个节点创建临时连线。
-4. 运行工作流，观察失败节点；打开证据面板，执行局部重试，查看代码流式输出和结果产物。
-5. 打开结果血缘和 3D 结构面板，拖动结构、点击残基；在中屏/移动端打开工具抽屉并点击遮罩或 Esc 关闭。
+冒烟测试会验证登录鉴权、CSV / TSV 文件结构解析、工作流布局保存与版本恢复、澄清、计划审批、SSE 事件流、失败重试、成功和取消运行。开发演示需要从初始状态开始时，smoke 会通过同源 `POST /api/tasks` 重置为“待补充信息”；生产预览会关闭该重置接口。
 
-## 架构与运行时序
+## 工程质量门禁
+
+```bash
+npm run format:check
+npm run typecheck
+npm run build
+git diff --check
+```
+
+代码使用 Prettier 统一格式，业务变量使用明确语义命名；页面按对话、澄清、工作流、证据、代码、结果、3D 和弹窗领域拆分。默认开发端口与生产预览端口均为 3000，开发与构建可通过 `NEXT_DIST_DIR` 隔离缓存目录。
+
+## 架构与交付材料
+
+- [架构与交付说明](./docs/架构与交付说明.md)：分层架构、API 矩阵、时序图、安全边界和 Mock 替换点。
+- [面试演示脚本](./docs/演示脚本.md)：约 7 分钟的逐步操作话术。
+- [需求拆解与技术方案](./outputs/需求拆解与技术方案.md)：产品目标、竞品差异和技术方案。
+- [待办工作流](./docs/待办工作流.md)：阶段状态、验收门禁和已知限制。
+- [AI 使用说明](./docs/AI使用说明.md)：AI 辅助开发、人工 Review 与修复记录。
+
+## 架构摘要
 
 ```text
-浏览器对话层
-  ├─ 澄清 / 审批 / 画布 / 工具抽屉
+浏览器工作台
+  ├─ 对话 / 澄清 / 审批 / 工作流画布 / 工具抽屉
+  ├─ 文件结构摘要（CSV / TSV）
   └─ EventSource ← /api/runs/:runId/events
                          ↓
 Next.js API 层（HttpOnly Cookie + Origin 校验）
   ├─ 任务与计划：/api/tasks、/api/workflows/:id/approve
+  ├─ 布局与文件：/api/workflows/:id/layout、/api/files/profile
   ├─ 运行控制：/api/runs、cancel、nodes/:nodeId/retry
   └─ 本地状态：data/state.json（演示持久化）
                          ↓
@@ -46,33 +75,23 @@ Next.js API 层（HttpOnly Cookie + Origin 校验）
   意图识别 → RAG 检索 → 证据重排 → 参数绑定 → 代码流 → Artifact
 ```
 
-本项目是面试演示级实现：Agent Runner、RAG、3D 结构和结果数据均为可解释 Mock，但运行参数、状态机、事件流和产物链路都通过服务端配置驱动；生产接入时应替换为真实队列、数据库、对象存储和 Mol* 渲染器。
+当前 Runner、RAG、3D 结构和结果数据均为可解释 Mock，但运行参数、状态机、事件流和产物链路都通过服务端配置驱动。生产接入时可按[架构与交付说明](./docs/架构与交付说明.md)替换为真实队列、数据库、对象存储、Agent Gateway 和 Mol* 渲染器。
 
-If the browser shows a blank page, confirm the terminal still has `npm run dev` running. A blank `localhost:3000` tab usually means the local Next server is not listening. For file-watcher limits, use `npm run dev:poll`.
+## 安全与数据边界
 
-## Security
+- 所有写接口要求 HMAC 签名的 HttpOnly `bioflow_session` Cookie。
+- 所有写请求校验 `Origin` 与 `Host`，拒绝跨站写入。
+- 文件解析接口只接受 CSV / TSV，限制 5 MB、512 列、100,000 行。
+- 原始文件单元格不会返回浏览器；任务只保存字段类型、缺失数量和分组建议。
+- 真实 LLM、数据库和对象存储密钥只能配置在服务端环境变量，不能进入客户端 bundle。
 
-API routes require the `bioflow_session` HttpOnly cookie issued by `/api/auth/login`. Third-party LLM keys belong only in server environment variables; never expose them to the browser.
+## 访问 404 或 `Cannot find module './682.js'`
 
-## Scope
-
-The main demo is a bulk RNA-seq workflow with RAG evidence events, streaming code output, deterministic failure/retry, artifact lineage, responsive layout, and a lightweight 3D structure preview fallback.
-
-## 面试材料
-
-- [产品逆向分析](./analysis.md)
-- [需求拆解与技术方案](./outputs/需求拆解与技术方案.md)
-- [AI 使用说明](./docs/AI使用说明.md)
-- [演示脚本](./docs/演示脚本.md)
-### 访问 404 或 `Cannot find module './682.js'`
-
-如果 3000/3001 端口被旧的 Next 进程占用，浏览器可能打开旧实例并返回 404。先关闭项目目录下的旧进程，再启动生产预览：
+优先确认终端仍有 `npm run dev` 运行，并检查 3000 端口是否指向当前项目：
 
 ```bash
-lsof -tiTCP:3000 -sTCP:LISTEN | xargs kill
-lsof -tiTCP:3001 -sTCP:LISTEN | xargs kill
-npm run build
-npm run start
+lsof -nP -iTCP:3000 -sTCP:LISTEN
+npm run dev
 ```
 
-默认访问 `http://127.0.0.1:3000`。若端口仍被占用，可执行 `PORT=3010 npm run start`，访问 `http://127.0.0.1:3010`。
+启动器会自动清理当前端口占用。若需要独立预览，可使用 `PORT=3010 npm run dev`，访问 [http://127.0.0.1:3010](http://127.0.0.1:3010)。开发演示建议用 `npm run dev`，避免开发缓存与生产构建共用 `.next`。

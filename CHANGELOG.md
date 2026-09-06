@@ -32,6 +32,18 @@
 - 证据来源和知识图谱仍可在抽屉中呈现，关闭工具抽屉按钮可正常响应；生产构建无白屏。
 - `npm run typecheck`、`npm run build`、`git diff --check` 通过。
 
+## 2026-09-06（P1-4 工作区弹窗组件化）
+
+- 新增 `components/WorkspaceModal.tsx`，封装项目切换、能力说明、文件列表、新建任务、上传文件、布局切换和文件/证据详情弹窗。
+- 统一文件选择、Enter 创建任务、空白区域关闭和确认反馈等交互，通过 Props 将状态修改回调交还页面编排。
+- `WorkspaceModalState` 与 `ModalKind` 提供明确领域类型，避免弹窗分支继续堆积在 `app/page.tsx`。
+
+### 浏览器验收
+
+- 真实打开项目切换弹窗，选择“肿瘤基因组项目”后标题更新、弹窗关闭并出现“已切换到…” Toast。
+- 保留上传文件名、布局重置、文件详情和证据详情的既有行为；生产构建无白屏。
+- `npm run typecheck`、`npm run build`、`git diff --check` 通过。
+
 ## 2026-09-06（P1-4 第一批组件化）
 
 - 新增 `components/ClarificationCard.tsx`，集中维护四步澄清题库、答案类型、步骤导航和选项卡交互。

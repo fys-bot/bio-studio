@@ -11,6 +11,10 @@ import { WorkflowCanvas } from "@/components/WorkflowCanvas";
 import { TaskSidebar } from "@/components/TaskSidebar";
 import { ConversationPanel } from "@/components/ConversationPanel";
 import { InspectorDrawer, type InspectorTab } from "@/components/InspectorDrawer";
+import {
+  WorkspaceModal,
+  type WorkspaceModalState,
+} from "@/components/WorkspaceModal";
 import { defaultDemoConfig, DemoConfig } from "@/lib/demo-config";
 
 type WorkflowNodeState = {
@@ -132,21 +136,7 @@ export default function Home() {
   );
   const [activeTask, setActiveTask] = useState("rna");
   const [projectName, setProjectName] = useState("BioFlow 生命科学实验室");
-  const [modal, setModal] = useState<
-    {
-      kind:
-        | "projects"
-        | "skills"
-        | "files"
-        | "new-task"
-        | "upload"
-        | "layout"
-        | "file"
-        | "source";
-      title: string;
-      detail?: string;
-    } | null
-  >(null);
+  const [modal, setModal] = useState<WorkspaceModalState | null>(null);
   const [toast, setToast] = useState("");
   const [agentMode, setAgentMode] = useState<
     "标准模式" | "严谨模式" | "快速模式"
@@ -920,236 +910,57 @@ export default function Home() {
         onResizeStart={(event) => startResize("inspector", event)}
       />
       {modal && (
-        <div
-          className="ui-modal-backdrop"
-          onMouseDown={() => setModal(null)}
-        >
-          <section
-            className="ui-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label={modal.title}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <header>
-              <div>
-                <small>BioFlow 工作区</small>
-                <h2>{modal.title}</h2>
-              </div>
-              <button onClick={() => setModal(null)} aria-label="关闭弹窗">
-                ×
-              </button>
-            </header>
-            {modal.kind === "projects" && (
-              <div className="modal-list">
-                {["BioFlow 生命科学实验室", "肿瘤基因组项目", "蛋白质工程项目"]
-                  .map((name) => (
-                    <button
-                      key={name}
-                      className={projectName === name ? "selected" : ""}
-                      onClick={() => {
-                        setProjectName(name);
-                        setModal(null);
-                        notify(`已切换到${name}`);
-                      }}
-                    >
-                      <span>◈</span>
-                      <div>
-                        <b>{name}</b>
-                        <small>
-                          {name === projectName ? "当前项目" : "点击切换项目"}
-                        </small>
-                      </div>
-                      <em>{name === projectName ? "✓" : "→"}</em>
-                    </button>
-                  ))}
-              </div>
-            )}
-            {modal.kind === "skills" && (
-              <div className="modal-list">
-                {[["DESeq2 差异表达", "已启用"], ["RAG 证据检索", "已启用"], [
-                  "蛋白质结构分析",
-                  "可用",
-                ]].map(([name, state]) => (
-                  <button
-                    key={name}
-                    onClick={() => notify(`${name}：${state}`)}
-                  >
-                    <span>◇</span>
-                    <div>
-                      <b>{name}</b>
-                      <small>点击查看能力说明与输入输出</small>
-                    </div>
-                    <em>{state}</em>
-                  </button>
-                ))}
-              </div>
-            )}
-            {modal.kind === "files" && (
-              <div className="modal-list">
-                {["counts.csv", "sample_metadata.tsv", ...uploadedFiles].map(
-                  (name) => (
-                    <button
-                      key={name}
-                      onClick={() =>
-                        setModal({
-                          kind: "file",
-                          title: name,
-                          detail: name.endsWith(".csv")
-                            ? "RNA-seq 计数矩阵 · 24 个样本"
-                            : "项目文件 · 可供智能体检索与分析",
-                        })}
-                    >
-                      <span>▧</span>
-                      <div>
-                        <b>{name}</b>
-                        <small>本地项目空间</small>
-                      </div>
-                      <em>查看</em>
-                    </button>
-                  ),
-                )}
-              </div>
-            )}
-            {modal.kind === "new-task" && (
-              <div className="modal-form">
-                <label>
-                  任务名称<input
-                    autoFocus
-                    value={newTaskName}
-                    onChange={(e) => setNewTaskName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") createTask();
-                    }}
-                    placeholder="例如：单细胞聚类与细胞注释"
-                  />
-                </label>
-                <p>新任务会继承当前项目文件，并从对话澄清开始。</p>
-                <div className="modal-actions">
-                  <button className="secondary" onClick={() => setModal(null)}>
-                    取消
-                  </button>
-                  <button className="primary" onClick={createTask}>
-                    创建任务
-                  </button>
-                </div>
-              </div>
-            )}
-            {modal.kind === "upload" && (
-              <div className="modal-form">
-                <label className="upload-drop">
-                  ＋ 选择本地文件<input
-                    type="file"
-                    multiple
-                    onChange={(e) => {
-                      const names = Array.from(e.target.files || []).map(
-                        (file) => file.name,
-                      );
-                      if (names.length) {
-                        setUploadedFiles((items) => [...items, ...names]);
-                        setModal(null);
-                        notify(`已添加 ${names.length} 个文件`);
-                      }
-                    }}
-                  />
-                  <small>
-                    支持 CSV、TSV、FASTQ、PDB/CIF；演示模式只保存文件名
-                  </small>
-                </label>
-              </div>
-            )}
-            {modal.kind === "layout" && (
-              <div className="modal-list">
-                <button
-                  onClick={() => {
-                    setPlanOpen(false);
-                    setTraceOpen(false);
-                    setMobilePanel(false);
-                    setModal(null);
-                    notify("已切换为对话专注布局");
-                  }}
-                >
-                  <span>◫</span>
-                  <div>
-                    <b>对话专注</b>
-                    <small>收起计划、轨迹和工具抽屉</small>
-                  </div>
-                  <em>应用</em>
-                </button>
-                <button
-                  onClick={() => {
-                    setPlanOpen(true);
-                    setModal(null);
-                    notify("已展开工作流布局");
-                  }}
-                >
-                  <span>⌘</span>
-                  <div>
-                    <b>工作流布局</b>
-                    <small>展开可编辑分析计划画布</small>
-                  </div>
-                  <em>应用</em>
-                </button>
-                <button
-                  onClick={() => {
-                    setSidebarWidth(260);
-                    setInspectorWidth(320);
-                    setEvidenceHeight(92);
-                    setPlanOpen(false);
-                    setTraceOpen(false);
-                    setMobilePanel(false);
-                    resetCanvas();
-                    setModal(null);
-                  }}
-                >
-                  <span>↺</span>
-                  <div>
-                    <b>恢复默认布局</b>
-                    <small>重置分栏、画布、缩放和面板</small>
-                  </div>
-                  <em>重置</em>
-                </button>
-              </div>
-            )}
-            {(modal.kind === "file" || modal.kind === "source") && (
-              <div className="modal-detail">
-                <div className="detail-icon">
-                  {modal.kind === "source" ? "⌁" : "▧"}
-                </div>
-                <p>{modal.detail}</p>
-                <dl>
-                  <div>
-                    <dt>状态</dt>
-                    <dd>可用</dd>
-                  </div>
-                  <div>
-                    <dt>数据区域</dt>
-                    <dd>本地项目空间</dd>
-                  </div>
-                  {modal.kind === "source" && (
-                    <div>
-                      <dt>用途</dt>
-                      <dd>支撑节点参数与可复现决策</dd>
-                    </div>
-                  )}
-                </dl>
-                <button
-                  className="primary full"
-                  onClick={() => {
-                    setModal(null);
-                    notify(
-                      modal.kind === "source"
-                        ? "已定位到关联证据"
-                        : "文件预览已确认",
-                    );
-                  }}
-                >
-                  确认
-                </button>
-              </div>
-            )}
-          </section>
-        </div>
+        <WorkspaceModal
+          modal={modal}
+          projectName={projectName}
+          uploadedFileNames={uploadedFiles}
+          newTaskName={newTaskName}
+          onClose={() => setModal(null)}
+          onSelectProject={(nextProjectName) => {
+            setProjectName(nextProjectName);
+            setModal(null);
+            notify(`已切换到${nextProjectName}`);
+          }}
+          onSelectSkill={(skillName, skillState) =>
+            notify(`${skillName}：${skillState}`)
+          }
+          onOpenFile={(fileName, detail) => setModal({ kind: "file", title: fileName, detail })}
+          onNewTaskNameChange={setNewTaskName}
+          onCreateTask={createTask}
+          onUploadFiles={(fileNames) => {
+            setUploadedFiles((items) => [...items, ...fileNames]);
+            setModal(null);
+            notify(`已添加 ${fileNames.length} 个文件`);
+          }}
+          onApplyLayout={(layout) => {
+            if (layout === "focus") {
+              setPlanOpen(false);
+              setTraceOpen(false);
+              setMobilePanel(false);
+              setModal(null);
+              notify("已切换为对话专注布局");
+              return;
+            }
+            if (layout === "workflow") {
+              setPlanOpen(true);
+              setModal(null);
+              notify("已展开工作流布局");
+              return;
+            }
+            setSidebarWidth(260);
+            setInspectorWidth(320);
+            setEvidenceHeight(92);
+            setPlanOpen(false);
+            setTraceOpen(false);
+            setMobilePanel(false);
+            resetCanvas();
+            setModal(null);
+          }}
+          onConfirmDetail={(kind) => {
+            setModal(null);
+            notify(kind === "source" ? "已定位到关联证据" : "文件预览已确认");
+          }}
+        />
       )}
       {toast && (
         <div className="ui-toast" role="status">

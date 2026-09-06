@@ -44,6 +44,11 @@
 - 保留上传文件名、布局重置、文件详情和证据详情的既有行为；生产构建无白屏。
 - `npm run typecheck`、`npm run build`、`git diff --check` 通过。
 
+### 接口验证边界
+
+- 额外执行 `npm run smoke -- http://127.0.0.1:3014` 时，脚本在生产模式调用 `POST /api/tasks`，服务端按设计返回 `404 Disabled in production`。
+- 该结果已如实记录为运行环境/脚本模式不匹配；鉴权登录本身通过，后续应在开发服务上执行完整状态变更 smoke，或为生产 smoke 增加只读分支。
+
 ## 2026-09-06（P1-4 第一批组件化）
 
 - 新增 `components/ClarificationCard.tsx`，集中维护四步澄清题库、答案类型、步骤导航和选项卡交互。

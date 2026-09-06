@@ -2,6 +2,14 @@
 
 本文件记录 BioFlow Studio 每次可交付改动，提交代码时同步更新。
 
+## 2026-09-06（P1-4 第一批组件化）
+
+- 新增 `components/ClarificationCard.tsx`，集中维护四步澄清题库、答案类型、步骤导航和选项卡交互。
+- `app/page.tsx` 的澄清区域改为受控组件，页面只负责答案状态、接口提交和步骤切换编排。
+- 清理页面中一段不会参与渲染的重复澄清 JSX，降低后续拆分和代码 Review 成本。
+- 浏览器真实点击通过：四步澄清、自动推进、生成分析计划并进入待审批状态。
+- `npm run typecheck`、`npm run build`、`git diff --check` 和完整接口 smoke 均通过。
+
 ## 2026-09-06（P1-1 RAG 与知识图谱可视化）
 
 - 新增独立 `components/KnowledgeGraph.tsx`，将 Agent 检索证据按项目文件、技能包、文献、知识图谱四类分组，避免所有 RAG 逻辑堆在页面文件中。

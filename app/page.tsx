@@ -3,6 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { ParticleLoader } from "@/components/ParticleLoader";
 import { ConfigPanel } from "@/components/ConfigPanel";
 import { KnowledgeGraph } from "@/components/KnowledgeGraph";
+import {
+  ClarificationCard,
+  clarificationQuestions,
+  ClarificationAnswers,
+} from "@/components/ClarificationCard";
 import { defaultDemoConfig, DemoConfig } from "@/lib/demo-config";
 
 type Node = {
@@ -69,49 +74,6 @@ const seedEvents: TimelineEvent[] = [
   },
 ];
 
-const clarificationQuestions = [
-  {
-    key: "format",
-    number: "01",
-    label: "数据格式",
-    description: "决定从原始读段、比对结果还是计数矩阵开始。",
-    options: [["Count 矩阵", "直接进入 DESeq2，适合当前演示"], [
-      "FASTQ 文件",
-      "增加质控、比对和定量步骤",
-    ], ["公共数据库", "从 GEO / SRA 获取数据"]],
-  },
-  {
-    key: "comparison",
-    number: "02",
-    label: "比较方案",
-    description: "决定设计矩阵、对比项和统计模型。",
-    options: [["处理组 vs 对照组", "单一对比，路径最清晰"], [
-      "多组比较",
-      "生成多个 contrasts",
-    ], ["时间序列", "使用时间效应模型"]],
-  },
-  {
-    key: "organism",
-    number: "03",
-    label: "研究物种",
-    description: "决定参考基因组与基因注释版本。",
-    options: [["人类", "GRCh38 / GENCODE"], ["小鼠", "GRCm39 / GENCODE"], [
-      "大鼠",
-      "mRatBN7.2 / Ensembl",
-    ]],
-  },
-  {
-    key: "deliverable",
-    number: "04",
-    label: "交付物",
-    description: "决定图表、表格和报告的完整程度。",
-    options: [["探索性分析", "快速结果与火山图"], [
-      "可发表结果",
-      "补充 QC、热图和方法说明",
-    ], ["完整科研报告", "输出图表、代码与报告"]],
-  },
-] as const;
-
 const statusLabel: Record<string, string> = {
   succeeded: "已完成",
   running: "运行中",
@@ -145,7 +107,7 @@ export default function Home() {
   const [agentReplies, setAgentReplies] = useState<string[]>([]);
   const [running, setRunning] = useState(false);
   const [retrying, setRetrying] = useState(false);
-  const [answers, setAnswers] = useState({
+  const [answers, setAnswers] = useState<ClarificationAnswers>({
     format: "",
     comparison: "",
     organism: "",
@@ -494,81 +456,6 @@ export default function Home() {
     }
     setTimeout(() => setRunning(false), 1800);
   };
-  {
-    task?.status === "clarifying" && (
-      <div className="gate-card clarification-card">
-        <div className="gate-head">
-          <div>
-            <small>智能体需要补充信息</small>
-            <h2>先确认这次实验的分析上下文</h2>
-            <p>每项选择都会实时影响后续分析路径。</p>
-          </div>
-          <span className="gate-progress">
-            已完成 {Object.values(answers).filter(Boolean).length} / 4
-          </span>
-        </div>
-        <div className="question-nav">
-          {clarificationQuestions.map((q, i) => (
-            <button
-              key={q.key}
-              className={`${activeQuestion === i ? "active" : ""} ${
-                answers[q.key] ? "answered" : ""
-              }`}
-              onClick={() => setActiveQuestion(i)}
-            >
-              <span>{answers[q.key] ? "✓" : q.number}</span>
-              {q.label}
-            </button>
-          ))}
-        </div>
-        {clarificationQuestions.map((q, i) =>
-          activeQuestion === i && (
-            <section className="question-panel" key={q.key}>
-              <div className="question-copy">
-                <small>{q.number} / 04</small>
-                <h3>{q.label}</h3>
-                <p>{q.description}</p>
-              </div>
-              <div className="option-cards">
-                {q.options.map(([value, hint]) => (
-                  <button
-                    key={value}
-                    className={answers[q.key] === value ? "selected" : ""}
-                    onClick={() => {
-                      setAnswers((a) => ({ ...a, [q.key]: value }));
-                      if (i < 3) {
-                        setTimeout(() => setActiveQuestion(i + 1), 180);
-                      }
-                    }}
-                  >
-                    <i>{answers[q.key] === value ? "●" : "○"}</i>
-                    <span>
-                      <b>{value}</b>
-                      <small>{hint}</small>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )
-        )}
-        <div className="clarification-actions">
-          <span>
-            {Object.values(answers).filter(Boolean).length < 4
-              ? "完成全部选择后生成计划"
-              : "上下文已完整，可以生成分析计划"}
-          </span>
-          <button
-            className="primary"
-            onClick={submitClarifications}
-            disabled={Object.values(answers).some((v) => !v)}
-          >
-            生成分析计划 →
-          </button>
-        </div>
-      </div>
-    );
-  }
   const retry = async () => {
     setRetrying(true);
     setCodeText("");
@@ -1004,77 +891,18 @@ export default function Home() {
           />
         </div>
         {task?.status === "clarifying" && (
-          <div className="gate-card clarification-card">
-            <div className="gate-head">
-              <div>
-                <small>智能体需要补充信息</small>
-                <h2>先确认这次实验的分析上下文</h2>
-                <p>每项选择都会实时影响后续分析路径。</p>
-              </div>
-              <span className="gate-progress">
-                已完成 {Object.values(answers).filter(Boolean).length} / 4
-              </span>
-            </div>
-            <div className="question-nav">
-              {clarificationQuestions.map((q, i) => (
-                <button
-                  key={q.key}
-                  className={`${activeQuestion === i ? "active" : ""} ${
-                    answers[q.key] ? "answered" : ""
-                  }`}
-                  onClick={() => setActiveQuestion(i)}
-                >
-                  <span>{answers[q.key] ? "✓" : q.number}</span>
-                  {q.label}
-                </button>
-              ))}
-            </div>
-            {clarificationQuestions.map((q, i) =>
-              activeQuestion === i && (
-                <section className="question-panel" key={q.key}>
-                  <div className="question-copy">
-                    <small>{q.number} / 04</small>
-                    <h3>{q.label}</h3>
-                    <p>{q.description}</p>
-                  </div>
-                  <div className="option-cards">
-                    {q.options.map(([value, hint]) => (
-                      <button
-                        key={value}
-                        className={answers[q.key] === value ? "selected" : ""}
-                        onClick={() => {
-                          setAnswers((a) => ({ ...a, [q.key]: value }));
-                          if (i < 3) {
-                            setTimeout(() => setActiveQuestion(i + 1), 180);
-                          }
-                        }}
-                      >
-                        <i>{answers[q.key] === value ? "●" : "○"}</i>
-                        <span>
-                          <b>{value}</b>
-                          <small>{hint}</small>
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              )
-            )}
-            <div className="clarification-actions">
-              <span>
-                {Object.values(answers).filter(Boolean).length < 4
-                  ? "完成全部选择后生成计划"
-                  : "上下文已完整，可以生成分析计划"}
-              </span>
-              <button
-                className="primary"
-                onClick={submitClarifications}
-                disabled={Object.values(answers).some((v) => !v)}
-              >
-                生成分析计划 →
-              </button>
-            </div>
-          </div>
+          <ClarificationCard
+            answers={answers}
+            activeQuestion={activeQuestion}
+            onActiveQuestionChange={setActiveQuestion}
+            onAnswer={(key, value, index) => {
+              setAnswers((current) => ({ ...current, [key]: value }));
+              if (index < clarificationQuestions.length - 1) {
+                setTimeout(() => setActiveQuestion(index + 1), 180);
+              }
+            }}
+            onSubmit={submitClarifications}
+          />
         )}
         {task?.status === "awaiting_approval" && (
           <div className="gate-card approval">

@@ -105,8 +105,7 @@ type KnowledgeGraphProps = {
 export function KnowledgeGraph({ nodeLabel = "当前节点" }: KnowledgeGraphProps) {
   const [selectedId, setSelectedId] = useState("metadata");
   const selected = useMemo(
-    () =>
-      evidenceItems.find((item) => item.id === selectedId) || evidenceItems[0],
+    () => evidenceItems.find((item) => item.id === selectedId) || evidenceItems[0],
     [selectedId],
   );
   const selectGraphEvidence = (id: string) => {
@@ -114,10 +113,10 @@ export function KnowledgeGraph({ nodeLabel = "当前节点" }: KnowledgeGraphPro
       id === "gene" || id === "pathway"
         ? "cell-cycle"
         : id === "paper"
-        ? "love2014"
-        : id === "deseq"
-        ? "deseq2"
-        : "metadata",
+          ? "love2014"
+          : id === "deseq"
+            ? "deseq2"
+            : "metadata",
     );
   };
 
@@ -131,34 +130,28 @@ export function KnowledgeGraph({ nodeLabel = "当前节点" }: KnowledgeGraphPro
         <span>{evidenceItems.length} 条绑定</span>
       </div>
       <div className="rag-groups">
-        {(["项目文件", "技能包", "文献", "知识图谱"] as EvidenceGroup[]).map(
-          (group) => (
-            <div className="rag-group" key={group}>
-              <small>{group}</small>
-              {evidenceItems
-                .filter((item) => item.group === group)
-                .map((item) => (
-                  <button
-                    className={`rag-source ${
-                      selected.id === item.id ? "active" : ""
-                    }`}
-                    key={item.id}
-                    onClick={() => setSelectedId(item.id)}
-                  >
-                    <span className="rag-source-icon">
-                      {group === "知识图谱" ? "◇" : "↳"}
-                    </span>
-                    <span>
-                      <b>{item.title}</b>
-                      <em>
-                        {item.score} · {item.binding}
-                      </em>
-                    </span>
-                  </button>
-                ))}
-            </div>
-          ),
-        )}
+        {(["项目文件", "技能包", "文献", "知识图谱"] as EvidenceGroup[]).map((group) => (
+          <div className="rag-group" key={group}>
+            <small>{group}</small>
+            {evidenceItems
+              .filter((item) => item.group === group)
+              .map((item) => (
+                <button
+                  className={`rag-source ${selected.id === item.id ? "active" : ""}`}
+                  key={item.id}
+                  onClick={() => setSelectedId(item.id)}
+                >
+                  <span className="rag-source-icon">{group === "知识图谱" ? "◇" : "↳"}</span>
+                  <span>
+                    <b>{item.title}</b>
+                    <em>
+                      {item.score} · {item.binding}
+                    </em>
+                  </span>
+                </button>
+              ))}
+          </div>
+        ))}
       </div>
       <div className="rag-detail">
         <div className="rag-detail-head">
@@ -187,11 +180,7 @@ export function KnowledgeGraph({ nodeLabel = "当前节点" }: KnowledgeGraphPro
           <small>点击节点查看关系</small>
         </div>
         <div className="knowledge-graph-canvas">
-          <svg
-            viewBox="0 0 390 205"
-            role="img"
-            aria-label="基因、通路、文献与分析参数关系图"
-          >
+          <svg viewBox="0 0 390 205" role="img" aria-label="基因、通路、文献与分析参数关系图">
             {graphEdges.map(([from, to]) => {
               const source = graphNodes.find((node) => node.id === from)!;
               const target = graphNodes.find((node) => node.id === to)!;
@@ -221,20 +210,15 @@ export function KnowledgeGraph({ nodeLabel = "当前节点" }: KnowledgeGraphPro
                 role="button"
                 aria-label={`查看${node.label}关系`}
               >
-                <circle
-                  cx={node.x}
-                  cy={node.y}
-                  r="17"
-                  fill={nodeColor[node.type]}
-                />
+                <circle cx={node.x} cy={node.y} r="17" fill={nodeColor[node.type]} />
                 <text x={node.x} y={node.y + 3} textAnchor="middle">
                   {node.type === "gene"
                     ? "基"
                     : node.type === "pathway"
-                    ? "通"
-                    : node.type === "paper"
-                    ? "文"
-                    : "参"}
+                      ? "通"
+                      : node.type === "paper"
+                        ? "文"
+                        : "参"}
                 </text>
                 <text
                   className="knowledge-node-label"

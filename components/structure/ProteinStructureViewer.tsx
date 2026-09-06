@@ -3,10 +3,7 @@
 import { useMemo, useState } from "react";
 import { useProteinStructureRenderer } from "@/components/structure/useProteinStructureRenderer";
 import type { CandidateGene } from "@/lib/domain";
-import {
-  getStructureMetadata,
-  structurePoints,
-} from "@/lib/structure-model";
+import { getStructureMetadata, structurePoints } from "@/lib/structure-model";
 
 type ProteinStructureViewerProps = {
   gene?: CandidateGene;
@@ -68,9 +65,7 @@ export function ProteinStructureViewer({
           onPointerLeave={renderer.handlePointerLeave}
           onWheel={renderer.handleWheel}
         />
-        <span className="structure-interaction-hint">
-          拖拽旋转 · 滚轮缩放 · 点击残基
-        </span>
+        <span className="structure-interaction-hint">拖拽旋转 · 滚轮缩放 · 点击残基</span>
         {selectedPoint && (
           <div className="residue-tooltip">
             <b>
@@ -101,8 +96,7 @@ export function ProteinStructureViewer({
         <h3>{structure.name}</h3>
         {gene ? (
           <p>
-            来自火山图候选基因 · FDR {gene.fdr} · log₂FC{" "}
-            {gene.log2FoldChange > 0 ? "+" : ""}
+            来自火山图候选基因 · FDR {gene.fdr} · log₂FC {gene.log2FoldChange > 0 ? "+" : ""}
             {gene.log2FoldChange}
           </p>
         ) : (

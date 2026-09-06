@@ -11,10 +11,7 @@ import { WorkflowCanvas } from "@/components/WorkflowCanvas";
 import { TaskSidebar } from "@/components/TaskSidebar";
 import { ConversationPanel } from "@/components/ConversationPanel";
 import { InspectorDrawer, type InspectorTab } from "@/components/InspectorDrawer";
-import {
-  WorkspaceModal,
-  type WorkspaceModalState,
-} from "@/components/WorkspaceModal";
+import { WorkspaceModal, type WorkspaceModalState } from "@/components/WorkspaceModal";
 import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
 import { bioflowApi } from "@/lib/api-client";
 import type { ResearchTask, WorkflowNodeState } from "@/lib/domain";
@@ -25,6 +22,13 @@ type TimelineEvent = {
   detail: string;
   state: "done" | "active" | "idle" | "error";
   time: string;
+};
+
+type RunStreamEvent = {
+  type: string;
+  createdAt: string;
+  nodeId?: string;
+  payload?: Record<string, unknown>;
 };
 
 const seedEvents: TimelineEvent[] = [
@@ -101,9 +105,7 @@ export default function Home() {
   const [sidebarWidth, setSidebarWidth] = useState(260);
   const [inspectorWidth, setInspectorWidth] = useState(320);
   const [evidenceHeight, setEvidenceHeight] = useState(92);
-  const [resizing, setResizing] = useState<
-    "sidebar" | "inspector" | "evidence" | null
-  >(null);
+  const [resizing, setResizing] = useState<"sidebar" | "inspector" | "evidence" | null>(null);
   const [selectedResidue, setSelectedResidue] = useState<number | null>(null);
   const [viewportWidth, setViewportWidth] = useState(1440);
   const [planOpen, setPlanOpen] = useState(false);
@@ -113,19 +115,13 @@ export default function Home() {
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [extraEdges, setExtraEdges] = useState<string[][]>([]);
   const [canvasPan, setCanvasPan] = useState({ x: 0, y: 0 });
-  const [nodePositions, setNodePositions] = useState<
-    Record<string, { x: number; y: number }>
-  >({});
-  const [activeNav, setActiveNav] = useState<"workspace" | "skills" | "files">(
-    "workspace",
-  );
+  const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [activeNav, setActiveNav] = useState<"workspace" | "skills" | "files">("workspace");
   const [activeTask, setActiveTask] = useState("rna");
   const [projectName, setProjectName] = useState("BioFlow 生命科学实验室");
   const [modal, setModal] = useState<WorkspaceModalState | null>(null);
   const [toast, setToast] = useState("");
-  const [agentMode, setAgentMode] = useState<
-    "标准模式" | "严谨模式" | "快速模式"
-  >("标准模式");
+  const [agentMode, setAgentMode] = useState<"标准模式" | "严谨模式" | "快速模式">("标准模式");
   const [extraTasks, setExtraTasks] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [newTaskName, setNewTaskName] = useState("");
@@ -173,14 +169,17 @@ export default function Home() {
   useEffect(() => {
     if (!authed || !running) return;
     const sync = () =>
-      bioflowApi.getTask().then((response) => {
-        if (response.task) {
-          setTask(response.task);
-          if (["failed", "succeeded", "cancelled"].includes(response.task.status)) {
-            setRunning(false);
+      bioflowApi
+        .getTask()
+        .then((response) => {
+          if (response.task) {
+            setTask(response.task);
+            if (["failed", "succeeded", "cancelled"].includes(response.task.status)) {
+              setRunning(false);
+            }
           }
-        }
-      }).catch(() => undefined);
+        })
+        .catch(() => undefined);
     sync();
     const timer = setInterval(sync, 300);
     return () => clearInterval(timer);
@@ -188,25 +187,29 @@ export default function Home() {
   useEffect(() => {
     if (!authed || !task) return;
     const sync = () =>
-      bioflowApi.getTask().then((response) => setTask(response.task)).catch(() => undefined);
+      bioflowApi
+        .getTask()
+        .then((response) => setTask(response.task))
+        .catch(() => undefined);
     const es = new EventSource("/api/runs/run_demo_001/events");
     es.onmessage = (message) => {
       try {
-        const e = JSON.parse(message.data);
+        const runEvent = JSON.parse(message.data) as RunStreamEvent;
         setLiveLogs((logs) =>
           [
             ...logs,
-            `[${new Date(e.createdAt).toLocaleTimeString()}] ${e.type}${
-              e.nodeId ? ` · ${e.nodeId}` : ""
+            `[${new Date(runEvent.createdAt).toLocaleTimeString()}] ${runEvent.type}${
+              runEvent.nodeId ? ` · ${runEvent.nodeId}` : ""
             }`,
-          ].slice(-100)
+          ].slice(-100),
         );
-        if (e.type === "code.delta" && typeof e.payload?.text === "string") {
+        if (runEvent.type === "code.delta" && typeof runEvent.payload?.text === "string") {
+          const codeDelta = runEvent.payload.text;
           setCodeStreaming(true);
-          setCodeText((v) => v + e.payload.text);
+          setCodeText((currentCode) => currentCode + codeDelta);
         }
-        if (e.type === "code.completed") setCodeStreaming(false);
-        const map: any = {
+        if (runEvent.type === "code.completed") setCodeStreaming(false);
+        const timelineUpdates: Record<string, Partial<TimelineEvent> & { id: number }> = {
           "intent.detected": {
             id: 1,
             state: "done",
@@ -222,15 +225,15 @@ export default function Home() {
           "retrieval.hit": {
             id: 3,
             state: "active",
-            detail: `项目文件 ${e.payload?.projectFiles || 2} · 技能包 ${
-              e.payload?.skills || 3
-            } · 文献 ${e.payload?.literature || 12}`,
+            detail: `项目文件 ${runEvent.payload?.projectFiles || 2} · 技能包 ${
+              runEvent.payload?.skills || 3
+            } · 文献 ${runEvent.payload?.literature || 12}`,
             time: "1.2s",
           },
           "evidence.reranked": {
             id: 3,
             state: "done",
-            detail: `保留 ${e.payload?.kept || 4} 条高相关证据`,
+            detail: `保留 ${runEvent.payload?.kept || 4} 条高相关证据`,
             time: "1.8s",
           },
           "grounding.bound": {
@@ -240,11 +243,12 @@ export default function Home() {
             time: "2.1s",
           },
         };
-        if (map[e.type]) {
+        const timelineUpdate = timelineUpdates[runEvent.type];
+        if (timelineUpdate) {
           setEvents((items) =>
             items.map((item) =>
-              item.id === map[e.type].id ? { ...item, ...map[e.type] } : item
-            )
+              item.id === timelineUpdate.id ? { ...item, ...timelineUpdate } : item,
+            ),
           );
         }
       } catch {}
@@ -255,10 +259,10 @@ export default function Home() {
     };
     return () => es.close();
   }, [authed]);
-  const node = useMemo(() => task?.nodes.find((n) => n.id === selected), [
-    task,
-    selected,
-  ]);
+  const selectedNode = useMemo(
+    () => task?.nodes.find((workflowNode) => workflowNode.id === selected),
+    [task, selected],
+  );
   useEffect(() => {
     if (selectedResidue) {
       notify(`已选择残基 ${selectedResidue}，证据与代码上下文已关联`);
@@ -292,10 +296,12 @@ export default function Home() {
         behavior: "smooth",
       });
       notify("已回到智能体工作台");
-    } else {setModal({
+    } else {
+      setModal({
         kind: next,
         title: next === "skills" ? "能力中心" : "项目文件",
-      });}
+      });
+    }
   };
   const shareTask = async () => {
     const url = window.location.href;
@@ -369,7 +375,7 @@ ${task?.goal || config.goal}
     notify(`已创建任务：${name}`);
   };
   const submitClarifications = async () => {
-    if (submittingAnswers || Object.values(answers).some((v) => !v)) return;
+    if (submittingAnswers || Object.values(answers).some((answer) => !answer)) return;
     setSubmittingAnswers(true);
     try {
       const response = await bioflowApi.submitClarifications({ answers });
@@ -439,12 +445,10 @@ ${task?.goal || config.goal}
     setMessageText("");
     setTimeout(
       () =>
-        setAgentReplies(
-          (items) => [
-            ...items,
-            `已收到。我会按${agentMode}结合当前项目文件和分析上下文，给出下一步可执行建议。`,
-          ],
-        ),
+        setAgentReplies((items) => [
+          ...items,
+          `已收到。我会按${agentMode}结合当前项目文件和分析上下文，给出下一步可执行建议。`,
+        ]),
       220,
     );
   };
@@ -464,35 +468,23 @@ ${task?.goal || config.goal}
       setCancellingRun(false);
     }
   };
-  const startResize = (
-    kind: "sidebar" | "inspector" | "evidence",
-    event: React.PointerEvent,
-  ) => {
+  const startResize = (kind: "sidebar" | "inspector" | "evidence", event: React.PointerEvent) => {
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     setResizing(kind);
     const startX = event.clientX,
       startY = event.clientY,
-      base = kind === "sidebar"
-        ? sidebarWidth
-        : kind === "inspector"
-        ? inspectorWidth
-        : evidenceHeight;
+      base =
+        kind === "sidebar" ? sidebarWidth : kind === "inspector" ? inspectorWidth : evidenceHeight;
     const move = (e: PointerEvent) => {
       if (kind === "sidebar") {
-        setSidebarWidth(
-          Math.min(390, Math.max(210, base + e.clientX - startX)),
-        );
+        setSidebarWidth(Math.min(390, Math.max(210, base + e.clientX - startX)));
       }
       if (kind === "inspector") {
-        setInspectorWidth(
-          Math.min(520, Math.max(260, base + startX - e.clientX)),
-        );
+        setInspectorWidth(Math.min(520, Math.max(260, base + startX - e.clientX)));
       }
       if (kind === "evidence") {
-        setEvidenceHeight(
-          Math.min(220, Math.max(70, base + e.clientY - startY)),
-        );
+        setEvidenceHeight(Math.min(220, Math.max(70, base + e.clientY - startY)));
       }
     };
     const up = () => {
@@ -503,7 +495,7 @@ ${task?.goal || config.goal}
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
   };
-  const clampZoom = (value: number) => Math.min(1.6, Math.max(.55, value));
+  const clampZoom = (value: number) => Math.min(1.6, Math.max(0.55, value));
   const startCanvasPan = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.target !== event.currentTarget) return;
     event.preventDefault();
@@ -521,10 +513,7 @@ ${task?.goal || config.goal}
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
   };
-  const startNodeDrag = (
-    node: WorkflowNodeState,
-    event: React.PointerEvent<HTMLButtonElement>,
-  ) => {
+  const startNodeDrag = (node: WorkflowNodeState, event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
     if (event.shiftKey) {
@@ -623,12 +612,8 @@ ${task?.goal || config.goal}
         extraTaskNames={extraTasks}
         uploadedFileNames={uploadedFiles}
         statusLabels={statusLabel}
-        onOpenProjectPicker={() =>
-          setModal({ kind: "projects", title: "切换项目" })
-        }
-        onCreateTask={() =>
-          setModal({ kind: "new-task", title: "新建科研任务" })
-        }
+        onOpenProjectPicker={() => setModal({ kind: "projects", title: "切换项目" })}
+        onCreateTask={() => setModal({ kind: "new-task", title: "新建科研任务" })}
         onSelectTask={selectTask}
         onUploadFile={() => setModal({ kind: "upload", title: "上传项目文件" })}
         onOpenFile={(fileName, fileDetail) =>
@@ -648,11 +633,7 @@ ${task?.goal || config.goal}
               <i /> 智能体运行 39 秒
             </span>
             <button onClick={shareTask}>分享</button>
-            <button
-              onClick={() => setModal({ kind: "layout", title: "工作区布局" })}
-            >
-              布局
-            </button>
+            <button onClick={() => setModal({ kind: "layout", title: "工作区布局" })}>布局</button>
           </div>
         </header>
         <div className="goal-strip">
@@ -667,24 +648,14 @@ ${task?.goal || config.goal}
             <button className="secondary" onClick={() => setConfigOpen(true)}>
               配置
             </button>
-            <button
-              className="secondary"
-              onClick={() => setPlanOpen((v) => !v)}
-            >
+            <button className="secondary" onClick={() => setPlanOpen((current) => !current)}>
               {planOpen ? "收起计划" : "分析计划"}
             </button>
-            <button
-              className="secondary"
-              onClick={() => setMobilePanel(!mobilePanel)}
-            >
+            <button className="secondary" onClick={() => setMobilePanel(!mobilePanel)}>
               工具
             </button>
             {task.status === "running" && (
-              <button
-                className="secondary danger"
-                onClick={cancel}
-                disabled={cancellingRun}
-              >
+              <button className="secondary danger" onClick={cancel} disabled={cancellingRun}>
                 {cancellingRun ? "取消中…" : "取消"}
               </button>
             )}
@@ -696,10 +667,7 @@ ${task?.goal || config.goal}
         <div className="dialogue-thread">
           <div className="user-message">
             <small>你 · 刚刚</small>
-            <p>
-              我有 RNA-seq
-              数据，希望比较处理组与对照组，找出显著差异基因并生成火山图。
-            </p>
+            <p>我有 RNA-seq 数据，希望比较处理组与对照组，找出显著差异基因并生成火山图。</p>
           </div>
           <div className="agent-message">
             <div className="assistant-avatar">✦</div>
@@ -708,10 +676,7 @@ ${task?.goal || config.goal}
               <p>
                 可以。我会先检查项目文件，再确认数据格式、实验设计和交付要求，然后生成一份可审批的分析计划。
               </p>
-              <button
-                className="trace-chip"
-                onClick={() => setTraceOpen((v) => !v)}
-              >
+              <button className="trace-chip" onClick={() => setTraceOpen((current) => !current)}>
                 {traceOpen ? "收起执行轨迹" : "✓ 已检查项目文件 · 查看执行轨迹"}
               </button>
             </div>
@@ -726,23 +691,23 @@ ${task?.goal || config.goal}
             <b>证据流水线</b>
             <small>智能体决策追踪</small>
           </div>
-          {events.map((e) => (
+          {events.map((timelineEvent) => (
             <button
-              key={e.id}
-              className={`evidence-step ${e.state}`}
+              key={timelineEvent.id}
+              className={`evidence-step ${timelineEvent.state}`}
               onClick={() => openTool("evidence")}
             >
-              <span className="phase">{e.phase}</span>
+              <span className="phase">{timelineEvent.phase}</span>
               <span>
-                <b>{e.title}</b>
-                <small>{e.detail}</small>
+                <b>{timelineEvent.title}</b>
+                <small>{timelineEvent.detail}</small>
               </span>
-              <em>{e.time}</em>
+              <em>{timelineEvent.time}</em>
             </button>
           ))}
           <div
             className="horizontal-splitter"
-            onPointerDown={(e) => startResize("evidence", e)}
+            onPointerDown={(pointerEvent) => startResize("evidence", pointerEvent)}
             title="拖拽调整证据区高度"
           />
         </div>
@@ -767,10 +732,7 @@ ${task?.goal || config.goal}
               <div>
                 <small>分析计划待确认</small>
                 <h2>RNA-seq 候选基因分析工作流</h2>
-                <p>
-                  共 6 步 · 预计 2 分 30 秒 · 已绑定 3 个证据来源 ·
-                  不向外部传输数据
-                </p>
+                <p>共 6 步 · 预计 2 分 30 秒 · 已绑定 3 个证据来源 · 不向外部传输数据</p>
               </div>
               <span className="status-pill blocked">等待审批</span>
             </div>
@@ -783,17 +745,10 @@ ${task?.goal || config.goal}
               <span>06 撰写科研报告</span>
             </div>
             <div className="approval-actions">
-              <button
-                className="secondary"
-                onClick={() => openTool("evidence")}
-              >
+              <button className="secondary" onClick={() => openTool("evidence")}>
                 查看证据
               </button>
-              <button
-                className="primary"
-                onClick={approvePlan}
-                disabled={approvingPlan}
-              >
+              <button className="primary" onClick={approvePlan} disabled={approvingPlan}>
                 {approvingPlan ? "审批中…" : "批准并执行 →"}
               </button>
             </div>
@@ -814,9 +769,7 @@ ${task?.goal || config.goal}
           onCanvasPanStart={startCanvasPan}
           onCanvasWheel={(event) => {
             event.preventDefault();
-            setCanvasZoom((value) =>
-              clampZoom(value + (event.deltaY < 0 ? 0.08 : -0.08)),
-            );
+            setCanvasZoom((value) => clampZoom(value + (event.deltaY < 0 ? 0.08 : -0.08)));
           }}
           onNodePointerDown={startNodeDrag}
         />
@@ -830,11 +783,12 @@ ${task?.goal || config.goal}
           onSendMessage={sendMessage}
           onAddFile={() => setModal({ kind: "upload", title: "添加项目文件" })}
           onAgentModeChange={() => {
-            const nextMode = agentMode === "标准模式"
-              ? "严谨模式"
-              : agentMode === "严谨模式"
-              ? "快速模式"
-              : "标准模式";
+            const nextMode =
+              agentMode === "标准模式"
+                ? "严谨模式"
+                : agentMode === "严谨模式"
+                  ? "快速模式"
+                  : "标准模式";
             setAgentMode(nextMode);
             notify(`已切换为${nextMode}`);
           }}
@@ -846,11 +800,12 @@ ${task?.goal || config.goal}
         />
       </section>
       <nav className="tool-dock" aria-label="研究工具">
-        {[["todo", "待办", "☷"], ["results", "结果", "▧"], [
-          "compute",
-          "计算",
-          "◉",
-        ], ["notes", "笔记", "✎"]].map(([key, label, icon]) => (
+        {[
+          ["todo", "待办", "☷"],
+          ["results", "结果", "▧"],
+          ["compute", "计算", "◉"],
+          ["notes", "笔记", "✎"],
+        ].map(([key, label, icon]) => (
           <button
             key={key}
             className={tab === key && mobilePanel ? "active" : ""}
@@ -874,7 +829,7 @@ ${task?.goal || config.goal}
       <InspectorDrawer
         isOpen={mobilePanel}
         activeTab={tab}
-        selectedNode={node}
+        selectedNode={selectedNode}
         statusLabels={statusLabel}
         answers={answers}
         liveLogs={liveLogs}
@@ -891,9 +846,7 @@ ${task?.goal || config.goal}
           setMobilePanel(false);
           notify(`已定位到${clarificationQuestions[questionIndex].label}`);
         }}
-        onOpenSource={(title, detail) =>
-          setModal({ kind: "source", title, detail })
-        }
+        onOpenSource={(title, detail) => setModal({ kind: "source", title, detail })}
         onRetry={retry}
         onRunDemo={runDemo}
         onDownloadVolcano={downloadVolcano}
@@ -903,9 +856,7 @@ ${task?.goal || config.goal}
           notify("已定位到结果血缘中的来源节点");
         }}
         onResidueSelect={setSelectedResidue}
-        onOpenMolstar={() =>
-          notify("当前为轻量 3D 预览；接入 Mol* 后将在此打开完整结构查看器")
-        }
+        onOpenMolstar={() => notify("当前为轻量 3D 预览；接入 Mol* 后将在此打开完整结构查看器")}
         onDownloadReport={downloadReport}
         onNotify={notify}
         onResizeStart={(event) => startResize("inspector", event)}
@@ -922,9 +873,7 @@ ${task?.goal || config.goal}
             setModal(null);
             notify(`已切换到${nextProjectName}`);
           }}
-          onSelectSkill={(skillName, skillState) =>
-            notify(`${skillName}：${skillState}`)
-          }
+          onSelectSkill={(skillName, skillState) => notify(`${skillName}：${skillState}`)}
           onOpenFile={(fileName, detail) => setModal({ kind: "file", title: fileName, detail })}
           onNewTaskNameChange={setNewTaskName}
           onCreateTask={createTask}
@@ -978,11 +927,8 @@ ${task?.goal || config.goal}
           saving={configSaving}
         />
       )}
-      <button
-        className="mobile-inspector-trigger"
-        onClick={() => setMobilePanel(true)}
-      >
-        检查器 · {node?.label}
+      <button className="mobile-inspector-trigger" onClick={() => setMobilePanel(true)}>
+        检查器 · {selectedNode?.label}
       </button>
     </main>
   );

@@ -11,11 +11,7 @@ type ArtifactLineageProps = {
 };
 
 /** 展示 Artifact 的输入、参数、方法、证据和输出，承担结果可解释性入口。 */
-export function ArtifactLineage({
-  artifact,
-  onOpenNode,
-  onOpenEvidence,
-}: ArtifactLineageProps) {
+export function ArtifactLineage({ artifact, onOpenNode, onOpenEvidence }: ArtifactLineageProps) {
   const [expanded, setExpanded] = useState(false);
   const [parameterSnapshotOpen, setParameterSnapshotOpen] = useState(false);
   const parameters = Object.entries(artifact.parameters || {});
@@ -33,10 +29,7 @@ export function ArtifactLineage({
       </div>
 
       <p>{(artifact.lineage || []).map((step) => step.label).join(" → ")}</p>
-      <button
-        className="parameter-snapshot-trigger"
-        onClick={() => setParameterSnapshotOpen(true)}
-      >
+      <button className="parameter-snapshot-trigger" onClick={() => setParameterSnapshotOpen(true)}>
         查看运行参数快照
       </button>
 
@@ -49,15 +42,9 @@ export function ArtifactLineage({
                 <b>{step.label}</b>
                 <small>{step.detail}</small>
               </div>
-              {step.nodeId && (
-                <button onClick={() => onOpenNode(step.nodeId!)}>定位节点</button>
-              )}
+              {step.nodeId && <button onClick={() => onOpenNode(step.nodeId!)}>定位节点</button>}
               {step.evidenceTitle && (
-                <button
-                  onClick={() =>
-                    onOpenEvidence(step.evidenceTitle!, step.detail)
-                  }
-                >
+                <button onClick={() => onOpenEvidence(step.evidenceTitle!, step.detail)}>
                   查看证据
                 </button>
               )}
@@ -89,10 +76,7 @@ export function ArtifactLineage({
                   <small>只读快照 · {artifact.version}</small>
                   <h3 id="parameter-dialog-title">运行参数</h3>
                 </div>
-                <button
-                  aria-label="关闭参数快照"
-                  onClick={() => setParameterSnapshotOpen(false)}
-                >
+                <button aria-label="关闭参数快照" onClick={() => setParameterSnapshotOpen(false)}>
                   ×
                 </button>
               </div>

@@ -22,9 +22,7 @@ export const defaultDemoConfig: DemoConfig = {
   codeChunkMs: 8,
 };
 
-export function normalizeDemoConfig(
-  input: Partial<DemoConfig> = {},
-): DemoConfig {
+export function normalizeDemoConfig(input: Partial<DemoConfig> = {}): DemoConfig {
   const delay = Number(input.runnerDelayMs ?? defaultDemoConfig.runnerDelayMs);
   const chunk = Number(input.codeChunkMs ?? defaultDemoConfig.codeChunkMs);
   return {
@@ -34,23 +32,14 @@ export function normalizeDemoConfig(
       1,
       Math.round(Number(input.sampleCount ?? defaultDemoConfig.sampleCount)),
     ),
-    geneCount: Math.max(
-      1,
-      Math.round(Number(input.geneCount ?? defaultDemoConfig.geneCount)),
-    ),
+    geneCount: Math.max(1, Math.round(Number(input.geneCount ?? defaultDemoConfig.geneCount))),
     runnerDelayMs: Math.min(
       12000,
-      Math.max(
-        500,
-        Number.isFinite(delay) ? delay : defaultDemoConfig.runnerDelayMs,
-      ),
+      Math.max(500, Number.isFinite(delay) ? delay : defaultDemoConfig.runnerDelayMs),
     ),
     codeChunkMs: Math.min(
       80,
-      Math.max(
-        1,
-        Number.isFinite(chunk) ? chunk : defaultDemoConfig.codeChunkMs,
-      ),
+      Math.max(1, Number.isFinite(chunk) ? chunk : defaultDemoConfig.codeChunkMs),
     ),
     failAt: input.failAt === "none" ? "none" : "design",
   };

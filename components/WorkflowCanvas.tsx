@@ -28,10 +28,7 @@ type WorkflowCanvasProps = {
   onReset: () => void;
   onCanvasPanStart: (event: PointerEvent<HTMLDivElement>) => void;
   onCanvasWheel: (event: WheelEvent<HTMLDivElement>) => void;
-  onNodePointerDown: (
-    node: WorkflowNode,
-    event: PointerEvent<HTMLButtonElement>,
-  ) => void;
+  onNodePointerDown: (node: WorkflowNode, event: PointerEvent<HTMLButtonElement>) => void;
 };
 
 /**
@@ -54,9 +51,7 @@ export function WorkflowCanvas({
   onNodePointerDown,
 }: WorkflowCanvasProps) {
   const updateZoom = (delta: number) => {
-    onZoomChange((value) =>
-      Math.min(1.6, Math.max(0.55, value + delta)),
-    );
+    onZoomChange((value) => Math.min(1.6, Math.max(0.55, value + delta)));
   };
 
   return (
@@ -94,11 +89,7 @@ export function WorkflowCanvas({
             transform: `translate(${canvasPan.x}px,${canvasPan.y}px) scale(${canvasZoom})`,
           }}
         >
-          <svg
-            className="edges"
-            viewBox="0 0 1000 500"
-            preserveAspectRatio="none"
-          >
+          <svg className="edges" viewBox="0 0 1000 500" preserveAspectRatio="none">
             {[...edges, ...extraEdges].map(([from, to]) => {
               const source = nodes.find((node) => node.id === from);
               const target = nodes.find((node) => node.id === to);
@@ -137,19 +128,19 @@ export function WorkflowCanvas({
                     {node.kind === "artifact"
                       ? "▧"
                       : node.kind === "gate"
-                      ? "◇"
-                      : node.kind === "input"
-                      ? "⇩"
-                      : "◉"}
+                        ? "◇"
+                        : node.kind === "input"
+                          ? "⇩"
+                          : "◉"}
                   </span>
                   <span className="node-status">
                     {node.status === "succeeded"
                       ? "✓"
                       : node.status === "failed"
-                      ? "!"
-                      : node.status === "running"
-                      ? "◌"
-                      : "·"}
+                        ? "!"
+                        : node.status === "running"
+                          ? "◌"
+                          : "·"}
                   </span>
                 </div>
                 <b>{node.label}</b>
@@ -159,9 +150,7 @@ export function WorkflowCanvas({
                     <i />
                   </div>
                 )}
-                {node.status === "failed" && (
-                  <span className="fix-hint">需要处理</span>
-                )}
+                {node.status === "failed" && <span className="fix-hint">需要处理</span>}
               </button>
             );
           })}

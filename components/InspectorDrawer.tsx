@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, type PointerEvent as ReactPointerEvent } from "react";
-import {
-  clarificationQuestions,
-  type ClarificationAnswers,
-} from "@/components/ClarificationCard";
+import { clarificationQuestions, type ClarificationAnswers } from "@/components/ClarificationCard";
 import { KnowledgeGraph } from "@/components/KnowledgeGraph";
 import { ResultsPanel } from "@/components/results/ResultsPanel";
 import { ProteinStructureViewer } from "@/components/structure/ProteinStructureViewer";
@@ -104,16 +101,18 @@ export function InspectorDrawer({
         <div>
           <small>研究工具</small>
           <b>
-            {{
-              todo: "任务待办",
-              results: "结果产物",
-              compute: "计算资源",
-              notes: "研究笔记",
-              evidence: "证据依据",
-              logs: "运行日志",
-              code: "分析代码",
-              structure: "3D 结构",
-            }[activeTab]}
+            {
+              {
+                todo: "任务待办",
+                results: "结果产物",
+                compute: "计算资源",
+                notes: "研究笔记",
+                evidence: "证据依据",
+                logs: "运行日志",
+                code: "分析代码",
+                structure: "3D 结构",
+              }[activeTab]
+            }
           </b>
         </div>
         <button className="close-inspector" onClick={onClose} aria-label="关闭工具抽屉">
@@ -144,10 +143,7 @@ export function InspectorDrawer({
             <span>{completedQuestionCount} / 4 已完成</span>
           </div>
           {clarificationQuestions.map((question, questionIndex) => (
-            <button
-              key={question.key}
-              onClick={() => onSelectQuestion(questionIndex)}
-            >
+            <button key={question.key} onClick={() => onSelectQuestion(questionIndex)}>
               <i>{answers[question.key] ? "✓" : "○"}</i>
               <span>
                 <b>{question.label}</b>
@@ -160,7 +156,8 @@ export function InspectorDrawer({
       {activeTab === "compute" && (
         <div className="tool-view compute-view">
           <div className="compute-status">
-            <i />计算环境待命
+            <i />
+            计算环境待命
           </div>
           <h3>标准分析环境</h3>
           <p>4 vCPU · 16 GB 内存 · Python / R</p>
@@ -182,11 +179,13 @@ export function InspectorDrawer({
       )}
       {activeTab === "notes" && (
         <div className="tool-view notes-view">
-          <textarea defaultValue={`研究备注
+          <textarea
+            defaultValue={`研究备注
 
 • 比较处理组与对照组
 • 优先关注 FDR < 0.05 的基因
-• 输出可发表火山图与方法说明`} />
+• 输出可发表火山图与方法说明`}
+          />
           <small>笔记保存在当前任务上下文中</small>
         </div>
       )}
@@ -201,9 +200,7 @@ export function InspectorDrawer({
           </div>
           <div className="explain-card">
             <span>✦ 为什么需要这一步？</span>
-            <p>
-              这一步会在统计分析前校验样本结构，避免分组误配，并保证最终报告可复现。
-            </p>
+            <p>这一步会在统计分析前校验样本结构，避免分组误配，并保证最终报告可复现。</p>
           </div>
           <div className="source-list">
             <h3>
@@ -250,16 +247,14 @@ export function InspectorDrawer({
           <div className="log-live">
             <i /> 实时事件流
           </div>
-          {(liveLogs.length ? liveLogs : ["等待运行事件…"]).map(
-            (logLine, logIndex) => (
-              <p
-                key={`${logLine}${logIndex}`}
-                className={logLine.includes("failed") ? "log-error" : ""}
-              >
-                {logLine}
-              </p>
-            ),
-          )}
+          {(liveLogs.length ? liveLogs : ["等待运行事件…"]).map((logLine, logIndex) => (
+            <p
+              key={`${logLine}${logIndex}`}
+              className={logLine.includes("failed") ? "log-error" : ""}
+            >
+              {logLine}
+            </p>
+          ))}
         </div>
       )}
       {activeTab === "code" && (

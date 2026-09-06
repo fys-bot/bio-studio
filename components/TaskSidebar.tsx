@@ -58,9 +58,7 @@ export function TaskSidebar({
         <button onClick={onCreateTask}>＋ 新建任务</button>
       </div>
       <button
-        className={`task-item task-button ${
-          activeTaskId === "rna" ? "selected" : ""
-        }`}
+        className={`task-item task-button ${activeTaskId === "rna" ? "selected" : ""}`}
         onClick={() => onSelectTask("rna", task.title)}
       >
         <i className="dot yellow" />
@@ -72,9 +70,7 @@ export function TaskSidebar({
         </div>
       </button>
       <button
-        className={`task-item task-button ${
-          activeTaskId === "literature" ? "selected" : ""
-        }`}
+        className={`task-item task-button ${activeTaskId === "literature" ? "selected" : ""}`}
         onClick={() => onSelectTask("literature", "文献证据图谱", "evidence")}
       >
         <i className="dot blue" />
@@ -84,9 +80,7 @@ export function TaskSidebar({
         </div>
       </button>
       <button
-        className={`task-item task-button ${
-          activeTaskId === "structure" ? "selected" : ""
-        }`}
+        className={`task-item task-button ${activeTaskId === "structure" ? "selected" : ""}`}
         onClick={() => onSelectTask("structure", "蛋白质结构预览", "structure")}
       >
         <i className="dot gray" />
@@ -118,10 +112,7 @@ export function TaskSidebar({
       <button
         className="dataset dataset-button"
         onClick={() =>
-          onOpenFile(
-            "counts.csv",
-            "RNA-seq 计数矩阵 · 2.4 MB · 24 个样本 · 18,432 个基因",
-          )
+          onOpenFile("counts.csv", "RNA-seq 计数矩阵 · 2.4 MB · 24 个样本 · 18,432 个基因")
         }
       >
         <span className="file-icon">CSV</span>

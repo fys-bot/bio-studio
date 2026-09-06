@@ -130,8 +130,7 @@ export function useProteinStructureRenderer({
         }))
         .filter((candidate) => candidate.distance <= 10)
         .sort(
-          (firstCandidate, secondCandidate) =>
-            firstCandidate.distance - secondCandidate.distance,
+          (firstCandidate, secondCandidate) => firstCandidate.distance - secondCandidate.distance,
         )[0]?.point || null
     );
   };

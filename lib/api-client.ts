@@ -18,12 +18,7 @@ export class ApiClientError extends Error {
   readonly code: ApiErrorCode;
   readonly retryable: boolean;
 
-  constructor(
-    message: string,
-    status: number,
-    code: ApiErrorCode,
-    retryable: boolean,
-  ) {
+  constructor(message: string, status: number, code: ApiErrorCode, retryable: boolean) {
     super(message);
     this.name = "ApiClientError";
     this.status = status;
@@ -89,9 +84,8 @@ async function requestJson<ResponsePayload extends object>(
 
       if (!response.ok) {
         const code = classifyStatus(response.status);
-        const serverMessage = "error" in payload && payload.error
-          ? payload.error
-          : `请求失败（${response.status}）`;
+        const serverMessage =
+          "error" in payload && payload.error ? payload.error : `请求失败（${response.status}）`;
         throw new ApiClientError(
           toUserMessage(code, serverMessage),
           response.status,
@@ -102,14 +96,10 @@ async function requestJson<ResponsePayload extends object>(
 
       return payload as ResponsePayload;
     } catch (error) {
-      const normalizedError = error instanceof ApiClientError
-        ? error
-        : new ApiClientError(
-            "服务暂时不可用，请稍后重试",
-            0,
-            "NETWORK",
-            true,
-          );
+      const normalizedError =
+        error instanceof ApiClientError
+          ? error
+          : new ApiClientError("服务暂时不可用，请稍后重试", 0, "NETWORK", true);
       if (!normalizedError.retryable || attempt === maxAttempts) {
         throw normalizedError;
       }

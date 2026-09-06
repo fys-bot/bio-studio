@@ -1,10 +1,6 @@
 "use client";
 
-import type {
-  ChangeEvent,
-  FormEvent,
-  KeyboardEvent,
-} from "react";
+import type { ChangeEvent, FormEvent, KeyboardEvent } from "react";
 
 type AgentMode = "标准模式" | "严谨模式" | "快速模式";
 
@@ -58,19 +54,13 @@ export function ConversationPanel({
   return (
     <div className="conversation">
       {sentMessages.map((messageText, messageIndex) => (
-        <div
-          className="user-message sent-message"
-          key={`sent-${messageIndex}-${messageText}`}
-        >
+        <div className="user-message sent-message" key={`sent-${messageIndex}-${messageText}`}>
           <small>你 · 刚刚</small>
           <p>{messageText}</p>
         </div>
       ))}
       {agentReplies.map((replyText, replyIndex) => (
-        <div
-          className="agent-message reply-message"
-          key={`reply-${replyIndex}-${replyText}`}
-        >
+        <div className="agent-message reply-message" key={`reply-${replyIndex}-${replyText}`}>
           <div className="assistant-avatar">✦</div>
           <div>
             <small>BioFlow 智能体 · 刚刚</small>
@@ -82,8 +72,8 @@ export function ConversationPanel({
         <div className="message failure-message">
           <small>BioFlow 智能体 · 刚刚</small>
           <p>
-            在运行 DESeq2 前发现元数据问题：映射中缺少{" "}
-            <code>condition</code> 字段，4 个下游产物已暂停。
+            在运行 DESeq2 前发现元数据问题：映射中缺少 <code>condition</code> 字段，4
+            个下游产物已暂停。
           </p>
           <div className="message-actions">
             <button onClick={onOpenFailureEvidence}>查看失败原因</button>

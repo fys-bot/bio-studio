@@ -100,7 +100,9 @@ export function StreamingCodePanel({
       <div className="code-actions">
         <button onClick={copyCode}>复制代码</button>
         <button onClick={downloadCode}>下载 .py</button>
-        <button onClick={onRunDemo} disabled={running || streaming}>重新生成</button>
+        <button onClick={onRunDemo} disabled={running || streaming}>
+          重新生成
+        </button>
       </div>
 
       <section className="code-lineage-card">
@@ -109,9 +111,18 @@ export function StreamingCodePanel({
           <b>{codeArtifact?.version || "草稿"} · DESeq2</b>
         </div>
         <dl>
-          <div><dt>设计公式</dt><dd>~ condition + batch</dd></div>
-          <div><dt>统计方法</dt><dd>negative binomial</dd></div>
-          <div><dt>结果绑定</dt><dd>volcano_plot.svg</dd></div>
+          <div>
+            <dt>设计公式</dt>
+            <dd>~ condition + batch</dd>
+          </div>
+          <div>
+            <dt>统计方法</dt>
+            <dd>negative binomial</dd>
+          </div>
+          <div>
+            <dt>结果绑定</dt>
+            <dd>volcano_plot.svg</dd>
+          </div>
         </dl>
         <div className="code-lineage-actions">
           <button onClick={() => onOpenNode("de")}>定位生成节点</button>

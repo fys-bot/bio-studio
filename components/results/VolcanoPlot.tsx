@@ -13,11 +13,7 @@ type VolcanoPlotProps = {
  * 可访问的交互式火山图。候选点坐标来自运行结果，背景点仅用于表达总体分布。
  * 鼠标、触控和键盘共享同一个选中状态，方便在面试演示中呈现图表联动能力。
  */
-export function VolcanoPlot({
-  genes,
-  selectedGeneSymbol,
-  onSelectGene,
-}: VolcanoPlotProps) {
+export function VolcanoPlot({ genes, selectedGeneSymbol, onSelectGene }: VolcanoPlotProps) {
   const [hoveredGeneSymbol, setHoveredGeneSymbol] = useState<string | null>(null);
   const activeGene = genes.find(
     (gene) => gene.symbol === (hoveredGeneSymbol || selectedGeneSymbol),
@@ -58,9 +54,7 @@ export function VolcanoPlot({
           return (
             <g
               key={gene.symbol}
-              className={`volcano-gene-point ${gene.direction} ${
-                isActive ? "active" : ""
-              }`}
+              className={`volcano-gene-point ${gene.direction} ${isActive ? "active" : ""}`}
               role="button"
               tabIndex={0}
               aria-label={`${gene.symbol}，FDR ${gene.fdr}，log2 倍数变化 ${gene.log2FoldChange}`}
@@ -93,9 +87,18 @@ export function VolcanoPlot({
       </svg>
 
       <div className="volcano-legend" aria-hidden="true">
-        <span><i className="up" />上调</span>
-        <span><i className="down" />下调</span>
-        <span><i className="background" />未显著</span>
+        <span>
+          <i className="up" />
+          上调
+        </span>
+        <span>
+          <i className="down" />
+          下调
+        </span>
+        <span>
+          <i className="background" />
+          未显著
+        </span>
       </div>
 
       {activeGene && (
@@ -105,7 +108,10 @@ export function VolcanoPlot({
           </span>
           <b>{activeGene.symbol}</b>
           <span>FDR {activeGene.fdr}</span>
-          <span>log₂FC {activeGene.log2FoldChange > 0 ? "+" : ""}{activeGene.log2FoldChange}</span>
+          <span>
+            log₂FC {activeGene.log2FoldChange > 0 ? "+" : ""}
+            {activeGene.log2FoldChange}
+          </span>
         </div>
       )}
     </div>

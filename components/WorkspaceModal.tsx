@@ -54,9 +54,7 @@ export function WorkspaceModal({
   onConfirmDetail,
 }: WorkspaceModalProps) {
   const handleUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    const fileNames = Array.from(event.target.files || []).map(
-      (file) => file.name,
-    );
+    const fileNames = Array.from(event.target.files || []).map((file) => file.name);
     if (fileNames.length) onUploadFiles(fileNames);
   };
 
@@ -95,9 +93,7 @@ export function WorkspaceModal({
                   <div>
                     <b>{availableProjectName}</b>
                     <small>
-                      {availableProjectName === projectName
-                        ? "当前项目"
-                        : "点击切换项目"}
+                      {availableProjectName === projectName ? "当前项目" : "点击切换项目"}
                     </small>
                   </div>
                   <em>{availableProjectName === projectName ? "✓" : "→"}</em>
@@ -113,10 +109,7 @@ export function WorkspaceModal({
               ["RAG 证据检索", "已启用"],
               ["蛋白质结构分析", "可用"],
             ].map(([skillName, skillState]) => (
-              <button
-                key={skillName}
-                onClick={() => onSelectSkill(skillName, skillState)}
-              >
+              <button key={skillName} onClick={() => onSelectSkill(skillName, skillState)}>
                 <span>◇</span>
                 <div>
                   <b>{skillName}</b>
@@ -129,28 +122,26 @@ export function WorkspaceModal({
         )}
         {modal.kind === "files" && (
           <div className="modal-list">
-            {["counts.csv", "sample_metadata.tsv", ...uploadedFileNames].map(
-              (fileName) => (
-                <button
-                  key={fileName}
-                  onClick={() =>
-                    onOpenFile(
-                      fileName,
-                      fileName.endsWith(".csv")
-                        ? "RNA-seq 计数矩阵 · 24 个样本"
-                        : "项目文件 · 可供智能体检索与分析",
-                    )
-                  }
-                >
-                  <span>▧</span>
-                  <div>
-                    <b>{fileName}</b>
-                    <small>本地项目空间</small>
-                  </div>
-                  <em>查看</em>
-                </button>
-              ),
-            )}
+            {["counts.csv", "sample_metadata.tsv", ...uploadedFileNames].map((fileName) => (
+              <button
+                key={fileName}
+                onClick={() =>
+                  onOpenFile(
+                    fileName,
+                    fileName.endsWith(".csv")
+                      ? "RNA-seq 计数矩阵 · 24 个样本"
+                      : "项目文件 · 可供智能体检索与分析",
+                  )
+                }
+              >
+                <span>▧</span>
+                <div>
+                  <b>{fileName}</b>
+                  <small>本地项目空间</small>
+                </div>
+                <em>查看</em>
+              </button>
+            ))}
           </div>
         )}
         {modal.kind === "new-task" && (
@@ -235,9 +226,7 @@ export function WorkspaceModal({
             </dl>
             <button
               className="primary full"
-              onClick={() =>
-                onConfirmDetail(modal.kind === "source" ? "source" : "file")
-              }
+              onClick={() => onConfirmDetail(modal.kind === "source" ? "source" : "file")}
             >
               确认
             </button>

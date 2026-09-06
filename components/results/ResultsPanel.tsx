@@ -35,10 +35,7 @@ export function ResultsPanel({
   const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
   const volcanoArtifact = artifacts.find((artifact) => artifact.kind === "chart");
   const reportArtifact = artifacts.find((artifact) => artifact.kind === "report");
-  const candidateGenes = useMemo(
-    () => volcanoArtifact?.candidateGenes || [],
-    [volcanoArtifact],
-  );
+  const candidateGenes = useMemo(() => volcanoArtifact?.candidateGenes || [], [volcanoArtifact]);
 
   if (!volcanoArtifact) {
     return (
@@ -103,16 +100,15 @@ export function ResultsPanel({
         </div>
         {candidateGenes.map((gene) => (
           <button
-            className={`candidate-row ${
-              selectedGeneSymbol === gene.symbol ? "active" : ""
-            }`}
+            className={`candidate-row ${selectedGeneSymbol === gene.symbol ? "active" : ""}`}
             key={gene.symbol}
             onClick={() => onSelectGene(gene.symbol)}
           >
             <b>{gene.symbol}</b>
             <span>FDR {gene.fdr}</span>
             <em className={gene.direction}>
-              {gene.log2FoldChange > 0 ? "+" : ""}{gene.log2FoldChange}
+              {gene.log2FoldChange > 0 ? "+" : ""}
+              {gene.log2FoldChange}
             </em>
           </button>
         ))}

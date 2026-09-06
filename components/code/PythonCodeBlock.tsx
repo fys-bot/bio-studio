@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 
-const tokenPattern = /(#.*$|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\b(?:assert|as|def|else|for|from|if|import|in|return)\b|\b\d+(?:\.\d+)?\b)/g;
-const highlightedTokenPattern = /^(#.*|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|(?:assert|as|def|else|for|from|if|import|in|return)|\d+(?:\.\d+)?)$/;
+const tokenPattern =
+  /(#.*$|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\b(?:assert|as|def|else|for|from|if|import|in|return)\b|\b\d+(?:\.\d+)?\b)/g;
+const highlightedTokenPattern =
+  /^(#.*|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|(?:assert|as|def|else|for|from|if|import|in|return)|\d+(?:\.\d+)?)$/;
 
 function classifyToken(token: string) {
   if (token.startsWith("#")) return "comment";
@@ -11,15 +13,18 @@ function classifyToken(token: string) {
 }
 
 function highlightLine(line: string): ReactNode[] {
-  return line.split(tokenPattern).filter(Boolean).map((token, tokenIndex) =>
-    highlightedTokenPattern.test(token) ? (
-      <span className={`code-token ${classifyToken(token)}`} key={`${token}-${tokenIndex}`}>
-        {token}
-      </span>
-    ) : (
-      <span key={`${token}-${tokenIndex}`}>{token}</span>
-    ),
-  );
+  return line
+    .split(tokenPattern)
+    .filter(Boolean)
+    .map((token, tokenIndex) =>
+      highlightedTokenPattern.test(token) ? (
+        <span className={`code-token ${classifyToken(token)}`} key={`${token}-${tokenIndex}`}>
+          {token}
+        </span>
+      ) : (
+        <span key={`${token}-${tokenIndex}`}>{token}</span>
+      ),
+    );
 }
 
 type PythonCodeBlockProps = {

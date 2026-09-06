@@ -1,10 +1,6 @@
 "use client";
 
-export type ClarificationKey =
-  | "format"
-  | "comparison"
-  | "organism"
-  | "deliverable";
+export type ClarificationKey = "format" | "comparison" | "organism" | "deliverable";
 
 export type ClarificationAnswers = Record<ClarificationKey, string>;
 
@@ -94,10 +90,10 @@ export function ClarificationCard({
         <span className="gate-progress">已完成 {completed} / 4</span>
       </div>
       <div className="question-nav">
-          {clarificationQuestions.map((item, index) => (
-            <button
-              key={item.key}
-              disabled={submitting}
+        {clarificationQuestions.map((item, index) => (
+          <button
+            key={item.key}
+            disabled={submitting}
             className={`${activeQuestion === index ? "active" : ""} ${
               answers[item.key] ? "answered" : ""
             }`}
@@ -132,11 +128,7 @@ export function ClarificationCard({
         </div>
       </section>
       <div className="clarification-actions">
-        <span>
-          {completed < 4
-            ? "完成全部选择后生成计划"
-            : "上下文已完整，可以生成分析计划"}
-        </span>
+        <span>{completed < 4 ? "完成全部选择后生成计划" : "上下文已完整，可以生成分析计划"}</span>
         <button
           className="primary"
           onClick={onSubmit}

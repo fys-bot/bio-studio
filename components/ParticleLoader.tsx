@@ -36,14 +36,7 @@ export function ParticleLoader() {
       const centerY = height * 0.42;
       const scale = Math.min(width, height) / 720;
       context.clearRect(0, 0, width, height);
-      const glow = context.createRadialGradient(
-        centerX,
-        centerY,
-        0,
-        centerX,
-        centerY,
-        260 * scale,
-      );
+      const glow = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, 260 * scale);
       glow.addColorStop(0, "rgba(18, 148, 108, .14)");
       glow.addColorStop(1, "rgba(4, 12, 10, 0)");
       context.fillStyle = glow;
@@ -52,12 +45,11 @@ export function ParticleLoader() {
       particles.forEach((particle) => {
         const angle = particle.angle + time * particle.speed;
         const wave = Math.sin(time * 0.001 + particle.phase) * 14 * scale;
-        const x = centerX + Math.cos(angle) * (particle.radius * scale + wave);
-        const y = centerY + Math.sin(angle) * (particle.radius * scale) * 0.42;
-        const alpha = 0.28 +
-          ((Math.sin(angle * 3 + time * 0.002) + 1) / 2) * 0.68;
+        const particleX = centerX + Math.cos(angle) * (particle.radius * scale + wave);
+        const particleY = centerY + Math.sin(angle) * (particle.radius * scale) * 0.42;
+        const alpha = 0.28 + ((Math.sin(angle * 3 + time * 0.002) + 1) / 2) * 0.68;
         context.fillStyle = `rgba(66, 236, 183, ${alpha})`;
-        context.fillRect(x, y, 1.5 * scale, 1.5 * scale);
+        context.fillRect(particleX, particleY, 1.5 * scale, 1.5 * scale);
       });
 
       animation = requestAnimationFrame(render);
@@ -72,7 +64,5 @@ export function ParticleLoader() {
     };
   }, []);
 
-  return (
-    <canvas ref={canvasRef} className="particle-loader" aria-hidden="true" />
-  );
+  return <canvas ref={canvasRef} className="particle-loader" aria-hidden="true" />;
 }

@@ -10,6 +10,13 @@
 - 浏览器真实点击通过：四步澄清、自动推进、生成分析计划并进入待审批状态。
 - `npm run typecheck`、`npm run build`、`git diff --check` 和完整接口 smoke 均通过。
 
+## 2026-09-06（P1-4 工作流画布组件化）
+
+- 新增 `components/WorkflowCanvas.tsx`，封装工作流节点、SVG 连线、节点拖拽、画布平移、缩放、重置和 Shift 连线提示。
+- 页面继续持有任务状态、节点位置和运行回调，组件只负责可视化与交互事件派发，便于后续替换 React Flow 或真实流程图引擎。
+- 浏览器真实点击通过：打开分析计划、缩小、居中重置、点击“构建设计矩阵”打开证据抽屉。
+- `npm run typecheck`、`npm run build`、`git diff --check` 和 `npm run smoke -- http://127.0.0.1:3012` 均通过。
+
 ## 2026-09-06（P1-1 RAG 与知识图谱可视化）
 
 - 新增独立 `components/KnowledgeGraph.tsx`，将 Agent 检索证据按项目文件、技能包、文献、知识图谱四类分组，避免所有 RAG 逻辑堆在页面文件中。

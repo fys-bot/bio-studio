@@ -8,6 +8,7 @@ import {
   clarificationQuestions,
   ClarificationAnswers,
 } from "@/components/ClarificationCard";
+import { WorkflowCanvas } from "@/components/WorkflowCanvas";
 import { defaultDemoConfig, DemoConfig } from "@/lib/demo-config";
 
 type Node = {
@@ -938,127 +939,27 @@ export default function Home() {
             </div>
           </div>
         )}
-        <div className={`canvas-wrap ${planOpen ? "" : "plan-collapsed"}`}>
-          <div className="canvas-toolbar">
-            <span>
-              分析工作流 / v1.4{" "}
-              <em>
-                {connectingFrom
-                  ? `正在连线：${connectingFrom} → Shift 点击目标节点`
-                  : "拖拽节点 · 拖动画布 · 滚轮缩放 · Shift+点击连线"}
-              </em>
-            </span>
-            <div>
-              <button
-                onClick={() => setCanvasZoom((v) => clampZoom(v - .1))}
-                aria-label="缩小"
-              >
-                −
-              </button>
-              <span>{Math.round(canvasZoom * 100)}%</span>
-              <button
-                onClick={() => setCanvasZoom((v) => clampZoom(v + .1))}
-                aria-label="放大"
-              >
-                ＋
-              </button>
-              <button onClick={resetCanvas} aria-label="居中并重置">⊙</button>
-            </div>
-          </div>
-          <div
-            className="canvas canvas-viewport"
-            onPointerDown={startCanvasPan}
-            onWheel={(e) => {
-              e.preventDefault();
-              setCanvasZoom((v) => clampZoom(v + (e.deltaY < 0 ? .08 : -.08)));
-            }}
-          >
-            <div
-              className="canvas-stage"
-              style={{
-                transform:
-                  `translate(${canvasPan.x}px,${canvasPan.y}px) scale(${canvasZoom})`,
-              }}
-            >
-              <svg
-                className="edges"
-                viewBox="0 0 1000 500"
-                preserveAspectRatio="none"
-              >
-                {[...task.edges, ...extraEdges].map(([a, b]) => {
-                  const source = task.nodes.find((n) => n.id === a)!,
-                    target = task.nodes.find((n) => n.id === b)!,
-                    s = nodePositions[a] || source,
-                    t = nodePositions[b] || target;
-                  return (
-                    <line
-                      key={a + b}
-                      x1={s.x + 170}
-                      y1={s.y + 55}
-                      x2={t.x}
-                      y2={t.y + 55}
-                      className={source.status === "succeeded" &&
-                          target.status !== "blocked"
-                        ? "edge-done"
-                        : "edge"}
-                    />
-                  );
-                })}
-              </svg>
-              {task.nodes.map((n) => {
-                const position = nodePositions[n.id] || n;
-                return (
-                  <button
-                    key={n.id}
-                    className={`node ${n.status} ${
-                      selected === n.id ? "selected" : ""
-                    } ${connectingFrom === n.id ? "connecting" : ""}`}
-                    style={{ left: position.x, top: position.y }}
-                    onPointerDown={(e) => startNodeDrag(n, e)}
-                  >
-                    <div className="node-head">
-                      <span className={`node-icon ${n.kind}`}>
-                        {n.kind === "artifact"
-                          ? "▧"
-                          : n.kind === "gate"
-                          ? "◇"
-                          : n.kind === "input"
-                          ? "⇩"
-                          : "◉"}
-                      </span>
-                      <span className="node-status">
-                        {n.status === "succeeded"
-                          ? "✓"
-                          : n.status === "failed"
-                          ? "!"
-                          : n.status === "running"
-                          ? "◌"
-                          : "·"}
-                      </span>
-                    </div>
-                    <b>{n.label}</b>
-                    <small>{n.detail}</small>
-                    {n.status === "running" && (
-                      <div className="progress">
-                        <i />
-                      </div>
-                    )}
-                    {n.status === "failed" && (
-                      <span className="fix-hint">需要处理</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="minimap">
-            <span />
-            <span />
-            <span />
-            <span />
-            <span />
-          </div>
-        </div>
+        <WorkflowCanvas
+          open={planOpen}
+          nodes={task.nodes}
+          edges={task.edges}
+          extraEdges={extraEdges}
+          selected={selected}
+          connectingFrom={connectingFrom}
+          canvasZoom={canvasZoom}
+          canvasPan={canvasPan}
+          nodePositions={nodePositions}
+          onZoomChange={(update) => setCanvasZoom((value) => clampZoom(update(value)))}
+          onReset={resetCanvas}
+          onCanvasPanStart={startCanvasPan}
+          onCanvasWheel={(event) => {
+            event.preventDefault();
+            setCanvasZoom((value) =>
+              clampZoom(value + (event.deltaY < 0 ? 0.08 : -0.08)),
+            );
+          }}
+          onNodePointerDown={startNodeDrag}
+        />
         <div className="conversation">
           {sentMessages.map((text, i) => (
             <div className="user-message sent-message" key={`${text}-${i}`}>

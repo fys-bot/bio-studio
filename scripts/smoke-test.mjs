@@ -16,8 +16,9 @@ async function request(path, options = {}) {
 const log = (message) => console.log(`✓ ${message}`);
 await request('/api/auth/login', { method: 'POST' });
 log('登录鉴权');
-await request('/api/tasks', { method: 'POST', headers: { origin: base } });
-log('重置演示状态');
+const resetResponse = await fetch(base + '/api/tasks', { method: 'POST', headers: { cookie, origin: base } });
+if (resetResponse.ok) log('重置演示状态');
+else if (resetResponse.status !== 404) throw new Error(`POST /api/tasks -> ${resetResponse.status}`);
 const initial = await request('/api/tasks');
 if (!initial.task) throw new Error('任务快照缺失');
 log(`读取任务：${initial.task.title}`);

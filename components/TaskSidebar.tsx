@@ -118,7 +118,9 @@ export function TaskSidebar({
       <div className="side-divider" />
       <div className="side-title">
         <span>数据集</span>
-        <button onClick={onUploadFile}>＋ 上传</button>
+        <button data-guide="upload" onClick={onUploadFile}>
+          ＋ 上传
+        </button>
       </div>
       <button
         className="dataset dataset-button"

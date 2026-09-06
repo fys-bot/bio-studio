@@ -66,7 +66,7 @@ export function WorkflowCanvas({
   };
 
   return (
-    <div className={`canvas-wrap ${open ? "" : "plan-collapsed"}`}>
+    <div className={`canvas-wrap ${open ? "" : "plan-collapsed"}`} data-guide="workflow">
       <div className="canvas-toolbar">
         <span>
           分析工作流 / v1.{layoutVersionCount}

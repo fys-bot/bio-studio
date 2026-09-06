@@ -12,6 +12,7 @@ import { TaskSidebar } from "@/components/TaskSidebar";
 import { ConversationPanel } from "@/components/ConversationPanel";
 import { InspectorDrawer, type InspectorTab } from "@/components/InspectorDrawer";
 import { WorkspaceModal, type WorkspaceModalState } from "@/components/WorkspaceModal";
+import { ProductGuide } from "@/components/ProductGuide";
 import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
 import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
 import type { DataFileProfile, ResearchTask, WorkflowNodeState } from "@/lib/domain";
@@ -136,6 +137,8 @@ export default function Home() {
   const [config, setConfig] = useState<DemoConfig>(defaultDemoConfig);
   const [configOpen, setConfigOpen] = useState(false);
   const [configSaving, setConfigSaving] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const guideInitializedRef = useRef(false);
   const uploadedFiles = useMemo(
     () => dataProfiles.map((profile) => profile.fileName),
     [dataProfiles],
@@ -164,6 +167,7 @@ export default function Home() {
       if (event.key === "Escape") {
         setMobilePanel(false);
         setModal(null);
+        setGuideOpen(false);
       }
     };
     window.addEventListener("keydown", close);
@@ -174,6 +178,13 @@ export default function Home() {
     const timer = setTimeout(() => setToast(""), 2200);
     return () => clearTimeout(timer);
   }, [toast]);
+  useEffect(() => {
+    if (!authed || !task || guideInitializedRef.current) return;
+    guideInitializedRef.current = true;
+    if (!window.localStorage.getItem("bioflow-studio-guide-v1")) {
+      setGuideOpen(true);
+    }
+  }, [authed, task]);
   useEffect(() => {
     (async () => {
       try {
@@ -714,6 +725,7 @@ ${task?.goal || config.goal}
           ◇<span>能力中心</span>
         </button>
         <button
+          data-guide="files-nav"
           className={`rail-btn ${activeNav === "files" ? "active" : ""}`}
           onClick={() => switchNav("files")}
         >
@@ -761,9 +773,10 @@ ${task?.goal || config.goal}
             </span>
             <button onClick={shareTask}>分享</button>
             <button onClick={() => setModal({ kind: "layout", title: "工作区布局" })}>布局</button>
+            <button onClick={() => setGuideOpen(true)}>使用指引</button>
           </div>
         </header>
-        <div className="goal-strip">
+        <div className="goal-strip" data-guide="goal">
           <div>
             <small>当前研究目标 · 生物信息学</small>
             <h1>{task.goal}</h1>
@@ -786,7 +799,7 @@ ${task?.goal || config.goal}
                 {cancellingRun ? "取消中…" : "取消"}
               </button>
             )}
-            <button className="primary" onClick={runDemo}>
+            <button className="primary" data-guide="run" onClick={runDemo}>
               {running ? "运行中…" : "运行工作流"}
             </button>
           </div>
@@ -810,6 +823,7 @@ ${task?.goal || config.goal}
           </div>
         </div>
         <div
+          data-guide="evidence"
           className={`evidence-strip ${traceOpen ? "" : "trace-collapsed"}`}
           style={{ height: evidenceHeight }}
         >
@@ -881,30 +895,32 @@ ${task?.goal || config.goal}
             </div>
           </div>
         )}
-        <WorkflowCanvas
-          open={planOpen}
-          nodes={task.nodes}
-          edges={task.edges}
-          extraEdges={extraEdges}
-          selected={selected}
-          connectingFrom={connectingFrom}
-          canvasZoom={canvasZoom}
-          canvasPan={canvasPan}
-          nodePositions={nodePositions}
-          layoutRevision={layoutRevision}
-          layoutVersionCount={layoutVersionCount}
-          layoutSaveState={layoutSaveState}
-          creatingVersion={creatingLayoutVersion}
-          onZoomChange={(update) => setCanvasZoom((value) => clampZoom(update(value)))}
-          onReset={resetCanvas}
-          onCreateVersion={createLayoutVersion}
-          onCanvasPanStart={startCanvasPan}
-          onCanvasWheel={(event) => {
-            event.preventDefault();
-            setCanvasZoom((value) => clampZoom(value + (event.deltaY < 0 ? 0.08 : -0.08)));
-          }}
-          onNodePointerDown={startNodeDrag}
-        />
+        <div className="workflow-guide-target">
+          <WorkflowCanvas
+            open={planOpen}
+            nodes={task.nodes}
+            edges={task.edges}
+            extraEdges={extraEdges}
+            selected={selected}
+            connectingFrom={connectingFrom}
+            canvasZoom={canvasZoom}
+            canvasPan={canvasPan}
+            nodePositions={nodePositions}
+            layoutRevision={layoutRevision}
+            layoutVersionCount={layoutVersionCount}
+            layoutSaveState={layoutSaveState}
+            creatingVersion={creatingLayoutVersion}
+            onZoomChange={(update) => setCanvasZoom((value) => clampZoom(update(value)))}
+            onReset={resetCanvas}
+            onCreateVersion={createLayoutVersion}
+            onCanvasPanStart={startCanvasPan}
+            onCanvasWheel={(event) => {
+              event.preventDefault();
+              setCanvasZoom((value) => clampZoom(value + (event.deltaY < 0 ? 0.08 : -0.08)));
+            }}
+            onNodePointerDown={startNodeDrag}
+          />
+        </div>
         <ConversationPanel
           sentMessages={sentMessages}
           agentReplies={agentReplies}
@@ -1059,6 +1075,7 @@ ${task?.goal || config.goal}
           saving={configSaving}
         />
       )}
+      <ProductGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
       <button className="mobile-inspector-trigger" onClick={() => setMobilePanel(true)}>
         检查器 · {selectedNode?.label}
       </button>

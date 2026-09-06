@@ -21,6 +21,9 @@ const defaultState=():State=>({ task:{ id:'task_demo_rnaseq', title:'RNA-seq 差
 function persist(s:State){ try { fs.mkdirSync(path.dirname(statePath),{recursive:true}); fs.writeFileSync(statePath,JSON.stringify(s,null,2)); } catch { /* read-only deploys use process memory */ } }
 function state(): State { if (!g.__bioflow) { try { g.__bioflow=JSON.parse(fs.readFileSync(statePath,'utf8')) as State; } catch { g.__bioflow=defaultState(); } } return g.__bioflow; }
 
+/** 演示环境重置任务，便于每次面试从澄清步骤开始。生产环境不应暴露此能力。 */
+export function resetDemoState() { const fresh = defaultState(); g.__bioflow = fresh; persist(fresh); return fresh.task; }
+
 export function snapshot() { return state().task; }
 export function eventsAfter(id:number) { return state().events.filter(e=>e.id>id); }
 export function pushEvent(runId:string,type:string,payload:Record<string,unknown>,nodeId?:string) { const s=state(); const event={id:s.nextEvent++,runId,type,nodeId,payload,createdAt:new Date().toISOString()}; s.events.push(event); persist(s); return event; }

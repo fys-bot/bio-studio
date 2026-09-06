@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { isAuthorized } from '@/lib/auth';
-import { snapshot } from '@/lib/store';
+import { isAuthorized, isSameOrigin } from '@/lib/auth';
+import { snapshot, resetDemoState } from '@/lib/store';
 
 const nodes = [
   { id:'input', label:'Read count matrix', kind:'input', status:'succeeded', x:50, y:220, detail:'counts.csv · 24 samples' },
@@ -15,4 +15,11 @@ const edges = [['input','qc'],['input','design'],['qc','de'],['design','de'],['d
 export async function GET() {
   if (!isAuthorized()) return NextResponse.json({ error:'Unauthorized' }, { status:401 });
   return NextResponse.json({ task: snapshot() });
+}
+
+export async function POST(request: Request) {
+  if (!isAuthorized()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isSameOrigin(request)) return NextResponse.json({ error: 'Forbidden origin' }, { status: 403 });
+  if (process.env.NODE_ENV === 'production') return NextResponse.json({ error: 'Disabled in production' }, { status: 404 });
+  return NextResponse.json({ task: resetDemoState() });
 }

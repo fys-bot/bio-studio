@@ -12,6 +12,10 @@ npm run dev
 
 Open http://127.0.0.1:3000 (or http://localhost:3000). The demo uses a deterministic server-side runner. No external API key is required.
 
+## 冒烟回归
+
+服务启动后可执行 `node scripts/smoke-test.mjs`，自动验证登录鉴权、澄清、计划审批、SSE 事件流和取消运行。开发演示需要从初始状态开始时，先登录并调用 `POST /api/tasks`（同源请求），即可重置为“待补充信息”。
+
 If the browser shows a blank page, confirm the terminal still has `npm run dev` running. A blank `localhost:3000` tab usually means the local Next server is not listening. For file-watcher limits, use `npm run dev:poll`.
 
 ## Security

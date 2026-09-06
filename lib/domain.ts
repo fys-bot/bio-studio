@@ -134,3 +134,86 @@ export type ArtifactLineageStep = {
 export type TaskResponse = {
   task: ResearchTask;
 };
+
+/** RAG 每一层都保留可审计输入、输出和耗时，供页面 Trace 面板与外部审计使用。 */
+export type RagDocument = {
+  id: string;
+  name: string;
+  sourceType: "项目文件" | "技能包" | "文献" | "知识图谱";
+  uri: string;
+  parser: string;
+  status: "parsed" | "failed";
+  chunkCount: number;
+};
+
+export type RagChunk = {
+  id: string;
+  documentId: string;
+  text: string;
+  tokenCount: number;
+  metadata: Record<string, string>;
+};
+
+export type RagRetrievalResult = {
+  chunkId: string;
+  documentId: string;
+  rank: number;
+  score: number;
+  retrievalMethod: "hybrid" | "keyword" | "vector";
+  reason: string;
+};
+
+export type RagRerankResult = RagRetrievalResult & {
+  rerankScore: number;
+  kept: boolean;
+  rationale: string;
+};
+
+export type RagGraphRelation = {
+  source: string;
+  relation: string;
+  target: string;
+  confidence: number;
+  provenance: string;
+};
+
+export type RagGroundingBinding = {
+  parameter: string;
+  value: string;
+  sourceChunkIds: string[];
+  confidence: number;
+  required: boolean;
+};
+
+export type RagToolCall = {
+  id: string;
+  tool: string;
+  purpose: string;
+  input: Record<string, unknown>;
+  output: Record<string, unknown>;
+  status: "succeeded" | "failed";
+  startedAt: string;
+  finishedAt: string;
+};
+
+export type RagTrace = {
+  id: string;
+  query: string;
+  normalizedQuery: string;
+  status: "completed" | "running" | "failed";
+  createdAt: string;
+  completedAt?: string;
+  durationMs: number;
+  parsedDocuments: RagDocument[];
+  chunks: RagChunk[];
+  retrievalTop20: RagRetrievalResult[];
+  rerankedResults: RagRerankResult[];
+  graphRelations: RagGraphRelation[];
+  groundingBindings: RagGroundingBinding[];
+  toolCalls: RagToolCall[];
+  finalDecision: {
+    summary: string;
+    nextAction: string;
+    evidenceChunkIds: string[];
+  };
+};

@@ -66,6 +66,7 @@ type ClarificationCardProps = {
   onActiveQuestionChange: (index: number) => void;
   onAnswer: (key: ClarificationKey, value: string, index: number) => void;
   onSubmit: () => void;
+  onUseDemoData?: () => void;
 };
 
 export function ClarificationCard({
@@ -75,6 +76,7 @@ export function ClarificationCard({
   onActiveQuestionChange,
   onAnswer,
   onSubmit,
+  onUseDemoData,
 }: ClarificationCardProps) {
   const completed = Object.values(answers).filter(Boolean).length;
   const question = clarificationQuestions[activeQuestion];
@@ -129,6 +131,11 @@ export function ClarificationCard({
       </section>
       <div className="clarification-actions">
         <span>{completed < 4 ? "完成全部选择后生成计划" : "上下文已完整，可以生成分析计划"}</span>
+        {onUseDemoData && (
+          <button className="text-button" onClick={onUseDemoData}>
+            使用示例数据
+          </button>
+        )}
         <button
           className="primary"
           onClick={onSubmit}

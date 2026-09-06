@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { ParticleLoader } from "@/components/ParticleLoader";
 import { ConfigPanel } from "@/components/ConfigPanel";
 import {
@@ -15,7 +16,7 @@ import { WorkspaceModal, type WorkspaceModalState } from "@/components/Workspace
 import { ProductGuide } from "@/components/ProductGuide";
 import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
 import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
-import type { DataFileProfile, ResearchTask, WorkflowNodeState } from "@/lib/domain";
+import type { DataFileProfile, RagTrace, ResearchTask, WorkflowNodeState } from "@/lib/domain";
 type TimelineEvent = {
   id: number;
   phase: string;
@@ -80,6 +81,8 @@ const statusLabel: Record<string, string> = {
 
 /** BioFlow Studio 主工作台，负责领域状态编排，不承载具体工具视图实现。 */
 export default function Home() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [authed, setAuthed] = useState(false);
   const [task, setTask] = useState<ResearchTask | null>(null);
   const [events, setEvents] = useState(seedEvents);
@@ -138,6 +141,7 @@ export default function Home() {
   const [configOpen, setConfigOpen] = useState(false);
   const [configSaving, setConfigSaving] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [ragTrace, setRagTrace] = useState<RagTrace | null>(null);
   const guideInitializedRef = useRef(false);
   const uploadedFiles = useMemo(
     () => dataProfiles.map((profile) => profile.fileName),
@@ -162,6 +166,11 @@ export default function Home() {
     window.addEventListener("resize", syncViewport);
     return () => window.removeEventListener("resize", syncViewport);
   }, []);
+  useEffect(() => {
+    if (pathname?.startsWith("/skills")) setActiveNav("skills");
+    else if (pathname?.startsWith("/files")) setActiveNav("files");
+    else setActiveNav("workspace");
+  }, [pathname]);
   useEffect(() => {
     const close = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -285,6 +294,15 @@ export default function Home() {
           setCodeStreaming(true);
           setCodeText((currentCode) => currentCode + codeDelta);
         }
+        if (
+          runEvent.type === "rag.trace.created" &&
+          typeof runEvent.payload?.traceId === "string"
+        ) {
+          void bioflowApi
+            .getRagTrace(runEvent.payload.traceId)
+            .then((response) => setRagTrace(response.trace))
+            .catch(() => undefined);
+        }
         if (runEvent.type === "code.completed") setCodeStreaming(false);
         const timelineUpdates: Record<string, Partial<TimelineEvent> & { id: number }> = {
           "intent.detected": {
@@ -367,17 +385,9 @@ export default function Home() {
   const switchNav = (next: "workspace" | "skills" | "files") => {
     setActiveNav(next);
     if (next === "workspace") {
-      setModal(null);
-      document.querySelector(".workspace")?.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
-      notify("已回到智能体工作台");
+      router.push("/projects/proj_a5211690a4/tasks/task_demo_rnaseq");
     } else {
-      setModal({
-        kind: next,
-        title: next === "skills" ? "能力中心" : "项目文件",
-      });
+      router.push(next === "skills" ? "/skills" : "/files");
     }
   };
   const shareTask = async () => {
@@ -431,6 +441,11 @@ ${task?.goal || config.goal}
   };
   const selectTask = (id: string, label: string, nextTab?: typeof tab) => {
     setActiveTask(id);
+    if (id === "rna") {
+      router.push("/projects/proj_a5211690a4/tasks/task_demo_rnaseq");
+    } else if (id === "literature" || id === "structure") {
+      router.push(`/projects/proj_a5211690a4/tasks/${id}`);
+    }
     if (id === "rna") {
       setMobilePanel(false);
       notify("已切换到 RNA-seq 差异表达分析");
@@ -554,14 +569,19 @@ ${task?.goal || config.goal}
     }
     setSentMessages((items) => [...items, text]);
     setMessageText("");
-    setTimeout(
-      () =>
-        setAgentReplies((items) => [
-          ...items,
-          `已收到。我会按${agentMode}结合当前项目文件和分析上下文，给出下一步可执行建议。`,
-        ]),
-      220,
-    );
+    setAgentReplies((items) => [
+      ...items,
+      `已收到。我会按${agentMode}结合当前项目文件和分析上下文，先完成 RAG 证据链，再给出下一步可执行建议。`,
+    ]);
+    void bioflowApi
+      .runRagQuery(text)
+      .then((response) => {
+        setRagTrace(response.trace);
+        setTab("evidence");
+        setMobilePanel(true);
+        notify("RAG 全链路已完成，可展开查看 Top 20 召回与参数依据");
+      })
+      .catch((error) => notify(getApiErrorMessage(error, "RAG 检索失败，请稍后重试")));
   };
   const cancel = async () => {
     if (cancellingRun) return;
@@ -769,7 +789,7 @@ ${task?.goal || config.goal}
           </div>
           <div className="top-actions">
             <span className="live">
-              <i /> 智能体运行 39 秒
+              <i /> 智能体 · {statusLabel[task.status] || task.status}
             </span>
             <button onClick={shareTask}>分享</button>
             <button onClick={() => setModal({ kind: "layout", title: "工作区布局" })}>布局</button>
@@ -865,6 +885,16 @@ ${task?.goal || config.goal}
               }
             }}
             onSubmit={submitClarifications}
+            onUseDemoData={() => {
+              setAnswers({
+                format: "Count 矩阵",
+                comparison: "处理组 vs 对照组",
+                organism: "人类",
+                deliverable: "可发表结果",
+              });
+              setActiveQuestion(3);
+              notify("已载入示例 RNA-seq 上下文，请检查后生成计划");
+            }}
           />
         )}
         {task?.status === "awaiting_approval" && (
@@ -987,6 +1017,7 @@ ${task?.goal || config.goal}
         codeText={codeText}
         selectedResidue={selectedResidue}
         artifacts={task.artifacts}
+        ragTrace={ragTrace}
         onTabChange={setTab}
         onClose={() => setMobilePanel(false)}
         onSelectQuestion={(questionIndex) => {
@@ -1008,12 +1039,15 @@ ${task?.goal || config.goal}
         onDownloadReport={downloadReport}
         onNotify={notify}
         onResizeStart={(event) => startResize("inspector", event)}
+        onCopy={(value) => {
+          void navigator.clipboard.writeText(value);
+          notify("审计 JSON 已复制");
+        }}
       />
       {modal && (
         <WorkspaceModal
           modal={modal}
           projectName={projectName}
-          uploadedFileNames={uploadedFiles}
           dataProfiles={dataProfiles}
           uploadingFileName={uploadingFileName}
           uploadError={uploadError}
@@ -1024,7 +1058,6 @@ ${task?.goal || config.goal}
             setModal(null);
             notify(`已切换到${nextProjectName}`);
           }}
-          onSelectSkill={(skillName, skillState) => notify(`${skillName}：${skillState}`)}
           onOpenFile={(fileName, detail) => setModal({ kind: "file", title: fileName, detail })}
           onNewTaskNameChange={setNewTaskName}
           onCreateTask={createTask}

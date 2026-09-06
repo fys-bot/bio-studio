@@ -5,6 +5,7 @@ import type {
   TaskResponse,
   WorkflowLayoutState,
   WorkflowLayoutVersion,
+  RagTrace,
 } from "@/lib/domain";
 import type { WorkflowLayoutInput } from "@/lib/workflow-layout";
 
@@ -64,6 +65,7 @@ export type FileProfileResponse = {
 export type WorkflowLayoutResponse = {
   layout: WorkflowLayoutState;
 };
+export type RagTraceResponse = { trace: RagTrace };
 
 /**
  * 前端 API 适配层：统一错误转换、JSON 解析和请求方法，页面不再直接拼接接口细节。
@@ -209,4 +211,13 @@ export const bioflowApi = {
         body: JSON.stringify({ name, ...layout }),
       },
     ),
+
+  runRagQuery: (query: string) =>
+    requestJson<RagTraceResponse>("/api/rag/query", {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify({ query }),
+    }),
+
+  getRagTrace: (traceId: string) => requestJson<RagTraceResponse>(`/api/rag/traces/${traceId}`),
 };

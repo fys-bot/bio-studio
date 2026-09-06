@@ -94,6 +94,20 @@ await expectStatus("/api/files/profile", 401, { method: "POST" });
 await expectStatus("/api/workflows/workflow_demo/layout", 401);
 await request("/api/auth/login", { method: "POST" });
 log("页面、文件解析与工作流布局接口登录鉴权");
+const ragQuery = await request("/api/rag/query", {
+  method: "POST",
+  headers: { "content-type": "application/json", origin: base },
+  body: JSON.stringify({ query: "比较处理组和对照组的 RNA-seq 差异基因" }),
+});
+if (ragQuery.trace?.retrievalTop20?.length !== 20) throw new Error("RAG Top 20 召回数量不正确");
+if (ragQuery.trace?.parsedDocuments?.length !== 4) throw new Error("RAG 来源分组不完整");
+if (ragQuery.trace?.groundingBindings?.length !== 4) throw new Error("RAG 参数 grounding 不完整");
+const ragTraceId = ragQuery.trace.id;
+const ragTrace = await request(`/api/rag/traces/${ragTraceId}`);
+if (ragTrace.trace?.toolCalls?.length !== 4) throw new Error("RAG 工具调用 Trace 缺失");
+const ragRetrieval = await request(`/api/rag/traces/${ragTraceId}/retrieval`);
+if (ragRetrieval.data?.[0]?.rank !== 1) throw new Error("RAG 分阶段检索接口缺失");
+log("RAG 全链路接口：解析、切分、Top 20、精排、图谱、grounding、工具调用");
 await request("/api/tasks", { method: "POST", headers: { origin: base } });
 log("重置演示状态");
 const initial = await request("/api/tasks");

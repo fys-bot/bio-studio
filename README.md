@@ -17,12 +17,23 @@ npm run dev
 
 ## 一次完整演示
 
+从 `/skills` 能力中心或 `/files` 文件中心开始也可以；工作台侧边栏的中心、文件和任务卡均为真实路由，刷新后仍可恢复。
+
 1. 展开执行轨迹，展示意图识别、RAG 检索、证据重排和参数绑定。
 2. 点击“上传”，选择 `demo-data/sample_metadata.tsv`，查看样本数、字段类型、缺失值和 `condition` 分组建议。
 3. 将建议应用到分析上下文，补完四步澄清，生成并审批分析计划。
 4. 展开画布，拖拽节点、平移、缩放、Shift+点击连线；观察自动保存，点击“保存版本”，刷新确认布局恢复。
 5. 运行失败恢复链路，查看 SSE 日志和代码流，执行局部重试。
 6. 查看火山图、候选基因、Artifact 血缘、报告下载和 3D 结构残基联动。
+
+输入任意科研问题后，页面会自动生成一条可展开的 RAG Trace：文档解析、文档切分、混合召回 Top 20、精排、知识图谱扩展、参数 grounding 和工具调用。Trace 支持复制审计 JSON；接口也可直接按阶段读取：
+
+```text
+POST /api/rag/query
+GET  /api/rag/traces/:traceId
+GET  /api/rag/traces/:traceId/{documents|chunks|retrieval|rerank|graph|grounding|tools}
+GET  /api/rag/traces/:traceId/events
+```
 
 ## 可配置演示
 
@@ -62,7 +73,7 @@ git diff --check
 
 首次进入工作台会自动展示 5 步产品引导；关闭后仍可通过顶部“使用指引”随时重新打开。站内引导负责告诉用户“此刻点哪里”，DOCX 手册负责解释“为什么这样做以及完整流程”，两者互为补充。
 
-当前按需求文档重新审计为 69/100：任务闭环和工作流画布基本可演示，但能力中心、文件中心和任务路由仍在 P0 重构中，不能宣称已经一比一完成 Biomni。
+当前按需求文档重新审计为 69/100；本轮已完成独立能力中心、文件中心、任务路由和结构化 RAG Trace，但 Agent/LLM、检索器、知识图谱、RNA-seq 计算和 3D 引擎仍明确标注为可替换演示 Adapter，不能宣称已经一比一完成 Biomni。
 
 ## 架构摘要
 

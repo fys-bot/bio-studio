@@ -2,12 +2,13 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 import { defaultDemoConfig, DemoConfig, normalizeDemoConfig } from "./demo-config";
-import type { DataFileProfile, ResearchTask, WorkflowLayoutState } from "./domain";
+import type { DataFileProfile, RagTrace, ResearchTask, WorkflowLayoutState } from "./domain";
 import {
   createDefaultWorkflowLayout,
   normalizeWorkflowLayout,
   type WorkflowLayoutInput,
 } from "./workflow-layout";
+import { createRagTrace } from "./rag";
 
 export type NodeStatus = "succeeded" | "running" | "blocked" | "failed" | "queued" | "cancelled";
 export type RunEvent = {
@@ -89,6 +90,7 @@ type BioFlowRuntimeState = {
   nextEvent: number;
   config: DemoConfig;
   workflowLayout?: WorkflowLayoutState;
+  ragTraces: RagTrace[];
 };
 const globalStateRegistry = globalThis as typeof globalThis & {
   __bioflow?: BioFlowRuntimeState;
@@ -130,6 +132,7 @@ const defaultState = (): BioFlowRuntimeState => ({
     current: createDefaultWorkflowLayout(),
     versions: [],
   },
+  ragTraces: [],
 });
 function persist(runtimeState: BioFlowRuntimeState) {
   try {
@@ -145,11 +148,29 @@ function state(): BioFlowRuntimeState {
       globalStateRegistry.__bioflow = JSON.parse(
         fs.readFileSync(statePath, "utf8"),
       ) as BioFlowRuntimeState;
+      globalStateRegistry.__bioflow.ragTraces ??= [];
     } catch {
       globalStateRegistry.__bioflow = defaultState();
     }
   }
   return globalStateRegistry.__bioflow;
+}
+
+/** 保存一次完整的 RAG Trace，支持按阶段接口读取与前端审计。 */
+export function createAndStoreRagTrace(query: string) {
+  const runtimeState = state();
+  const trace = createRagTrace(query);
+  runtimeState.ragTraces = [...runtimeState.ragTraces.slice(-49), trace];
+  persist(runtimeState);
+  return trace;
+}
+
+export function listRagTraces() {
+  return structuredClone(state().ragTraces ?? []);
+}
+
+export function getRagTrace(traceId: string) {
+  return (state().ragTraces ?? []).find((trace) => trace.id === traceId);
 }
 
 export function configSnapshot() {
@@ -426,6 +447,8 @@ export function createRun() {
   runtimeState.task.status = "running";
   persist(runtimeState);
   pushEvent(runId, "run.started", { message: "工作流已开始运行" });
+  const trace = createAndStoreRagTrace(runtimeState.task.goal);
+  pushEvent(runId, "rag.trace.created", { traceId: trace.id, topK: trace.retrievalTop20.length });
   emitCode(runId);
   setTimeout(() => {
     if (runtimeState.cancelled) return;

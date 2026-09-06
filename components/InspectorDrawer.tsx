@@ -7,6 +7,8 @@ import { ResultsPanel } from "@/components/results/ResultsPanel";
 import { ProteinStructureViewer } from "@/components/structure/ProteinStructureViewer";
 import { StreamingCodePanel } from "@/components/code/StreamingCodePanel";
 import type { ArtifactRecord } from "@/lib/domain";
+import type { RagTrace } from "@/lib/domain";
+import { RagTracePanel } from "@/components/RagTracePanel";
 
 export type InspectorTab =
   | "todo"
@@ -37,6 +39,7 @@ type InspectorDrawerProps = {
   codeText: string;
   selectedResidue: number | null;
   artifacts: ArtifactRecord[];
+  ragTrace: RagTrace | null;
   onTabChange: (tab: InspectorTab) => void;
   onClose: () => void;
   onSelectQuestion: (questionIndex: number) => void;
@@ -50,6 +53,7 @@ type InspectorDrawerProps = {
   onDownloadReport: () => void;
   onNotify: (message: string) => void;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onCopy?: (value: string) => void;
 };
 
 /**
@@ -69,6 +73,7 @@ export function InspectorDrawer({
   codeText,
   selectedResidue,
   artifacts,
+  ragTrace,
   onTabChange,
   onClose,
   onSelectQuestion,
@@ -82,6 +87,7 @@ export function InspectorDrawer({
   onDownloadReport,
   onNotify,
   onResizeStart,
+  onCopy,
 }: InspectorDrawerProps) {
   const completedQuestionCount = Object.values(answers).filter(Boolean).length;
   const [selectedGeneSymbol, setSelectedGeneSymbol] = useState<string | null>(null);
@@ -191,6 +197,7 @@ export function InspectorDrawer({
       )}
       {activeTab === "evidence" && (
         <>
+          <RagTracePanel trace={ragTrace} onCopy={onCopy} />
           <div className="inspector-title">
             <small>当前选中节点</small>
             <h2>{selectedNode?.label}</h2>

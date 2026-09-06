@@ -11,15 +11,7 @@ const columnTypeLabels: Record<TabularColumnProfile["inferredType"], string> = {
   text: "文本",
 };
 
-export type ModalKind =
-  | "projects"
-  | "skills"
-  | "files"
-  | "new-task"
-  | "upload"
-  | "layout"
-  | "file"
-  | "source";
+export type ModalKind = "projects" | "new-task" | "upload" | "layout" | "file" | "source";
 
 export type WorkspaceModalState = {
   kind: ModalKind;
@@ -30,14 +22,12 @@ export type WorkspaceModalState = {
 type WorkspaceModalProps = {
   modal: WorkspaceModalState;
   projectName: string;
-  uploadedFileNames: string[];
   dataProfiles: DataFileProfile[];
   uploadingFileName: string;
   uploadError: string;
   newTaskName: string;
   onClose: () => void;
   onSelectProject: (projectName: string) => void;
-  onSelectSkill: (skillName: string, skillState: string) => void;
   onOpenFile: (fileName: string, detail: string) => void;
   onNewTaskNameChange: (taskName: string) => void;
   onCreateTask: () => void;
@@ -54,14 +44,12 @@ type WorkspaceModalProps = {
 export function WorkspaceModal({
   modal,
   projectName,
-  uploadedFileNames,
   dataProfiles,
   uploadingFileName,
   uploadError,
   newTaskName,
   onClose,
   onSelectProject,
-  onSelectSkill,
   onOpenFile,
   onNewTaskNameChange,
   onCreateTask,
@@ -76,10 +64,6 @@ export function WorkspaceModal({
   };
 
   const latestDataProfile = dataProfiles.at(-1);
-  const availableFileNames = Array.from(
-    new Set(["counts.csv", "sample_metadata.tsv", ...uploadedFileNames]),
-  );
-
   const handleTaskNameKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") onCreateTask();
   };
@@ -122,46 +106,6 @@ export function WorkspaceModal({
                 </button>
               ),
             )}
-          </div>
-        )}
-        {modal.kind === "skills" && (
-          <div className="modal-list">
-            {[
-              ["DESeq2 差异表达", "已启用"],
-              ["RAG 证据检索", "已启用"],
-              ["蛋白质结构分析", "可用"],
-            ].map(([skillName, skillState]) => (
-              <button key={skillName} onClick={() => onSelectSkill(skillName, skillState)}>
-                <span>◇</span>
-                <div>
-                  <b>{skillName}</b>
-                  <small>点击查看能力说明与输入输出</small>
-                </div>
-                <em>{skillState}</em>
-              </button>
-            ))}
-          </div>
-        )}
-        {modal.kind === "files" && (
-          <div className="modal-list">
-            {availableFileNames.map((fileName) => {
-              const dataProfile = dataProfiles.find((profile) => profile.fileName === fileName);
-              const profileDetail = dataProfile
-                ? `${dataProfile.format} · ${dataProfile.sampleCount} 个样本 · ${dataProfile.columnCount} 个字段 · ${dataProfile.status === "ready" ? "可直接分析" : "需要字段映射"}`
-                : fileName.endsWith(".csv")
-                  ? "RNA-seq 计数矩阵 · 24 个样本"
-                  : "项目文件 · 可供智能体检索与分析";
-              return (
-                <button key={fileName} onClick={() => onOpenFile(fileName, profileDetail)}>
-                  <span>▧</span>
-                  <div>
-                    <b>{fileName}</b>
-                    <small>{dataProfile ? "服务端结构检查已完成" : "本地项目空间"}</small>
-                  </div>
-                  <em>查看</em>
-                </button>
-              );
-            })}
           </div>
         )}
         {modal.kind === "new-task" && (

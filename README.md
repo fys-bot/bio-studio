@@ -12,6 +12,12 @@ npm run dev
 
 Open http://127.0.0.1:3000 (or http://localhost:3000). The demo uses a deterministic server-side runner. No external API key is required.
 
+## 可配置演示
+
+进入页面后点击“配置”，可以现场切换工作流名称、研究目标、样本数、基因数、运行等待时间，以及“失败恢复链路 / 全成功链路”。配置通过受保护的 `/api/demo/config` 保存到服务端演示状态，下一次运行会使用新参数，不需要修改代码。
+
+`npm run dev` 会默认使用 3000 端口，并在启动前尝试释放占用该端口的本地监听进程；如果当前沙箱不允许终止其他进程，请使用 `PORT=3014 npm run dev` 临时启动。
+
 ## 冒烟回归
 
 服务启动后可执行 `npm run smoke`，自动验证登录鉴权、澄清、计划审批、SSE 事件流和取消运行。开发演示需要从初始状态开始时，先登录并调用 `POST /api/tasks`（同源请求），即可重置为“待补充信息”；生产预览会关闭这个重置接口。
@@ -40,7 +46,7 @@ Next.js API 层（HttpOnly Cookie + Origin 校验）
   意图识别 → RAG 检索 → 证据重排 → 参数绑定 → 代码流 → Artifact
 ```
 
-本项目是面试演示级实现：Agent Runner、RAG、3D 结构和结果数据均为可解释 Mock；生产接入时应替换为真实队列、数据库、对象存储和 Mol* 渲染器。
+本项目是面试演示级实现：Agent Runner、RAG、3D 结构和结果数据均为可解释 Mock，但运行参数、状态机、事件流和产物链路都通过服务端配置驱动；生产接入时应替换为真实队列、数据库、对象存储和 Mol* 渲染器。
 
 If the browser shows a blank page, confirm the terminal still has `npm run dev` running. A blank `localhost:3000` tab usually means the local Next server is not listening. For file-watcher limits, use `npm run dev:poll`.
 

@@ -34,6 +34,9 @@ type WorkflowCanvasProps = {
   ) => void;
 };
 
+/**
+ * 可编辑分析工作流画布：节点位置只保存在当前任务视图，运行状态仍由服务端任务快照驱动。
+ */
 export function WorkflowCanvas({
   open,
   nodes,

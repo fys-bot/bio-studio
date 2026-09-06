@@ -17,6 +17,14 @@
 - 浏览器真实点击通过：打开分析计划、缩小、居中重置、点击“构建设计矩阵”打开证据抽屉。
 - `npm run typecheck`、`npm run build`、`git diff --check` 和 `npm run smoke -- http://127.0.0.1:3012` 均通过。
 
+## 2026-09-06（P1-4 任务侧栏组件化）
+
+- 新增 `components/TaskSidebar.tsx`，封装项目切换、任务列表、数据集文件、上传入口和侧栏宽度拖拽。
+- 组件 Props 使用 `activeTaskId`、`extraTaskNames`、`uploadedFileNames`、`onOpenProjectPicker` 等明确命名，避免把页面状态与展示结构混在一起。
+- 页面统一负责任务切换、弹窗和文件详情状态，侧栏组件只派发用户意图。
+- 浏览器真实点击通过：项目切换、CSV 文件详情、文献证据图谱任务跳转、上传入口和侧栏导航反馈。
+- `npm run typecheck`、`npm run build`、`git diff --check` 通过；接口 smoke 因旧开发进程造成 EMFILE/路由 404 未重复宣称通过，待清理旧进程后补跑。
+
 ## 2026-09-06（P1-1 RAG 与知识图谱可视化）
 
 - 新增独立 `components/KnowledgeGraph.tsx`，将 Agent 检索证据按项目文件、技能包、文献、知识图谱四类分组，避免所有 RAG 逻辑堆在页面文件中。

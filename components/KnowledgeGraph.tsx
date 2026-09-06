@@ -99,6 +99,9 @@ type KnowledgeGraphProps = {
   nodeLabel?: string;
 };
 
+/**
+ * RAG 证据解释器：把检索来源、参数绑定和知识关系放在同一条可点击链路中。
+ */
 export function KnowledgeGraph({ nodeLabel = "当前节点" }: KnowledgeGraphProps) {
   const [selectedId, setSelectedId] = useState("metadata");
   const selected = useMemo(

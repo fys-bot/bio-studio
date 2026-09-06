@@ -10,6 +10,7 @@ import {
 } from "@/components/ClarificationCard";
 import { WorkflowCanvas } from "@/components/WorkflowCanvas";
 import { TaskSidebar } from "@/components/TaskSidebar";
+import { ConversationPanel } from "@/components/ConversationPanel";
 import { defaultDemoConfig, DemoConfig } from "@/lib/demo-config";
 
 type WorkflowNodeState = {
@@ -841,79 +842,30 @@ export default function Home() {
           }}
           onNodePointerDown={startNodeDrag}
         />
-        <div className="conversation">
-          {sentMessages.map((text, i) => (
-            <div className="user-message sent-message" key={`${text}-${i}`}>
-              <small>你 · 刚刚</small>
-              <p>{text}</p>
-            </div>
-          ))}
-          {agentReplies.map((text, i) => (
-            <div className="agent-message reply-message" key={`${text}-${i}`}>
-              <div className="assistant-avatar">✦</div>
-              <div>
-                <small>BioFlow 智能体 · 刚刚</small>
-                <p>{text}</p>
-              </div>
-            </div>
-          ))}
-          {task.status === "failed" && (
-            <div className="message failure-message">
-              <small>BioFlow 智能体 · 刚刚</small>
-              <p>
-                在运行 DESeq2 前发现元数据问题：映射中缺少{" "}
-                <code>condition</code> 字段，4 个下游产物已暂停。
-              </p>
-              <div className="message-actions">
-                <button
-                  onClick={() => {
-                    setSelected("design");
-                    openTool("evidence");
-                  }}
-                >
-                  查看失败原因
-                </button>
-                <button onClick={() => openTool("code")}>查看生成代码</button>
-              </div>
-            </div>
-          )}
-          <div className="composer">
-            <button
-              className="composer-add"
-              aria-label="添加项目文件"
-              onClick={() =>
-                setModal({ kind: "upload", title: "添加项目文件" })}
-            >
-              ＋
-            </button>
-            <input
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              placeholder="继续提问，或要求智能体修改分析参数…"
-            />
-            <button
-              className="mode"
-              onClick={() => {
-                const next = agentMode === "标准模式"
-                  ? "严谨模式"
-                  : agentMode === "严谨模式"
-                  ? "快速模式"
-                  : "标准模式";
-                setAgentMode(next);
-                notify(`已切换为${next}`);
-              }}
-            >
-              {agentMode}⌄
-            </button>
-            <button aria-label="发送" onClick={sendMessage}>➤</button>
-          </div>
-        </div>
+        <ConversationPanel
+          sentMessages={sentMessages}
+          agentReplies={agentReplies}
+          taskStatus={task.status}
+          messageText={messageText}
+          agentMode={agentMode}
+          onMessageTextChange={setMessageText}
+          onSendMessage={sendMessage}
+          onAddFile={() => setModal({ kind: "upload", title: "添加项目文件" })}
+          onAgentModeChange={() => {
+            const nextMode = agentMode === "标准模式"
+              ? "严谨模式"
+              : agentMode === "严谨模式"
+              ? "快速模式"
+              : "标准模式";
+            setAgentMode(nextMode);
+            notify(`已切换为${nextMode}`);
+          }}
+          onOpenFailureEvidence={() => {
+            setSelected("design");
+            openTool("evidence");
+          }}
+          onOpenCode={() => openTool("code")}
+        />
       </section>
       <nav className="tool-dock" aria-label="研究工具">
         {[["todo", "待办", "☷"], ["results", "结果", "▧"], [

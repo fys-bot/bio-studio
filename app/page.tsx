@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ParticleLoader } from "@/components/ParticleLoader";
 import { ConfigPanel } from "@/components/ConfigPanel";
+import { KnowledgeGraph } from "@/components/KnowledgeGraph";
 import { defaultDemoConfig, DemoConfig } from "@/lib/demo-config";
 
 type Node = {
@@ -1494,6 +1495,7 @@ export default function Home() {
                 </button>
               ))}
             </div>
+            <KnowledgeGraph nodeLabel={node?.label || "当前节点"} />
             {node?.status === "failed" && (
               <div className="error-card">
                 <b>⚠ 校验未通过</b>

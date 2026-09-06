@@ -73,6 +73,7 @@ const statusLabel: Record<string, string> = {
   awaiting_approval: "待审批",
 };
 
+/** BioFlow Studio 主工作台，负责领域状态编排，不承载具体工具视图实现。 */
 export default function Home() {
   const [authed, setAuthed] = useState(false);
   const [task, setTask] = useState<ResearchTask | null>(null);
@@ -930,10 +931,10 @@ ${task?.goal || config.goal}
         onRetry={retry}
         onRunDemo={runDemo}
         onDownloadVolcano={downloadVolcano}
-        onSelectResultSource={() => {
-          setSelected("de");
+        onSelectResultSource={(nodeId) => {
+          setSelected(nodeId);
           setTab("evidence");
-          notify("已追溯到 DESeq2 来源节点");
+          notify("已定位到结果血缘中的来源节点");
         }}
         onResidueSelect={setSelectedResidue}
         onOpenMolstar={() =>

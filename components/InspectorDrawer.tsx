@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, type PointerEvent as ReactPointerEvent } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import {
   clarificationQuestions,
   type ClarificationAnswers,
 } from "@/components/ClarificationCard";
 import { KnowledgeGraph } from "@/components/KnowledgeGraph";
+import { ResultsPanel } from "@/components/results/ResultsPanel";
 import type { ArtifactRecord } from "@/lib/domain";
 
 export type InspectorTab =
@@ -43,7 +44,7 @@ type InspectorDrawerProps = {
   onRetry: () => void;
   onRunDemo: () => void;
   onDownloadVolcano: () => void;
-  onSelectResultSource: () => void;
+  onSelectResultSource: (nodeId: string) => void;
   onResidueSelect: (residueNumber: number) => void;
   onOpenMolstar: () => void;
   onDownloadReport: () => void;
@@ -80,11 +81,6 @@ export function InspectorDrawer({
   onResizeStart,
 }: InspectorDrawerProps) {
   const completedQuestionCount = Object.values(answers).filter(Boolean).length;
-  const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
-  const volcanoArtifact = artifacts.find((artifact) => artifact.kind === "chart");
-  const reportArtifact = artifacts.find((artifact) => artifact.kind === "report");
-  const formatArtifactDate = (createdAt?: string) =>
-    createdAt ? new Date(createdAt).toLocaleString("zh-CN") : "运行完成后生成";
   const sourceNames = [
     "项目元数据规范",
     "DESeq2 技能包 · v2.1",
@@ -281,104 +277,15 @@ assert "condition" in metadata.columns
         </div>
       )}
       {activeTab === "results" && (
-        <div className="result-view">
-          <div className="result-head">
-            <div>
-              <small>结果产物</small>
-              <h3>火山图</h3>
-            </div>
-            <button onClick={onDownloadVolcano} aria-label="下载火山图 SVG">
-              ↧ SVG
-            </button>
-          </div>
-          <div className="artifact-meta">
-            <span>版本 {volcanoArtifact?.version || "待生成"}</span>
-            <span>{formatArtifactDate(volcanoArtifact?.createdAt)}</span>
-            <span>来源：{volcanoArtifact?.sourceNode || "DESeq2 差异表达"}</span>
-          </div>
-          <svg className="volcano" viewBox="0 0 280 220">
-            <line x1="32" y1="190" x2="265" y2="190" />
-            <line x1="32" y1="20" x2="32" y2="190" />
-            {Array.from({ length: 55 }, (_, pointIndex) => (
-              <circle
-                key={pointIndex}
-                cx={45 + ((pointIndex * 47) % 205)}
-                cy={178 - ((pointIndex * 29) % 145)}
-                r={pointIndex % 7 === 0 ? 3 : 2}
-                className={pointIndex % 7 === 0 ? "hit" : ""}
-              />
-            ))}
-          </svg>
-          <div className="metrics">
-            <div>
-              <b>1,842</b>
-              <small>检测基因数</small>
-            </div>
-            <div>
-              <b>126</b>
-              <small>显著差异</small>
-            </div>
-            <div>
-              <b>18</b>
-              <small>候选基因</small>
-            </div>
-          </div>
-          <div className="candidate-list">
-            <div className="candidate-list-head">
-              <b>候选基因 Top 5</b>
-              <small>按 FDR 与效应量排序</small>
-            </div>
-            {[
-              ["E2F1", "0.0004", "+2.84"],
-              ["CCNE2", "0.0012", "+2.31"],
-              ["CDK1", "0.0028", "+2.07"],
-              ["GADD45A", "0.0041", "-1.86"],
-              ["MKI67", "0.0063", "+1.72"],
-            ].map(([geneName, fdr, effect]) => (
-              <div className="candidate-row" key={geneName}>
-                <b>{geneName}</b>
-                <span>FDR {fdr}</span>
-                <em className={effect.startsWith("-") ? "down" : "up"}>
-                  {effect}
-                </em>
-              </div>
-            ))}
-          </div>
-          <div className="lineage-card">
-            <b>⌁ 结果血缘</b>
-            <p>counts.csv → 设计矩阵 → DESeq2 → volcano_plot.svg</p>
-            <button onClick={onSelectResultSource}>追溯到来源节点</button>
-          </div>
-          <div className="report-artifact-card">
-            <div>
-              <b>Markdown 分析报告</b>
-              <small>
-                {reportArtifact?.version || "待生成"} · {formatArtifactDate(reportArtifact?.createdAt)}
-              </small>
-            </div>
-            <div className="report-actions">
-              <button onClick={() => setReportPreviewOpen((open) => !open)}>
-                {reportPreviewOpen ? "收起预览" : "预览报告"}
-              </button>
-              <button onClick={onDownloadReport}>下载 .md</button>
-            </div>
-            {reportPreviewOpen && (
-              <pre className="report-preview">{`# RNA-seq 候选基因分析报告
-
-## 运行摘要
-
-- 版本：${reportArtifact?.version || "v1.0.0"}
-- 统计模型：DESeq2
-- FDR 阈值：0.05
-- 证据绑定：4 条
-
-## 结果
-
-火山图和候选基因列表已生成，可从结果血缘追溯到设计矩阵与证据来源。
-`}</pre>
-            )}
-          </div>
-        </div>
+        <ResultsPanel
+          artifacts={artifacts}
+          running={running}
+          onRunDemo={onRunDemo}
+          onDownloadVolcano={onDownloadVolcano}
+          onDownloadReport={onDownloadReport}
+          onOpenNode={onSelectResultSource}
+          onOpenEvidence={onOpenSource}
+        />
       )}
       {activeTab === "structure" && (
         <div className="structure-view">

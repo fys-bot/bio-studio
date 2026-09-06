@@ -126,6 +126,10 @@ const retry = await request(`/api/runs/${run.runId}/nodes/design/retry`, { metho
 if (retry.status !== 'running') throw new Error('局部重试未启动');
 const succeeded = await waitForTaskStatus('succeeded');
 if (succeeded.artifacts?.length !== 3) throw new Error('重试后结果产物不完整');
+const volcanoArtifact = succeeded.artifacts.find((artifact) => artifact.kind === 'chart');
+if (volcanoArtifact?.candidateGenes?.length !== 5) throw new Error('火山图候选基因不完整');
+if (volcanoArtifact?.lineage?.length !== 5) throw new Error('结果血缘不完整');
+if (!volcanoArtifact?.summary?.testedGeneCount) throw new Error('结果统计摘要缺失');
 log('局部重试并生成 3 个结果产物');
 
 await resetAndPrepare();
@@ -135,7 +139,10 @@ await request('/api/demo/config', {
   body: JSON.stringify({ failAt: 'none', runnerDelayMs: 500 }),
 });
 const successRun = await request('/api/runs', { method: 'POST', headers: { origin: base } });
-await waitForTaskStatus('succeeded');
+const directSuccess = await waitForTaskStatus('succeeded');
+if (directSuccess.artifacts?.find((artifact) => artifact.kind === 'chart')?.lineage?.length !== 5) {
+  throw new Error('成功直达链路未生成完整结果血缘');
+}
 log(`成功分支完成：${successRun.runId}`);
 
 await resetAndPrepare();

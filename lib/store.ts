@@ -217,6 +217,25 @@ function completeArtifacts(s: State, runId: string) {
     createdAt: artifactCreatedAt,
     sourceNode: "DESeq2 差异表达",
     parameters: { "FDR 阈值": 0.05, "检测基因数": s.config.geneCount },
+    summary: {
+      testedGeneCount: s.config.geneCount,
+      significantGeneCount: 126,
+      candidateGeneCount: 18,
+    },
+    candidateGenes: [
+      { symbol: "E2F1", fdr: 0.0004, log2FoldChange: 2.84, plotX: 223, plotY: 44, direction: "up" },
+      { symbol: "CCNE2", fdr: 0.0012, log2FoldChange: 2.31, plotX: 206, plotY: 62, direction: "up" },
+      { symbol: "CDK1", fdr: 0.0028, log2FoldChange: 2.07, plotX: 194, plotY: 78, direction: "up" },
+      { symbol: "GADD45A", fdr: 0.0041, log2FoldChange: -1.86, plotX: 69, plotY: 91, direction: "down" },
+      { symbol: "MKI67", fdr: 0.0063, log2FoldChange: 1.72, plotX: 185, plotY: 103, direction: "up" },
+    ],
+    lineage: [
+      { id: "counts", label: "counts.csv", detail: `${s.config.sampleCount} 个样本的原始计数矩阵`, kind: "input", nodeId: "input" },
+      { id: "design", label: "设计矩阵", detail: "~ condition + batch", kind: "transform", nodeId: "design" },
+      { id: "method", label: "DESeq2", detail: "负二项分布模型与多重检验校正", kind: "analysis", nodeId: "de" },
+      { id: "evidence", label: "方法证据", detail: "Love et al. 2014 · PMID 25516281", kind: "evidence", evidenceTitle: "Love et al. 2014 · Genome Biology" },
+      { id: "volcano", label: "volcano_plot.svg", detail: "可交互火山图与候选基因 Top 5", kind: "artifact", nodeId: "volcano" },
+    ],
   }, {
     id: "artifact_report",
     kind: "report",

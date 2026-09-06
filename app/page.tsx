@@ -103,7 +103,6 @@ export default function Home() {
   const [resizing, setResizing] = useState<
     "sidebar" | "inspector" | "evidence" | null
   >(null);
-  const [structureAngle, setStructureAngle] = useState(18);
   const [selectedResidue, setSelectedResidue] = useState<number | null>(null);
   const [viewportWidth, setViewportWidth] = useState(1440);
   const [planOpen, setPlanOpen] = useState(false);
@@ -253,45 +252,6 @@ export default function Home() {
     };
     return () => es.close();
   }, [authed]);
-  useEffect(() => {
-    if (tab !== "structure") return;
-    const canvas = document.querySelector<HTMLElement>(".structure-canvas");
-    if (!canvas) return;
-    let down = false, lastX = 0;
-    const move = (e: PointerEvent) => {
-      if (!down) return;
-      setStructureAngle((a) => a + (e.clientX - lastX) * .7);
-      lastX = e.clientX;
-    };
-    const start = (e: PointerEvent) => {
-      down = true;
-      lastX = e.clientX;
-      canvas.setPointerCapture?.(e.pointerId);
-    };
-    const end = () => {
-      down = false;
-    };
-    canvas.addEventListener("pointerdown", start);
-    canvas.addEventListener("pointermove", move);
-    canvas.addEventListener("pointerup", end);
-    canvas.addEventListener("pointerleave", end);
-    return () => {
-      canvas.removeEventListener("pointerdown", start);
-      canvas.removeEventListener("pointermove", move);
-      canvas.removeEventListener("pointerup", end);
-      canvas.removeEventListener("pointerleave", end);
-    };
-  }, [tab]);
-  useEffect(() => {
-    const canvas = document.querySelector<HTMLElement>(".structure-canvas");
-    if (canvas) {
-      canvas.style.setProperty("--structure-angle", `${structureAngle}deg`);
-      canvas.style.setProperty(
-        "--structure-shift",
-        `${Math.sin(structureAngle / 28) * 18}px`,
-      );
-    }
-  }, [structureAngle, tab]);
   const node = useMemo(() => task?.nodes.find((n) => n.id === selected), [
     task,
     selected,

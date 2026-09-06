@@ -1,12 +1,13 @@
 "use client";
 
-import type { PointerEvent as ReactPointerEvent } from "react";
+import { useState, type PointerEvent as ReactPointerEvent } from "react";
 import {
   clarificationQuestions,
   type ClarificationAnswers,
 } from "@/components/ClarificationCard";
 import { KnowledgeGraph } from "@/components/KnowledgeGraph";
 import { ResultsPanel } from "@/components/results/ResultsPanel";
+import { ProteinStructureViewer } from "@/components/structure/ProteinStructureViewer";
 import type { ArtifactRecord } from "@/lib/domain";
 
 export type InspectorTab =
@@ -81,6 +82,10 @@ export function InspectorDrawer({
   onResizeStart,
 }: InspectorDrawerProps) {
   const completedQuestionCount = Object.values(answers).filter(Boolean).length;
+  const [selectedGeneSymbol, setSelectedGeneSymbol] = useState<string | null>(null);
+  const selectedGene = artifacts
+    .find((artifact) => artifact.kind === "chart")
+    ?.candidateGenes?.find((gene) => gene.symbol === selectedGeneSymbol);
   const sourceNames = [
     "项目元数据规范",
     "DESeq2 技能包 · v2.1",
@@ -280,6 +285,8 @@ assert "condition" in metadata.columns
         <ResultsPanel
           artifacts={artifacts}
           running={running}
+          selectedGeneSymbol={selectedGeneSymbol}
+          onSelectGene={setSelectedGeneSymbol}
           onRunDemo={onRunDemo}
           onDownloadVolcano={onDownloadVolcano}
           onDownloadReport={onDownloadReport}
@@ -288,32 +295,12 @@ assert "condition" in metadata.columns
         />
       )}
       {activeTab === "structure" && (
-        <div className="structure-view">
-          <div className="structure-canvas">
-            <div className="helix">⌁</div>
-            {[1, 2, 3, 4].map((residueNumber) => (
-              <button
-                key={residueNumber}
-                aria-label={`选择残基 ${residueNumber}`}
-                className={`residue r${residueNumber} ${
-                  selectedResidue === residueNumber ? "chosen" : ""
-                }`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onResidueSelect(residueNumber);
-                }}
-              />
-            ))}
-          </div>
-          <h3>蛋白质结构预览</h3>
-          <p>
-            3D 结构产物已就绪，支持 PDB/CIF
-            结果。选择残基即可关联证据与代码上下文。
-          </p>
-          <button className="secondary full" onClick={onOpenMolstar}>
-            在 Mol* 中打开
-          </button>
-        </div>
+        <ProteinStructureViewer
+          gene={selectedGene}
+          selectedResidue={selectedResidue}
+          onSelectResidue={onResidueSelect}
+          onOpenMolstar={onOpenMolstar}
+        />
       )}
       <div
         className="vertical-splitter right"

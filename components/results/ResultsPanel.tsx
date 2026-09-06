@@ -8,6 +8,8 @@ import { VolcanoPlot } from "@/components/results/VolcanoPlot";
 type ResultsPanelProps = {
   artifacts: ArtifactRecord[];
   running: boolean;
+  selectedGeneSymbol: string | null;
+  onSelectGene: (geneSymbol: string) => void;
   onRunDemo: () => void;
   onDownloadVolcano: () => void;
   onDownloadReport: () => void;
@@ -22,13 +24,14 @@ const formatArtifactDate = (createdAt?: string) =>
 export function ResultsPanel({
   artifacts,
   running,
+  selectedGeneSymbol,
+  onSelectGene,
   onRunDemo,
   onDownloadVolcano,
   onDownloadReport,
   onOpenNode,
   onOpenEvidence,
 }: ResultsPanelProps) {
-  const [selectedGeneSymbol, setSelectedGeneSymbol] = useState<string | null>(null);
   const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
   const volcanoArtifact = artifacts.find((artifact) => artifact.kind === "chart");
   const reportArtifact = artifacts.find((artifact) => artifact.kind === "report");
@@ -75,7 +78,7 @@ export function ResultsPanel({
       <VolcanoPlot
         genes={candidateGenes}
         selectedGeneSymbol={selectedGeneSymbol}
-        onSelectGene={setSelectedGeneSymbol}
+        onSelectGene={onSelectGene}
       />
 
       <div className="metrics">
@@ -104,7 +107,7 @@ export function ResultsPanel({
               selectedGeneSymbol === gene.symbol ? "active" : ""
             }`}
             key={gene.symbol}
-            onClick={() => setSelectedGeneSymbol(gene.symbol)}
+            onClick={() => onSelectGene(gene.symbol)}
           >
             <b>{gene.symbol}</b>
             <span>FDR {gene.fdr}</span>

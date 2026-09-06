@@ -371,3 +371,10 @@
 
 - `npm run typecheck` 通过。
 - `npm run build` 通过。
+# 2026-09-06
+
+## 修复 Next.js 依赖模块加载错误
+
+- 重新安装被 macOS/iCloud 标记为 `dataless` 的 Next.js 内置依赖，恢复 `comment-json.parse` 与 `semver.lt`。
+- 验证 `npm run typecheck` 通过。
+- 开发环境如遇 `EMFILE` 文件监听上限，使用 `npm run dev:poll` 启动轮询模式。

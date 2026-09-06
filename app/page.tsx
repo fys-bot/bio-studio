@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ParticleLoader } from "@/components/ParticleLoader";
 import { ConfigPanel } from "@/components/ConfigPanel";
-import { KnowledgeGraph } from "@/components/KnowledgeGraph";
 import {
   ClarificationCard,
   clarificationQuestions,
@@ -11,6 +10,7 @@ import {
 import { WorkflowCanvas } from "@/components/WorkflowCanvas";
 import { TaskSidebar } from "@/components/TaskSidebar";
 import { ConversationPanel } from "@/components/ConversationPanel";
+import { InspectorDrawer, type InspectorTab } from "@/components/InspectorDrawer";
 import { defaultDemoConfig, DemoConfig } from "@/lib/demo-config";
 
 type WorkflowNodeState = {
@@ -94,16 +94,7 @@ export default function Home() {
   const [events, setEvents] = useState(seedEvents);
   const [liveLogs, setLiveLogs] = useState<string[]>([]);
   const [selected, setSelected] = useState("design");
-  const [tab, setTab] = useState<
-    | "todo"
-    | "results"
-    | "compute"
-    | "notes"
-    | "evidence"
-    | "logs"
-    | "code"
-    | "structure"
-  >("todo");
+  const [tab, setTab] = useState<InspectorTab>("todo");
   const [mobilePanel, setMobilePanel] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [sentMessages, setSentMessages] = useState<string[]>([]);
@@ -893,307 +884,41 @@ export default function Home() {
           onClick={() => setMobilePanel(false)}
         />
       )}
-      <aside className={`inspector ${mobilePanel ? "mobile-open" : ""}`}>
-        <div className="drawer-heading">
-          <div>
-            <small>研究工具</small>
-            <b>
-              {{
-                todo: "任务待办",
-                results: "结果产物",
-                compute: "计算资源",
-                notes: "研究笔记",
-                evidence: "证据依据",
-                logs: "运行日志",
-                code: "分析代码",
-                structure: "3D 结构",
-              }[tab]}
-            </b>
-          </div>
-          <button
-            className="close-inspector"
-            onClick={() => setMobilePanel(false)}
-            aria-label="关闭工具抽屉"
-          >
-            ×
-          </button>
-        </div>
-        <div className="inspector-tabs">
-          <button
-            className={tab === "evidence" ? "active" : ""}
-            onClick={() => setTab("evidence")}
-          >
-            证据
-          </button>
-          <button
-            className={tab === "logs" ? "active" : ""}
-            onClick={() => setTab("logs")}
-          >
-            日志
-          </button>
-          <button
-            className={tab === "code" ? "active" : ""}
-            onClick={() => setTab("code")}
-          >
-            代码
-          </button>
-          <button
-            className={tab === "results" ? "active" : ""}
-            onClick={() => setTab("results")}
-          >
-            结果
-          </button>
-          <button
-            className={tab === "structure" ? "active" : ""}
-            onClick={() => setTab("structure")}
-          >
-            3D
-          </button>
-        </div>
-        {tab === "todo" && (
-          <div className="tool-view todo-view">
-            <div className="tool-summary">
-              <b>分析准备</b>
-              <span>
-                {Object.values(answers).filter(Boolean).length} / 4 已完成
-              </span>
-            </div>
-            {clarificationQuestions.map((q, i) => (
-              <button
-                key={q.key}
-                onClick={() => {
-                  setActiveQuestion(i);
-                  setMobilePanel(false);
-                  notify(`已定位到${q.label}`);
-                }}
-              >
-                <i>{answers[q.key] ? "✓" : "○"}</i>
-                <span>
-                  <b>{q.label}</b>
-                  <small>{answers[q.key] || "等待你的选择"}</small>
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-        {tab === "compute" && (
-          <div className="tool-view compute-view">
-            <div className="compute-status">
-              <i />计算环境待命
-            </div>
-            <h3>标准分析环境</h3>
-            <p>4 vCPU · 16 GB 内存 · Python / R</p>
-            <dl>
-              <div>
-                <dt>运行时</dt>
-                <dd>BioFlow RNA-seq 1.4</dd>
-              </div>
-              <div>
-                <dt>数据区域</dt>
-                <dd>本地项目空间</dd>
-              </div>
-              <div>
-                <dt>外发数据</dt>
-                <dd>无</dd>
-              </div>
-            </dl>
-          </div>
-        )}
-        {tab === "notes" && (
-          <div className="tool-view notes-view">
-            <textarea defaultValue="研究备注
-
-• 比较处理组与对照组
-• 优先关注 FDR < 0.05 的基因
-• 输出可发表火山图与方法说明" />
-            <small>笔记保存在当前任务上下文中</small>
-          </div>
-        )}
-        {tab === "evidence" && (
-          <>
-            <div className="inspector-title">
-              <small>当前选中节点</small>
-              <h2>{node?.label}</h2>
-              <span className={`status-pill ${node?.status}`}>
-                {statusLabel[node?.status || ""] || node?.status}
-              </span>
-            </div>
-            <div className="explain-card">
-              <span>✦ 为什么需要这一步？</span>
-              <p>
-                这一步会在统计分析前校验样本结构，避免分组误配，并保证最终报告可复现。
-              </p>
-            </div>
-            <div className="source-list">
-              <h3>
-                依据来源 <span>4</span>
-              </h3>
-              {[
-                "项目元数据规范",
-                "DESeq2 技能包 · v2.1",
-                "Bioconductor 设计指南",
-                "质控策略 · 2026-08",
-              ].map((s, i) => (
-                <button
-                  className="source"
-                  key={s}
-                  onClick={() =>
-                    setModal({
-                      kind: "source",
-                      title: s,
-                      detail: `${i === 0 ? "直接匹配" : "语义匹配"} · 0.${
-                        91 - i
-                      } 相关度 · 已绑定到 ${node?.label || "当前节点"}`,
-                    })}
-                >
-                  <i>{i + 1}</i>
-                  <span>
-                    <b>{s}</b>
-                    <small>
-                      {i === 0 ? "直接匹配" : "语义匹配"} · 0.{91 - i} 相关度
-                    </small>
-                  </span>
-                  <em>↗</em>
-                </button>
-              ))}
-            </div>
-            <KnowledgeGraph nodeLabel={node?.label || "当前节点"} />
-            {node?.status === "failed" && (
-              <div className="error-card">
-                <b>⚠ 校验未通过</b>
-                <p>{node.error}</p>
-                <button className="primary full" onClick={retry}>
-                  {retrying ? "重试中…" : "映射 condition 并重试"}
-                </button>
-              </div>
-            )}
-          </>
-        )}
-        {tab === "logs" && (
-          <div className="log-view">
-            <div className="log-live">
-              <i /> 实时事件流
-            </div>
-            {(liveLogs.length ? liveLogs : ["等待运行事件…"]).map((l, i) => (
-              <p
-                key={`${l}${i}`}
-                className={l.includes("failed") ? "log-error" : ""}
-              >
-                {l}
-              </p>
-            ))}
-          </div>
-        )}
-        {tab === "code" && (
-          <div className="code-view">
-            <div className="code-head">
-              <span>analysis.py</span>
-              <span className="code-state">
-                ● {running ? "生成中" : "就绪"}
-              </span>
-            </div>
-            <pre><code>{codeText||`import pandas as pd\nfrom deseq2 import DESeqDataSet\n\ncounts = pd.read_csv("counts.csv")\nmetadata = pd.read_csv("sample_metadata.tsv")\n\n# Validate before execution\nassert "condition" in metadata.columns\n`}</code></pre>
-            <button className="primary full" onClick={runDemo}>
-              {running ? "代码生成中…" : "运行代码"}
-            </button>
-          </div>
-        )}
-        {tab === "results" && (
-          <div className="result-view">
-            <div className="result-head">
-              <div>
-                <small>结果产物</small>
-                <h3>火山图</h3>
-              </div>
-              <button onClick={downloadVolcano} aria-label="下载火山图 SVG">
-                ↧ SVG
-              </button>
-            </div>
-            <svg className="volcano" viewBox="0 0 280 220">
-              <line x1="32" y1="190" x2="265" y2="190" />
-              <line x1="32" y1="20" x2="32" y2="190" />
-              {Array.from(
-                { length: 55 },
-                (_, i) => (
-                  <circle
-                    key={i}
-                    cx={45 + ((i * 47) % 205)}
-                    cy={178 - ((i * 29) % 145)}
-                    r={i % 7 === 0 ? 3 : 2}
-                    className={i % 7 === 0 ? "hit" : ""}
-                  />
-                ),
-              )}
-            </svg>
-            <div className="metrics">
-              <div>
-                <b>1,842</b>
-                <small>检测基因数</small>
-              </div>
-              <div>
-                <b>126</b>
-                <small>显著差异</small>
-              </div>
-              <div>
-                <b>18</b>
-                <small>候选基因</small>
-              </div>
-            </div>
-            <div className="lineage-card">
-              <b>⌁ 结果血缘</b>
-              <p>counts.csv → 设计矩阵 → DESeq2 → volcano_plot.svg</p>
-              <button
-                onClick={() => {
-                  setSelected("de");
-                  setTab("evidence");
-                  notify("已追溯到 DESeq2 来源节点");
-                }}
-              >
-                追溯到来源节点
-              </button>
-            </div>
-          </div>
-        )}
-        {tab === "structure" && (
-          <div className="structure-view">
-            <div className="structure-canvas">
-              <div className="helix">⌁</div>
-              {[1, 2, 3, 4].map((value) => (
-                <button
-                  key={value}
-                  aria-label={`选择残基 ${value}`}
-                  className={`residue r${value} ${
-                    selectedResidue === value ? "chosen" : ""
-                  }`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setSelectedResidue(value);
-                  }}
-                />
-              ))}
-            </div>
-            <h3>蛋白质结构预览</h3>
-            <p>
-              3D 结构产物已就绪，支持 PDB/CIF
-              结果。选择残基即可关联证据与代码上下文。
-            </p>
-            <button
-              className="secondary full"
-              onClick={() =>
-                notify(
-                  "当前为轻量 3D 预览；接入 Mol* 后将在此打开完整结构查看器",
-                )}
-            >
-              在 Mol* 中打开
-            </button>
-          </div>
-        )}
-        <div
-          className="vertical-splitter right"
-          onPointerDown={(e) => startResize("inspector", e)}
-          title="拖拽调整检查器宽度"
-        />
-      </aside>
+      <InspectorDrawer
+        isOpen={mobilePanel}
+        activeTab={tab}
+        selectedNode={node}
+        statusLabels={statusLabel}
+        answers={answers}
+        liveLogs={liveLogs}
+        running={running}
+        retrying={retrying}
+        codeText={codeText}
+        selectedResidue={selectedResidue}
+        onTabChange={setTab}
+        onClose={() => setMobilePanel(false)}
+        onSelectQuestion={(questionIndex) => {
+          setActiveQuestion(questionIndex);
+          setMobilePanel(false);
+          notify(`已定位到${clarificationQuestions[questionIndex].label}`);
+        }}
+        onOpenSource={(title, detail) =>
+          setModal({ kind: "source", title, detail })
+        }
+        onRetry={retry}
+        onRunDemo={runDemo}
+        onDownloadVolcano={downloadVolcano}
+        onSelectResultSource={() => {
+          setSelected("de");
+          setTab("evidence");
+          notify("已追溯到 DESeq2 来源节点");
+        }}
+        onResidueSelect={setSelectedResidue}
+        onOpenMolstar={() =>
+          notify("当前为轻量 3D 预览；接入 Mol* 后将在此打开完整结构查看器")
+        }
+        onResizeStart={(event) => startResize("inspector", event)}
+      />
       {modal && (
         <div
           className="ui-modal-backdrop"

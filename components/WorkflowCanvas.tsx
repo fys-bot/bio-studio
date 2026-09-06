@@ -1,6 +1,7 @@
 "use client";
 
 import type { PointerEvent, WheelEvent } from "react";
+import type { WorkflowPosition } from "@/lib/domain";
 
 export type WorkflowNode = {
   id: string;
@@ -12,7 +13,7 @@ export type WorkflowNode = {
   detail: string;
 };
 
-export type WorkflowPosition = { x: number; y: number };
+export type LayoutSaveState = "loading" | "idle" | "saving" | "saved" | "error";
 
 type WorkflowCanvasProps = {
   open: boolean;
@@ -24,15 +25,20 @@ type WorkflowCanvasProps = {
   canvasZoom: number;
   canvasPan: WorkflowPosition;
   nodePositions: Record<string, WorkflowPosition>;
+  layoutRevision: number;
+  layoutVersionCount: number;
+  layoutSaveState: LayoutSaveState;
+  creatingVersion: boolean;
   onZoomChange: (next: (value: number) => number) => void;
   onReset: () => void;
+  onCreateVersion: () => void;
   onCanvasPanStart: (event: PointerEvent<HTMLDivElement>) => void;
   onCanvasWheel: (event: WheelEvent<HTMLDivElement>) => void;
   onNodePointerDown: (node: WorkflowNode, event: PointerEvent<HTMLButtonElement>) => void;
 };
 
 /**
- * 可编辑分析工作流画布：节点位置只保存在当前任务视图，运行状态仍由服务端任务快照驱动。
+ * 可编辑分析工作流画布：布局自动保存到服务端，运行状态仍由任务快照独立驱动。
  */
 export function WorkflowCanvas({
   open,
@@ -44,8 +50,13 @@ export function WorkflowCanvas({
   canvasZoom,
   canvasPan,
   nodePositions,
+  layoutRevision,
+  layoutVersionCount,
+  layoutSaveState,
+  creatingVersion,
   onZoomChange,
   onReset,
+  onCreateVersion,
   onCanvasPanStart,
   onCanvasWheel,
   onNodePointerDown,
@@ -58,12 +69,23 @@ export function WorkflowCanvas({
     <div className={`canvas-wrap ${open ? "" : "plan-collapsed"}`}>
       <div className="canvas-toolbar">
         <span>
-          分析工作流 / v1.4{" "}
+          分析工作流 / v1.{layoutVersionCount}
           <em>
             {connectingFrom
               ? `正在连线：${connectingFrom} → Shift 点击目标节点`
               : "拖拽节点 · 拖动画布 · 滚轮缩放 · Shift+点击连线"}
           </em>
+          <small className={`layout-save-state ${layoutSaveState}`}>
+            {layoutSaveState === "loading"
+              ? "正在恢复布局"
+              : layoutSaveState === "saving"
+                ? "正在自动保存"
+                : layoutSaveState === "saved"
+                  ? `已自动保存 · r${layoutRevision}`
+                  : layoutSaveState === "error"
+                    ? "自动保存失败"
+                    : "布局已就绪"}
+          </small>
         </span>
         <div>
           <button onClick={() => updateZoom(-0.1)} aria-label="缩小">
@@ -75,6 +97,13 @@ export function WorkflowCanvas({
           </button>
           <button onClick={onReset} aria-label="居中并重置">
             ⊙
+          </button>
+          <button
+            className="layout-version-button"
+            onClick={onCreateVersion}
+            disabled={creatingVersion || layoutSaveState === "loading"}
+          >
+            {creatingVersion ? "保存中…" : "保存版本"}
           </button>
         </div>
       </div>

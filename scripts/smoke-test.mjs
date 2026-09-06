@@ -91,13 +91,48 @@ async function resetAndPrepare() {
 const log = (message) => console.log(`✓ ${message}`);
 await expectStatus("/api/tasks", 401);
 await expectStatus("/api/files/profile", 401, { method: "POST" });
+await expectStatus("/api/workflows/workflow_demo/layout", 401);
 await request("/api/auth/login", { method: "POST" });
-log("页面与文件解析接口登录鉴权");
+log("页面、文件解析与工作流布局接口登录鉴权");
 await request("/api/tasks", { method: "POST", headers: { origin: base } });
 log("重置演示状态");
 const initial = await request("/api/tasks");
 if (!initial.task) throw new Error("任务快照缺失");
 log(`读取任务：${initial.task.title}`);
+
+await expectStatus("/api/workflows/workflow_demo/layout", 403, {
+  method: "PUT",
+  headers: { "content-type": "application/json", origin: "https://evil.example" },
+  body: JSON.stringify({ zoom: 1.2 }),
+});
+const savedLayoutResponse = await request("/api/workflows/workflow_demo/layout", {
+  method: "PUT",
+  headers: { "content-type": "application/json", origin: base },
+  body: JSON.stringify({
+    nodePositions: { design: { x: 360, y: 280 } },
+    extraEdges: [["qc", "report"]],
+    zoom: 1.25,
+    pan: { x: 42, y: -18 },
+  }),
+});
+if (savedLayoutResponse.layout?.current?.nodePositions?.design?.x !== 360) {
+  throw new Error("工作流节点位置未保存");
+}
+const restoredLayoutResponse = await request("/api/workflows/workflow_demo/layout");
+if (restoredLayoutResponse.layout?.current?.zoom !== 1.25) {
+  throw new Error("工作流缩放比例未恢复");
+}
+const versionResponse = await request("/api/workflows/workflow_demo/layout", {
+  method: "POST",
+  headers: { "content-type": "application/json", origin: base },
+  body: JSON.stringify({
+    name: "冒烟测试布局",
+    ...restoredLayoutResponse.layout.current,
+  }),
+});
+if (versionResponse.version?.name !== "冒烟测试布局") throw new Error("工作流版本名称缺失");
+if (versionResponse.layout?.versions?.length !== 1) throw new Error("工作流版本未持久化");
+log("工作流布局保存、刷新恢复与版本快照");
 
 const crossOriginMetadataForm = new FormData();
 crossOriginMetadataForm.append(

@@ -2291,6 +2291,49 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.canvas-toolbar > span {
+  min-width: 0;
+}
+.canvas-toolbar > div {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.layout-save-state {
+  display: inline-block;
+  margin-left: 9px;
+  color: #70756a;
+  font-size: 9px;
+}
+.layout-save-state.saving {
+  color: #8a7014;
+}
+.layout-save-state.saved {
+  color: #667119;
+}
+.layout-save-state.error {
+  color: #a04437;
+}
+.canvas-toolbar .layout-version-button {
+  width: auto;
+  min-width: 70px;
+  padding: 0 8px;
+  color: #5f681a;
+}
+.canvas-toolbar .layout-version-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+@media (max-width: 760px) {
+  .layout-save-state {
+    display: block;
+    margin: 3px 0 0;
+  }
+  .canvas-toolbar .layout-version-button {
+    min-width: 62px;
+    padding: 0 5px;
+  }
+}
 @keyframes connect-pulse {
   50% {
     box-shadow:

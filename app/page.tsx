@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ParticleLoader } from "@/components/ParticleLoader";
 import { ConfigPanel } from "@/components/ConfigPanel";
 import {
@@ -7,7 +7,7 @@ import {
   clarificationQuestions,
   ClarificationAnswers,
 } from "@/components/ClarificationCard";
-import { WorkflowCanvas } from "@/components/WorkflowCanvas";
+import { WorkflowCanvas, type LayoutSaveState } from "@/components/WorkflowCanvas";
 import { TaskSidebar } from "@/components/TaskSidebar";
 import { ConversationPanel } from "@/components/ConversationPanel";
 import { InspectorDrawer, type InspectorTab } from "@/components/InspectorDrawer";
@@ -116,6 +116,12 @@ export default function Home() {
   const [extraEdges, setExtraEdges] = useState<string[][]>([]);
   const [canvasPan, setCanvasPan] = useState({ x: 0, y: 0 });
   const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [layoutReady, setLayoutReady] = useState(false);
+  const [layoutSaveState, setLayoutSaveState] = useState<LayoutSaveState>("loading");
+  const [layoutRevision, setLayoutRevision] = useState(0);
+  const [layoutVersionCount, setLayoutVersionCount] = useState(0);
+  const [creatingLayoutVersion, setCreatingLayoutVersion] = useState(false);
+  const lastSavedLayoutRef = useRef("");
   const [activeNav, setActiveNav] = useState<"workspace" | "skills" | "files">("workspace");
   const [activeTask, setActiveTask] = useState("rna");
   const [projectName, setProjectName] = useState("BioFlow 生命科学实验室");
@@ -133,6 +139,19 @@ export default function Home() {
   const uploadedFiles = useMemo(
     () => dataProfiles.map((profile) => profile.fileName),
     [dataProfiles],
+  );
+  const workflowLayoutInput = useMemo(
+    () => ({
+      nodePositions,
+      extraEdges,
+      zoom: canvasZoom,
+      pan: canvasPan,
+    }),
+    [canvasPan, canvasZoom, extraEdges, nodePositions],
+  );
+  const serializedWorkflowLayout = useMemo(
+    () => JSON.stringify(workflowLayoutInput),
+    [workflowLayoutInput],
   );
   useEffect(() => {
     const syncViewport = () => setViewportWidth(window.innerWidth);
@@ -159,20 +178,60 @@ export default function Home() {
     (async () => {
       try {
         await bioflowApi.login();
-        const [taskResponse, configResponse] = await Promise.all([
+        const [taskResponse, configResponse, layoutResponse] = await Promise.all([
           bioflowApi.getTask(),
           bioflowApi.getConfig(),
+          bioflowApi.getWorkflowLayout(),
           new Promise((resolve) => setTimeout(resolve, 850)),
         ]);
         setTask(taskResponse.task);
         setDataProfiles(taskResponse.task.dataProfiles ?? []);
         if (configResponse.config) setConfig(configResponse.config);
+        const restoredLayout = layoutResponse.layout.current;
+        const restoredLayoutInput = {
+          nodePositions: restoredLayout.nodePositions,
+          extraEdges: restoredLayout.extraEdges,
+          zoom: restoredLayout.zoom,
+          pan: restoredLayout.pan,
+        };
+        setNodePositions(restoredLayout.nodePositions);
+        setExtraEdges(restoredLayout.extraEdges);
+        setCanvasZoom(restoredLayout.zoom);
+        setCanvasPan(restoredLayout.pan);
+        setLayoutRevision(restoredLayout.revision);
+        setLayoutVersionCount(layoutResponse.layout.versions.length);
+        lastSavedLayoutRef.current = JSON.stringify(restoredLayoutInput);
+        setLayoutReady(true);
+        setLayoutSaveState("saved");
         setAuthed(true);
       } catch {
         setToast("工作区初始化失败，请检查服务状态");
       }
     })();
   }, []);
+  useEffect(() => {
+    if (!authed || !layoutReady || serializedWorkflowLayout === lastSavedLayoutRef.current) return;
+
+    setLayoutSaveState("saving");
+    let saveCancelled = false;
+    const saveTimer = window.setTimeout(async () => {
+      try {
+        const response = await bioflowApi.saveWorkflowLayout(workflowLayoutInput);
+        if (saveCancelled) return;
+        lastSavedLayoutRef.current = serializedWorkflowLayout;
+        setLayoutRevision(response.layout.current.revision);
+        setLayoutVersionCount(response.layout.versions.length);
+        setLayoutSaveState("saved");
+      } catch {
+        if (!saveCancelled) setLayoutSaveState("error");
+      }
+    }, 650);
+
+    return () => {
+      saveCancelled = true;
+      window.clearTimeout(saveTimer);
+    };
+  }, [authed, layoutReady, serializedWorkflowLayout, workflowLayoutInput]);
   useEffect(() => {
     if (!authed || !running) return;
     const sync = () =>
@@ -589,10 +648,33 @@ ${task?.goal || config.goal}
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
   };
+  const createLayoutVersion = async () => {
+    if (creatingLayoutVersion || !layoutReady) return;
+    setCreatingLayoutVersion(true);
+    setLayoutSaveState("saving");
+    try {
+      const versionName = `分析布局 v1.${layoutVersionCount + 1}`;
+      const response = await bioflowApi.createWorkflowLayoutVersion(
+        versionName,
+        workflowLayoutInput,
+      );
+      lastSavedLayoutRef.current = serializedWorkflowLayout;
+      setLayoutRevision(response.layout.current.revision);
+      setLayoutVersionCount(response.layout.versions.length);
+      setLayoutSaveState("saved");
+      notify(`已保存 ${response.version.name}`);
+    } catch {
+      setLayoutSaveState("error");
+      notify("布局版本保存失败，请稍后重试");
+    } finally {
+      setCreatingLayoutVersion(false);
+    }
+  };
   const resetCanvas = () => {
     setCanvasZoom(1);
     setCanvasPan({ x: 0, y: 0 });
     setNodePositions({});
+    setExtraEdges([]);
     setConnectingFrom(null);
     notify("画布位置和缩放已重置");
   };
@@ -809,8 +891,13 @@ ${task?.goal || config.goal}
           canvasZoom={canvasZoom}
           canvasPan={canvasPan}
           nodePositions={nodePositions}
+          layoutRevision={layoutRevision}
+          layoutVersionCount={layoutVersionCount}
+          layoutSaveState={layoutSaveState}
+          creatingVersion={creatingLayoutVersion}
           onZoomChange={(update) => setCanvasZoom((value) => clampZoom(update(value)))}
           onReset={resetCanvas}
+          onCreateVersion={createLayoutVersion}
           onCanvasPanStart={startCanvasPan}
           onCanvasWheel={(event) => {
             event.preventDefault();

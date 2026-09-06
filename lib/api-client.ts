@@ -1,5 +1,12 @@
 import type { DemoConfig } from "@/lib/demo-config";
-import type { DataFileProfile, ResearchTask, TaskResponse } from "@/lib/domain";
+import type {
+  DataFileProfile,
+  ResearchTask,
+  TaskResponse,
+  WorkflowLayoutState,
+  WorkflowLayoutVersion,
+} from "@/lib/domain";
+import type { WorkflowLayoutInput } from "@/lib/workflow-layout";
 
 type ApiErrorPayload = {
   error?: string;
@@ -47,6 +54,10 @@ export type ClarificationPayload = {
 export type FileProfileResponse = {
   profile: DataFileProfile;
   task: ResearchTask;
+};
+
+export type WorkflowLayoutResponse = {
+  layout: WorkflowLayoutState;
 };
 
 /**
@@ -173,4 +184,24 @@ export const bioflowApi = {
       body: formData,
     });
   },
+
+  getWorkflowLayout: () =>
+    requestJson<WorkflowLayoutResponse>("/api/workflows/workflow_demo/layout"),
+
+  saveWorkflowLayout: (layout: WorkflowLayoutInput) =>
+    requestJson<WorkflowLayoutResponse>("/api/workflows/workflow_demo/layout", {
+      method: "PUT",
+      headers: jsonHeaders,
+      body: JSON.stringify(layout),
+    }),
+
+  createWorkflowLayoutVersion: (name: string, layout: WorkflowLayoutInput) =>
+    requestJson<WorkflowLayoutResponse & { version: WorkflowLayoutVersion }>(
+      "/api/workflows/workflow_demo/layout",
+      {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({ name, ...layout }),
+      },
+    ),
 };

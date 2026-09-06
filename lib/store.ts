@@ -2,7 +2,12 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 import { defaultDemoConfig, DemoConfig, normalizeDemoConfig } from "./demo-config";
-import type { DataFileProfile, ResearchTask } from "./domain";
+import type { DataFileProfile, ResearchTask, WorkflowLayoutState } from "./domain";
+import {
+  createDefaultWorkflowLayout,
+  normalizeWorkflowLayout,
+  type WorkflowLayoutInput,
+} from "./workflow-layout";
 
 export type NodeStatus = "succeeded" | "running" | "blocked" | "failed" | "queued" | "cancelled";
 export type RunEvent = {
@@ -83,6 +88,7 @@ type BioFlowRuntimeState = {
   cancelled: boolean;
   nextEvent: number;
   config: DemoConfig;
+  workflowLayout?: WorkflowLayoutState;
 };
 const globalStateRegistry = globalThis as typeof globalThis & {
   __bioflow?: BioFlowRuntimeState;
@@ -120,6 +126,10 @@ const defaultState = (): BioFlowRuntimeState => ({
   cancelled: false,
   nextEvent: 1,
   config: defaultDemoConfig,
+  workflowLayout: {
+    current: createDefaultWorkflowLayout(),
+    versions: [],
+  },
 });
 function persist(runtimeState: BioFlowRuntimeState) {
   try {
@@ -181,6 +191,42 @@ export function saveDataFileProfile(profile: DataFileProfile) {
   ];
   persist(runtimeState);
   return runtimeState.task;
+}
+
+function ensureWorkflowLayout(runtimeState: BioFlowRuntimeState) {
+  runtimeState.workflowLayout ??= {
+    current: createDefaultWorkflowLayout(),
+    versions: [],
+  };
+  return runtimeState.workflowLayout;
+}
+
+export function workflowLayoutSnapshot() {
+  return structuredClone(ensureWorkflowLayout(state()));
+}
+
+export function saveWorkflowLayout(input: WorkflowLayoutInput) {
+  const runtimeState = state();
+  const workflowLayout = ensureWorkflowLayout(runtimeState);
+  workflowLayout.current = normalizeWorkflowLayout(input, workflowLayout.current);
+  persist(runtimeState);
+  return structuredClone(workflowLayout);
+}
+
+export function createWorkflowLayoutVersion(name: string, input: WorkflowLayoutInput) {
+  const runtimeState = state();
+  const workflowLayout = ensureWorkflowLayout(runtimeState);
+  workflowLayout.current = normalizeWorkflowLayout(input, workflowLayout.current);
+  const versionNumber = workflowLayout.versions.length + 1;
+  const version = {
+    id: randomUUID(),
+    name: name.trim().slice(0, 60) || `布局版本 ${versionNumber}`,
+    createdAt: new Date().toISOString(),
+    snapshot: structuredClone(workflowLayout.current),
+  };
+  workflowLayout.versions = [...workflowLayout.versions.slice(-9), version];
+  persist(runtimeState);
+  return { layout: structuredClone(workflowLayout), version };
 }
 
 export function eventsAfter(eventId: number) {

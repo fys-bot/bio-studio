@@ -13,6 +13,32 @@ export type WorkflowNodeState = {
   error?: string;
 };
 
+export type WorkflowPosition = {
+  x: number;
+  y: number;
+};
+
+export type WorkflowLayoutSnapshot = {
+  nodePositions: Record<string, WorkflowPosition>;
+  extraEdges: string[][];
+  zoom: number;
+  pan: WorkflowPosition;
+  revision: number;
+  updatedAt: string;
+};
+
+export type WorkflowLayoutVersion = {
+  id: string;
+  name: string;
+  createdAt: string;
+  snapshot: WorkflowLayoutSnapshot;
+};
+
+export type WorkflowLayoutState = {
+  current: WorkflowLayoutSnapshot;
+  versions: WorkflowLayoutVersion[];
+};
+
 export type ResearchTask = {
   id: string;
   title: string;

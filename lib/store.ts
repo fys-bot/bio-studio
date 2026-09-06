@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 import { defaultDemoConfig, DemoConfig, normalizeDemoConfig } from "./demo-config";
-import type { ResearchTask } from "./domain";
+import type { DataFileProfile, ResearchTask } from "./domain";
 
 export type NodeStatus = "succeeded" | "running" | "blocked" | "failed" | "queued" | "cancelled";
 export type RunEvent = {
@@ -112,6 +112,7 @@ const defaultState = (): BioFlowRuntimeState => ({
       ["de", "report"],
     ],
     artifacts: [],
+    dataProfiles: [],
     clarification: { status: "pending", answers: {} },
   },
   events: [],
@@ -169,6 +170,19 @@ export function resetDemoState() {
 export function snapshot() {
   return state().task;
 }
+
+/** 按文件名替换最新结构摘要，持久化时不保存任何原始单元格。 */
+export function saveDataFileProfile(profile: DataFileProfile) {
+  const runtimeState = state();
+  const existingProfiles = runtimeState.task.dataProfiles ?? [];
+  runtimeState.task.dataProfiles = [
+    ...existingProfiles.filter((existingProfile) => existingProfile.fileName !== profile.fileName),
+    profile,
+  ];
+  persist(runtimeState);
+  return runtimeState.task;
+}
+
 export function eventsAfter(eventId: number) {
   return state().events.filter((eventRecord) => eventRecord.id > eventId);
 }

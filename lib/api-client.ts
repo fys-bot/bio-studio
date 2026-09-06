@@ -1,5 +1,5 @@
 import type { DemoConfig } from "@/lib/demo-config";
-import type { ResearchTask, TaskResponse } from "@/lib/domain";
+import type { DataFileProfile, ResearchTask, TaskResponse } from "@/lib/domain";
 
 type ApiErrorPayload = {
   error?: string;
@@ -42,6 +42,11 @@ export type ConfigResponse = {
 
 export type ClarificationPayload = {
   answers: Record<string, string>;
+};
+
+export type FileProfileResponse = {
+  profile: DataFileProfile;
+  task: ResearchTask;
 };
 
 /**
@@ -159,4 +164,13 @@ export const bioflowApi = {
       headers: jsonHeaders,
       body: JSON.stringify(config),
     }),
+
+  profileTabularFile: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return requestJson<FileProfileResponse>("/api/files/profile", {
+      method: "POST",
+      body: formData,
+    });
+  },
 };

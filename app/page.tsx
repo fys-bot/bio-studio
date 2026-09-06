@@ -14,7 +14,7 @@ import { InspectorDrawer, type InspectorTab } from "@/components/InspectorDrawer
 import { WorkspaceModal, type WorkspaceModalState } from "@/components/WorkspaceModal";
 import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
 import { bioflowApi } from "@/lib/api-client";
-import type { ResearchTask, WorkflowNodeState } from "@/lib/domain";
+import type { DataFileProfile, ResearchTask, WorkflowNodeState } from "@/lib/domain";
 type TimelineEvent = {
   id: number;
   phase: string;
@@ -123,11 +123,17 @@ export default function Home() {
   const [toast, setToast] = useState("");
   const [agentMode, setAgentMode] = useState<"标准模式" | "严谨模式" | "快速模式">("标准模式");
   const [extraTasks, setExtraTasks] = useState<string[]>([]);
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [dataProfiles, setDataProfiles] = useState<DataFileProfile[]>([]);
+  const [uploadingFileName, setUploadingFileName] = useState("");
+  const [uploadError, setUploadError] = useState("");
   const [newTaskName, setNewTaskName] = useState("");
   const [config, setConfig] = useState<DemoConfig>(defaultDemoConfig);
   const [configOpen, setConfigOpen] = useState(false);
   const [configSaving, setConfigSaving] = useState(false);
+  const uploadedFiles = useMemo(
+    () => dataProfiles.map((profile) => profile.fileName),
+    [dataProfiles],
+  );
   useEffect(() => {
     const syncViewport = () => setViewportWidth(window.innerWidth);
     syncViewport();
@@ -159,6 +165,7 @@ export default function Home() {
           new Promise((resolve) => setTimeout(resolve, 850)),
         ]);
         setTask(taskResponse.task);
+        setDataProfiles(taskResponse.task.dataProfiles ?? []);
         if (configResponse.config) setConfig(configResponse.config);
         setAuthed(true);
       } catch {
@@ -373,6 +380,40 @@ ${task?.goal || config.goal}
     setModal(null);
     setActiveTask(`extra-${extraTasks.length}`);
     notify(`已创建任务：${name}`);
+  };
+  const profileUploadedFiles = async (files: File[]) => {
+    const uploadFailures: string[] = [];
+    setUploadError("");
+    for (const file of files) {
+      setUploadingFileName(file.name);
+      try {
+        const response = await bioflowApi.profileTabularFile(file);
+        setTask(response.task);
+        setDataProfiles(response.task.dataProfiles ?? []);
+        notify(`${file.name} 结构检查完成`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "文件结构解析失败";
+        uploadFailures.push(`${file.name}：${message}`);
+        notify(`${file.name} 解析失败`);
+      } finally {
+        setUploadingFileName("");
+      }
+    }
+    setUploadError(uploadFailures.join("；"));
+  };
+  const applyDataProfile = (profile: DataFileProfile) => {
+    const suggestedAnswers: ClarificationAnswers = {
+      ...answers,
+      format: profile.dataRole === "count_matrix" ? "Count 矩阵" : answers.format,
+      comparison: profile.recognizedFields.condition ? "处理组 vs 对照组" : answers.comparison,
+    };
+    const nextUnansweredQuestion = clarificationQuestions.findIndex(
+      (question) => !suggestedAnswers[question.key],
+    );
+    setAnswers(suggestedAnswers);
+    setActiveQuestion(nextUnansweredQuestion >= 0 ? nextUnansweredQuestion : 3);
+    setModal(null);
+    notify(`已将 ${profile.fileName} 的结构建议应用到分析上下文`);
   };
   const submitClarifications = async () => {
     if (submittingAnswers || Object.values(answers).some((answer) => !answer)) return;
@@ -611,11 +652,15 @@ ${task?.goal || config.goal}
         activeTaskId={activeTask}
         extraTaskNames={extraTasks}
         uploadedFileNames={uploadedFiles}
+        dataProfiles={dataProfiles}
         statusLabels={statusLabel}
         onOpenProjectPicker={() => setModal({ kind: "projects", title: "切换项目" })}
         onCreateTask={() => setModal({ kind: "new-task", title: "新建科研任务" })}
         onSelectTask={selectTask}
-        onUploadFile={() => setModal({ kind: "upload", title: "上传项目文件" })}
+        onUploadFile={() => {
+          setUploadError("");
+          setModal({ kind: "upload", title: "上传项目文件" });
+        }}
         onOpenFile={(fileName, fileDetail) =>
           setModal({ kind: "file", title: fileName, detail: fileDetail })
         }
@@ -866,6 +911,9 @@ ${task?.goal || config.goal}
           modal={modal}
           projectName={projectName}
           uploadedFileNames={uploadedFiles}
+          dataProfiles={dataProfiles}
+          uploadingFileName={uploadingFileName}
+          uploadError={uploadError}
           newTaskName={newTaskName}
           onClose={() => setModal(null)}
           onSelectProject={(nextProjectName) => {
@@ -877,11 +925,8 @@ ${task?.goal || config.goal}
           onOpenFile={(fileName, detail) => setModal({ kind: "file", title: fileName, detail })}
           onNewTaskNameChange={setNewTaskName}
           onCreateTask={createTask}
-          onUploadFiles={(fileNames) => {
-            setUploadedFiles((items) => [...items, ...fileNames]);
-            setModal(null);
-            notify(`已添加 ${fileNames.length} 个文件`);
-          }}
+          onUploadFiles={profileUploadedFiles}
+          onApplyDataProfile={applyDataProfile}
           onApplyLayout={(layout) => {
             if (layout === "focus") {
               setPlanOpen(false);

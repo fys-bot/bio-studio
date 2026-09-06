@@ -1,6 +1,15 @@
 "use client";
 
 import type { ChangeEvent, KeyboardEvent } from "react";
+import type { DataFileProfile, TabularColumnProfile } from "@/lib/domain";
+
+const columnTypeLabels: Record<TabularColumnProfile["inferredType"], string> = {
+  number: "数值",
+  category: "分类",
+  identifier: "标识符",
+  date: "日期",
+  text: "文本",
+};
 
 export type ModalKind =
   | "projects"
@@ -22,6 +31,9 @@ type WorkspaceModalProps = {
   modal: WorkspaceModalState;
   projectName: string;
   uploadedFileNames: string[];
+  dataProfiles: DataFileProfile[];
+  uploadingFileName: string;
+  uploadError: string;
   newTaskName: string;
   onClose: () => void;
   onSelectProject: (projectName: string) => void;
@@ -29,7 +41,8 @@ type WorkspaceModalProps = {
   onOpenFile: (fileName: string, detail: string) => void;
   onNewTaskNameChange: (taskName: string) => void;
   onCreateTask: () => void;
-  onUploadFiles: (fileNames: string[]) => void;
+  onUploadFiles: (files: File[]) => void;
+  onApplyDataProfile: (profile: DataFileProfile) => void;
   onApplyLayout: (layout: "focus" | "workflow" | "reset") => void;
   onConfirmDetail: (kind: "file" | "source") => void;
 };
@@ -42,6 +55,9 @@ export function WorkspaceModal({
   modal,
   projectName,
   uploadedFileNames,
+  dataProfiles,
+  uploadingFileName,
+  uploadError,
   newTaskName,
   onClose,
   onSelectProject,
@@ -50,13 +66,19 @@ export function WorkspaceModal({
   onNewTaskNameChange,
   onCreateTask,
   onUploadFiles,
+  onApplyDataProfile,
   onApplyLayout,
   onConfirmDetail,
 }: WorkspaceModalProps) {
   const handleUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    const fileNames = Array.from(event.target.files || []).map((file) => file.name);
-    if (fileNames.length) onUploadFiles(fileNames);
+    const files = Array.from(event.target.files || []);
+    if (files.length) onUploadFiles(files);
   };
+
+  const latestDataProfile = dataProfiles.at(-1);
+  const availableFileNames = Array.from(
+    new Set(["counts.csv", "sample_metadata.tsv", ...uploadedFileNames]),
+  );
 
   const handleTaskNameKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") onCreateTask();
@@ -122,26 +144,24 @@ export function WorkspaceModal({
         )}
         {modal.kind === "files" && (
           <div className="modal-list">
-            {["counts.csv", "sample_metadata.tsv", ...uploadedFileNames].map((fileName) => (
-              <button
-                key={fileName}
-                onClick={() =>
-                  onOpenFile(
-                    fileName,
-                    fileName.endsWith(".csv")
-                      ? "RNA-seq 计数矩阵 · 24 个样本"
-                      : "项目文件 · 可供智能体检索与分析",
-                  )
-                }
-              >
-                <span>▧</span>
-                <div>
-                  <b>{fileName}</b>
-                  <small>本地项目空间</small>
-                </div>
-                <em>查看</em>
-              </button>
-            ))}
+            {availableFileNames.map((fileName) => {
+              const dataProfile = dataProfiles.find((profile) => profile.fileName === fileName);
+              const profileDetail = dataProfile
+                ? `${dataProfile.format} · ${dataProfile.sampleCount} 个样本 · ${dataProfile.columnCount} 个字段 · ${dataProfile.status === "ready" ? "可直接分析" : "需要字段映射"}`
+                : fileName.endsWith(".csv")
+                  ? "RNA-seq 计数矩阵 · 24 个样本"
+                  : "项目文件 · 可供智能体检索与分析";
+              return (
+                <button key={fileName} onClick={() => onOpenFile(fileName, profileDetail)}>
+                  <span>▧</span>
+                  <div>
+                    <b>{fileName}</b>
+                    <small>{dataProfile ? "服务端结构检查已完成" : "本地项目空间"}</small>
+                  </div>
+                  <em>查看</em>
+                </button>
+              );
+            })}
           </div>
         )}
         {modal.kind === "new-task" && (
@@ -169,11 +189,76 @@ export function WorkspaceModal({
         )}
         {modal.kind === "upload" && (
           <div className="modal-form">
-            <label className="upload-drop">
-              ＋ 选择本地文件
-              <input type="file" multiple onChange={handleUpload} />
-              <small>支持 CSV、TSV、FASTQ、PDB/CIF；演示模式只保存文件名</small>
+            <label className={`upload-drop ${uploadingFileName ? "is-loading" : ""}`}>
+              {uploadingFileName ? "正在检查数据结构…" : "＋ 选择 CSV / TSV 文件"}
+              <input
+                type="file"
+                multiple
+                accept=".csv,.tsv,text/csv,text/tab-separated-values"
+                disabled={Boolean(uploadingFileName)}
+                onChange={handleUpload}
+              />
+              <small>
+                {uploadingFileName
+                  ? `服务端正在解析 ${uploadingFileName}`
+                  : "原始单元格仅在服务端解析，前端只接收字段、缺失值和分组建议"}
+              </small>
             </label>
+            {uploadError && (
+              <p className="upload-error" role="alert">
+                {uploadError}
+              </p>
+            )}
+            {latestDataProfile && (
+              <section className="data-profile-card" aria-label="文件结构检查结果">
+                <header>
+                  <div>
+                    <small>结构检查完成</small>
+                    <h3>{latestDataProfile.fileName}</h3>
+                  </div>
+                  <span className={latestDataProfile.status}>
+                    {latestDataProfile.status === "ready" ? "可直接分析" : "需要映射"}
+                  </span>
+                </header>
+                <div className="profile-metrics">
+                  <div>
+                    <b>{latestDataProfile.sampleCount}</b>
+                    <small>样本</small>
+                  </div>
+                  <div>
+                    <b>{latestDataProfile.columnCount}</b>
+                    <small>字段</small>
+                  </div>
+                  <div>
+                    <b>{latestDataProfile.missingCellCount}</b>
+                    <small>缺失值</small>
+                  </div>
+                </div>
+                <div className="profile-fields">
+                  {latestDataProfile.columns.slice(0, 8).map((column) => (
+                    <span key={column.name} title={`${column.distinctCount} 个不同值`}>
+                      {column.name}
+                      <em>{columnTypeLabels[column.inferredType]}</em>
+                    </span>
+                  ))}
+                </div>
+                <div className="profile-recommendation">
+                  <small>智能体建议</small>
+                  <p>{latestDataProfile.recommendations.join("；")}</p>
+                  {latestDataProfile.recognizedFields.condition && (
+                    <span>
+                      分组字段：<b>{latestDataProfile.recognizedFields.condition}</b>
+                    </span>
+                  )}
+                </div>
+                <button
+                  className="primary full"
+                  onClick={() => onApplyDataProfile(latestDataProfile)}
+                >
+                  应用到分析上下文
+                </button>
+              </section>
+            )}
           </div>
         )}
         {modal.kind === "layout" && (

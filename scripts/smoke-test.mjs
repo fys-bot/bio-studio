@@ -90,13 +90,90 @@ async function resetAndPrepare() {
 
 const log = (message) => console.log(`✓ ${message}`);
 await expectStatus("/api/tasks", 401);
+await expectStatus("/api/files/profile", 401, { method: "POST" });
 await request("/api/auth/login", { method: "POST" });
-log("登录鉴权");
+log("页面与文件解析接口登录鉴权");
 await request("/api/tasks", { method: "POST", headers: { origin: base } });
 log("重置演示状态");
 const initial = await request("/api/tasks");
 if (!initial.task) throw new Error("任务快照缺失");
 log(`读取任务：${initial.task.title}`);
+
+const crossOriginMetadataForm = new FormData();
+crossOriginMetadataForm.append(
+  "file",
+  new Blob(["sample_id\tcondition\nS01\tcontrol\n"], {
+    type: "text/tab-separated-values",
+  }),
+  "cross_origin_metadata.tsv",
+);
+await expectStatus("/api/files/profile", 403, {
+  method: "POST",
+  headers: { origin: "https://evil.example" },
+  body: crossOriginMetadataForm,
+});
+log("文件解析接口跨域写请求被拒绝");
+
+const metadataForm = new FormData();
+metadataForm.append(
+  "file",
+  new Blob(
+    [
+      "sample_id\tcondition\tbatch\nS01\tcontrol\tB1\nS02\tcontrol\tB1\nS03\ttreated\tB2\nS04\ttreated\t\n",
+    ],
+    { type: "text/tab-separated-values" },
+  ),
+  "smoke_metadata.tsv",
+);
+const profileResponse = await request("/api/files/profile", {
+  method: "POST",
+  headers: { origin: base },
+  body: metadataForm,
+});
+if (profileResponse.profile?.dataRole !== "sample_metadata") {
+  throw new Error("元数据文件角色识别失败");
+}
+if (profileResponse.profile?.sampleCount !== 4) throw new Error("样本数识别失败");
+if (profileResponse.profile?.recognizedFields?.condition !== "condition") {
+  throw new Error("实验分组字段识别失败");
+}
+if (profileResponse.profile?.missingCellCount !== 1) throw new Error("缺失值统计失败");
+if (profileResponse.task?.dataProfiles?.length !== 1) throw new Error("文件摘要未持久化");
+log("TSV 服务端解析与字段建议");
+
+const countMatrixForm = new FormData();
+countMatrixForm.append(
+  "file",
+  new Blob(["gene_id,S01,S02,S03\nENSG000001,12,9,31\nENSG000002,3,5,18\n"], {
+    type: "text/csv",
+  }),
+  "counts.csv",
+);
+const countMatrixResponse = await request("/api/files/profile", {
+  method: "POST",
+  headers: { origin: base },
+  body: countMatrixForm,
+});
+if (countMatrixResponse.profile?.dataRole !== "count_matrix") {
+  throw new Error("Count 矩阵角色识别失败");
+}
+if (countMatrixResponse.profile?.sampleCount !== 3) throw new Error("Count 矩阵样本数识别失败");
+if (countMatrixResponse.task?.dataProfiles?.length !== 2) throw new Error("多文件摘要未持久化");
+log("CSV Count 矩阵识别与样本统计");
+
+const unsupportedFileForm = new FormData();
+unsupportedFileForm.append(
+  "file",
+  new Blob(["not a tabular file"], { type: "text/plain" }),
+  "sequence.fastq",
+);
+await expectStatus("/api/files/profile", 400, {
+  method: "POST",
+  headers: { origin: base },
+  body: unsupportedFileForm,
+});
+log("不支持的文件类型返回 400");
+
 await expectStatus("/api/tasks/task_demo_rnaseq/clarifications", 400, {
   method: "POST",
   headers: { "content-type": "application/json", origin: base },

@@ -22,6 +22,46 @@ export type ResearchTask = {
   nodes: WorkflowNodeState[];
   edges: string[][];
   artifacts: ArtifactRecord[];
+  dataProfiles?: DataFileProfile[];
+};
+
+export type TabularColumnProfile = {
+  name: string;
+  inferredType: "number" | "category" | "identifier" | "date" | "text";
+  missingCount: number;
+  distinctCount: number;
+};
+
+export type GroupFieldCandidate = {
+  columnName: string;
+  distinctCount: number;
+  score: number;
+  reason: string;
+};
+
+/**
+ * 服务端仅返回数据结构摘要，不回传原始单元格，避免研究数据在前端预览中泄露。
+ */
+export type DataFileProfile = {
+  id: string;
+  fileName: string;
+  format: "CSV" | "TSV";
+  sizeBytes: number;
+  dataRole: "count_matrix" | "sample_metadata" | "tabular";
+  recordCount: number;
+  sampleCount: number;
+  columnCount: number;
+  missingCellCount: number;
+  columns: TabularColumnProfile[];
+  groupCandidates: GroupFieldCandidate[];
+  recognizedFields: {
+    sample?: string;
+    condition?: string;
+  };
+  status: "ready" | "needs_mapping";
+  recommendations: string[];
+  warnings: string[];
+  analyzedAt: string;
 };
 
 export type ArtifactRecord = {

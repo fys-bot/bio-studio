@@ -1,0 +1,7 @@
+sample_id	condition	batch	sex
+RNA_001	control	B1	female
+RNA_002	control	B1	male
+RNA_003	control	B2	female
+RNA_004	treated	B2	male
+RNA_005	treated	B3	female
+RNA_006	treated		male

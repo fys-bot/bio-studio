@@ -15,28 +15,9 @@ import {
   WorkspaceModal,
   type WorkspaceModalState,
 } from "@/components/WorkspaceModal";
-import { defaultDemoConfig, DemoConfig } from "@/lib/demo-config";
-
-type WorkflowNodeState = {
-  id: string;
-  label: string;
-  kind: string;
-  status: string;
-  x: number;
-  y: number;
-  detail: string;
-  error?: string;
-};
-type ResearchTask = {
-  id: string;
-  title: string;
-  goal: string;
-  status: string;
-  progress: number;
-  nodes: WorkflowNodeState[];
-  edges: string[][];
-  artifacts: unknown[];
-};
+import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
+import { bioflowApi } from "@/lib/api-client";
+import type { ResearchTask, WorkflowNodeState } from "@/lib/domain";
 type TimelineEvent = {
   id: number;
   phase: string;
@@ -170,32 +151,32 @@ export default function Home() {
   }, [toast]);
   useEffect(() => {
     (async () => {
-      const login = await fetch("/api/auth/login", { method: "POST" });
-      if (login.ok) {
+      try {
+        await bioflowApi.login();
         const [taskResponse, configResponse] = await Promise.all([
-          fetch("/api/tasks"),
-          fetch("/api/demo/config"),
+          bioflowApi.getTask(),
+          bioflowApi.getConfig(),
           new Promise((resolve) => setTimeout(resolve, 850)),
         ]);
-        const taskData = await taskResponse.json();
-        const configData = await configResponse.json();
-        setTask(taskData.task);
-        if (configData.config) setConfig(configData.config);
+        setTask(taskResponse.task);
+        if (configResponse.config) setConfig(configResponse.config);
         setAuthed(true);
+      } catch {
+        setToast("工作区初始化失败，请检查服务状态");
       }
     })();
   }, []);
   useEffect(() => {
     if (!authed || !running) return;
     const sync = () =>
-      fetch("/api/tasks").then((r) => r.ok ? r.json() : null).then((d) => {
-        if (d?.task) {
-          setTask(d.task);
-          if (["failed", "succeeded", "cancelled"].includes(d.task.status)) {
+      bioflowApi.getTask().then((response) => {
+        if (response.task) {
+          setTask(response.task);
+          if (["failed", "succeeded", "cancelled"].includes(response.task.status)) {
             setRunning(false);
           }
         }
-      });
+      }).catch(() => undefined);
     sync();
     const timer = setInterval(sync, 300);
     return () => clearInterval(timer);
@@ -203,9 +184,7 @@ export default function Home() {
   useEffect(() => {
     if (!authed || !task) return;
     const sync = () =>
-      fetch("/api/tasks").then((r) => r.ok ? r.json() : null).then((d) =>
-        d && setTask(d.task)
-      );
+      bioflowApi.getTask().then((response) => setTask(response.task)).catch(() => undefined);
     const es = new EventSource("/api/runs/run_demo_001/events");
     es.onmessage = (message) => {
       try {
@@ -321,19 +300,16 @@ export default function Home() {
   const notify = (message: string) => setToast(message);
   const saveConfig = async () => {
     setConfigSaving(true);
-    const response = await fetch("/api/demo/config", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(config),
-    });
-    if (response.ok) {
-      const data = await response.json();
-      setConfig(data.config);
-      const taskResponse = await fetch("/api/tasks");
-      if (taskResponse.ok) setTask((await taskResponse.json()).task);
+    try {
+      const configResponse = await bioflowApi.saveConfig(config);
+      setConfig(configResponse.config);
+      const taskResponse = await bioflowApi.getTask();
+      setTask(taskResponse.task);
       setConfigOpen(false);
       notify("演示配置已应用");
-    } else notify("配置保存失败，请检查服务状态");
+    } catch {
+      notify("配置保存失败，请检查服务状态");
+    }
     setConfigSaving(false);
   };
   const openTool = (nextTab: typeof tab) => {
@@ -401,20 +377,20 @@ export default function Home() {
   };
   const submitClarifications = async () => {
     if (Object.values(answers).some((v) => !v)) return;
-    const r = await fetch("/api/tasks/task_demo_rnaseq/clarifications", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ answers }),
-    });
-    if (r.ok) setTask((await r.json()).task);
+    try {
+      const response = await bioflowApi.submitClarifications({ answers });
+      setTask(response.task);
+    } catch {
+      notify("澄清信息提交失败，请检查服务状态");
+    }
   };
   const approvePlan = async () => {
-    const r = await fetch("/api/workflows/workflow_demo/approve", {
-      method: "POST",
-    });
-    if (r.ok) {
-      setTask((await r.json()).task);
+    try {
+      const response = await bioflowApi.approvePlan();
+      setTask(response.task);
       notify("分析计划已批准，等待运行");
+    } catch {
+      notify("分析计划审批失败，请检查服务状态");
     }
   };
   const runDemo = async () => {
@@ -432,8 +408,9 @@ export default function Home() {
     }
     setRunning(true);
     notify("工作流已开始运行");
-    const response = await fetch("/api/runs", { method: "POST" });
-    if (!response.ok) {
+    try {
+      await bioflowApi.startRun();
+    } catch {
       setRunning(false);
       notify("启动失败，请检查服务状态");
       return;
@@ -443,10 +420,13 @@ export default function Home() {
   const retry = async () => {
     setRetrying(true);
     setCodeText("");
-    await fetch("/api/runs/run_demo_001/nodes/design/retry", {
-      method: "POST",
-    });
-    setTimeout(() => setRetrying(false), 1300);
+    try {
+      await bioflowApi.retryNode("run_demo_001", "design");
+      setTimeout(() => setRetrying(false), 1300);
+    } catch {
+      setRetrying(false);
+      notify("节点重试失败，请检查服务状态");
+    }
   };
   const sendMessage = () => {
     const text = messageText.trim();
@@ -468,13 +448,16 @@ export default function Home() {
     );
   };
   const cancel = async () => {
-    const response = await fetch("/api/runs/run_demo_001/cancel", {
-      method: "POST",
-    });
-    const r = await fetch("/api/tasks");
-    if (r.ok) setTask((await r.json()).task);
-    setRunning(false);
-    notify(response.ok ? "运行已取消" : "取消失败，请稍后重试");
+    try {
+      await bioflowApi.cancelRun("run_demo_001");
+      const taskResponse = await bioflowApi.getTask();
+      setTask(taskResponse.task);
+      setRunning(false);
+      notify("运行已取消");
+    } catch {
+      setRunning(false);
+      notify("取消失败，请稍后重试");
+    }
   };
   const startResize = (
     kind: "sidebar" | "inspector" | "evidence",

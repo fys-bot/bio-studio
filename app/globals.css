@@ -34,3 +34,10 @@ body{background:var(--bg);color:var(--text)}.app-shell{background:var(--bg);colo
 @media(max-width:760px){.tool-dock{right:8px;top:auto;bottom:66px;transform:none;grid-template-columns:repeat(4,42px)}.tool-dock button{width:42px}.inspector{width:100%!important}.drawer-heading{height:58px}}
 .canvas-toolbar em{font-style:normal;color:#92968b;margin-left:9px}.canvas-viewport{position:relative;overflow:hidden!important;cursor:grab;touch-action:none;min-width:0!important}.canvas-viewport:active{cursor:grabbing}.canvas-stage{position:absolute;inset:0;width:1000px;height:500px;transform-origin:0 0;will-change:transform}.canvas-stage .node{cursor:grab;touch-action:none;user-select:none}.canvas-stage .node:active{cursor:grabbing}.canvas-stage .edges{pointer-events:none}.canvas-wrap:focus-within{border-color:#aeb72e}@media(max-width:760px){.canvas-toolbar em{display:none}.canvas-toolbar{padding:10px}.canvas-stage{width:900px}}
 .canvas-stage .node.connecting{border-color:#e5b84b;box-shadow:0 0 0 3px #e5b84b55,0 8px 20px #64664b22;animation:connect-pulse 1s ease-in-out infinite}.canvas-toolbar em{max-width:520px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@keyframes connect-pulse{50%{box-shadow:0 0 0 6px #e5b84b22,0 8px 20px #64664b22}}
+/* 对话气泡布局修复：避免 flex 子项按内容收缩造成中文逐字竖排 */
+.dialogue-thread > .agent-message { width: 100%; min-width: 0; }
+.dialogue-thread > .user-message { width: fit-content; max-width: 72%; }
+.conversation .agent-message { width: 100%; min-width: 0; }
+@media (max-width: 760px) {
+  .dialogue-thread > .user-message { max-width: 92%; }
+}

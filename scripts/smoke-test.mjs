@@ -115,7 +115,7 @@ if (!run.runId) throw new Error('运行 ID 缺失');
 log(`创建失败演示运行：${run.runId}`);
 const events = await readEvents(run.runId, 0, 1800);
 const eventTypes = new Set(events.map((event) => event.type));
-for (const type of ['run.started', 'intent.detected', 'retrieval.started', 'retrieval.hit', 'evidence.reranked', 'grounding.bound']) {
+for (const type of ['run.started', 'intent.detected', 'retrieval.started', 'retrieval.hit', 'evidence.reranked', 'grounding.bound', 'code.delta', 'code.completed']) {
   if (!eventTypes.has(type)) throw new Error(`缺少 SSE 事件：${type}`);
 }
 log(`SSE 事件完整：${[...eventTypes].join('、')}`);

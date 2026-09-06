@@ -97,6 +97,7 @@ export default function Home() {
     deliverable: "",
   });
   const [codeText, setCodeText] = useState("");
+  const [codeStreaming, setCodeStreaming] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(260);
   const [inspectorWidth, setInspectorWidth] = useState(320);
   const [evidenceHeight, setEvidenceHeight] = useState(92);
@@ -201,8 +202,10 @@ export default function Home() {
           ].slice(-100)
         );
         if (e.type === "code.delta" && typeof e.payload?.text === "string") {
+          setCodeStreaming(true);
           setCodeText((v) => v + e.payload.text);
         }
+        if (e.type === "code.completed") setCodeStreaming(false);
         const map: any = {
           "intent.detected": {
             id: 1,
@@ -404,6 +407,8 @@ ${task?.goal || config.goal}
       return;
     }
     setRunning(true);
+    setCodeText("");
+    setCodeStreaming(false);
     notify("工作流已开始运行");
     try {
       await bioflowApi.startRun();
@@ -412,7 +417,6 @@ ${task?.goal || config.goal}
       notify("启动失败，请检查服务状态");
       return;
     }
-    setTimeout(() => setRunning(false), 1800);
   };
   const retry = async () => {
     setRetrying(true);
@@ -452,6 +456,7 @@ ${task?.goal || config.goal}
       const taskResponse = await bioflowApi.getTask();
       setTask(taskResponse.task);
       setRunning(false);
+      setCodeStreaming(false);
       notify("运行已取消");
     } catch {
       notify("取消失败，请稍后重试");
@@ -874,6 +879,7 @@ ${task?.goal || config.goal}
         answers={answers}
         liveLogs={liveLogs}
         running={running}
+        codeStreaming={codeStreaming}
         retrying={retrying}
         codeText={codeText}
         selectedResidue={selectedResidue}
@@ -901,6 +907,7 @@ ${task?.goal || config.goal}
           notify("当前为轻量 3D 预览；接入 Mol* 后将在此打开完整结构查看器")
         }
         onDownloadReport={downloadReport}
+        onNotify={notify}
         onResizeStart={(event) => startResize("inspector", event)}
       />
       {modal && (

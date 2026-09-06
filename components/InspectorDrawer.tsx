@@ -8,6 +8,7 @@ import {
 import { KnowledgeGraph } from "@/components/KnowledgeGraph";
 import { ResultsPanel } from "@/components/results/ResultsPanel";
 import { ProteinStructureViewer } from "@/components/structure/ProteinStructureViewer";
+import { StreamingCodePanel } from "@/components/code/StreamingCodePanel";
 import type { ArtifactRecord } from "@/lib/domain";
 
 export type InspectorTab =
@@ -34,6 +35,7 @@ type InspectorDrawerProps = {
   answers: ClarificationAnswers;
   liveLogs: string[];
   running: boolean;
+  codeStreaming: boolean;
   retrying: boolean;
   codeText: string;
   selectedResidue: number | null;
@@ -49,6 +51,7 @@ type InspectorDrawerProps = {
   onResidueSelect: (residueNumber: number) => void;
   onOpenMolstar: () => void;
   onDownloadReport: () => void;
+  onNotify: (message: string) => void;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
 };
 
@@ -64,6 +67,7 @@ export function InspectorDrawer({
   answers,
   liveLogs,
   running,
+  codeStreaming,
   retrying,
   codeText,
   selectedResidue,
@@ -79,6 +83,7 @@ export function InspectorDrawer({
   onResidueSelect,
   onOpenMolstar,
   onDownloadReport,
+  onNotify,
   onResizeStart,
 }: InspectorDrawerProps) {
   const completedQuestionCount = Object.values(answers).filter(Boolean).length;
@@ -258,28 +263,16 @@ export function InspectorDrawer({
         </div>
       )}
       {activeTab === "code" && (
-        <div className="code-view">
-          <div className="code-head">
-            <span>analysis.py</span>
-            <span className="code-state">● {running ? "生成中" : "就绪"}</span>
-          </div>
-          <pre>
-            <code>
-              {codeText || `import pandas as pd
-from deseq2 import DESeqDataSet
-
-counts = pd.read_csv("counts.csv")
-metadata = pd.read_csv("sample_metadata.tsv")
-
-# Validate before execution
-assert "condition" in metadata.columns
-`}
-            </code>
-          </pre>
-          <button className="primary full" onClick={onRunDemo} disabled={running}>
-            {running ? "代码生成中…" : "运行代码"}
-          </button>
-        </div>
+        <StreamingCodePanel
+          codeText={codeText}
+          running={running}
+          streaming={codeStreaming}
+          artifacts={artifacts}
+          onRunDemo={onRunDemo}
+          onNotify={onNotify}
+          onOpenNode={onSelectResultSource}
+          onOpenEvidence={onOpenSource}
+        />
       )}
       {activeTab === "results" && (
         <ResultsPanel

@@ -203,6 +203,14 @@ function emitCode(runId: string) {
       }
     }, i * s.config.codeChunkMs)
   );
+  setTimeout(() => {
+    if (!s.cancelled) {
+      pushEvent(runId, "code.completed", {
+        artifactId: "artifact_code",
+        characterCount: code.length,
+      }, "de");
+    }
+  }, code.length * s.config.codeChunkMs + 20);
 }
 
 /** 两条成功路径共享同一份 Artifact 快照，保证结果版本与血缘一致。 */
@@ -270,6 +278,7 @@ export function createRun() {
   s.task.status = "running";
   persist(s);
   pushEvent(runId, "run.started", { message: "工作流已开始运行" });
+  emitCode(runId);
   setTimeout(() => {
     if (s.cancelled) return;
     pushEvent(runId, "intent.detected", {

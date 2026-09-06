@@ -204,6 +204,44 @@ function emitCode(runId: string) {
     }, i * s.config.codeChunkMs)
   );
 }
+
+/** 两条成功路径共享同一份 Artifact 快照，保证结果版本与血缘一致。 */
+function completeArtifacts(s: State, runId: string) {
+  const artifactCreatedAt = new Date().toISOString();
+  s.task.artifacts = [{
+    id: "artifact_volcano",
+    kind: "chart",
+    name: "volcano_plot.svg",
+    nodeId: "volcano",
+    version: "v1.0.0",
+    createdAt: artifactCreatedAt,
+    sourceNode: "DESeq2 差异表达",
+    parameters: { "FDR 阈值": 0.05, "检测基因数": s.config.geneCount },
+  }, {
+    id: "artifact_report",
+    kind: "report",
+    name: "analysis_report.md",
+    nodeId: "report",
+    version: "v1.0.0",
+    createdAt: artifactCreatedAt,
+    sourceNode: "科研分析报告",
+    parameters: { "交付物": "可发表结果", "证据绑定数": 4 },
+  }, {
+    id: "artifact_code",
+    kind: "code",
+    name: "analysis.py",
+    nodeId: "de",
+    version: "v1.0.0",
+    createdAt: artifactCreatedAt,
+    sourceNode: "DESeq2 差异表达",
+    parameters: { "统计模型": "DESeq2", "设计公式": "~ condition + batch" },
+  }];
+  pushEvent(runId, "artifact.created", {
+    name: "volcano_plot.svg",
+    kind: "chart",
+  }, "volcano");
+}
+
 export function createRun() {
   const s = state();
   const runId = randomUUID();
@@ -263,6 +301,7 @@ export function createRun() {
         );
         s.task.progress = 100;
         s.task.status = "succeeded";
+        completeArtifacts(s, runId);
         s.running = false;
         pushEvent(runId, "run.completed", { message: "全部结果产物已就绪" });
         persist(s);
@@ -315,27 +354,8 @@ export function retryNode(runId: string, nodeId: string) {
     );
     s.task.progress = 100;
     s.task.status = "succeeded";
-    s.task.artifacts = [{
-      id: "artifact_volcano",
-      kind: "chart",
-      name: "volcano_plot.svg",
-      nodeId: "volcano",
-    }, {
-      id: "artifact_report",
-      kind: "report",
-      name: "analysis_report.md",
-      nodeId: "report",
-    }, {
-      id: "artifact_code",
-      kind: "code",
-      name: "analysis.py",
-      nodeId: "de",
-    }];
+    completeArtifacts(s, runId);
     persist(s);
-    pushEvent(runId, "artifact.created", {
-      name: "volcano_plot.svg",
-      kind: "chart",
-    }, "volcano");
     pushEvent(runId, "run.completed", { message: "全部结果产物已就绪" });
     s.running = false;
   }, 1200);

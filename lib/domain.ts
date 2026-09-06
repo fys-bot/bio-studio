@@ -21,10 +21,20 @@ export type ResearchTask = {
   progress: number;
   nodes: WorkflowNodeState[];
   edges: string[][];
-  artifacts: unknown[];
+  artifacts: ArtifactRecord[];
+};
+
+export type ArtifactRecord = {
+  id: string;
+  kind: "chart" | "report" | "code";
+  name: string;
+  nodeId: string;
+  version?: string;
+  createdAt?: string;
+  sourceNode?: string;
+  parameters?: Record<string, string | number>;
 };
 
 export type TaskResponse = {
   task: ResearchTask;
 };
-

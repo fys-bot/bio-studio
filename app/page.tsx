@@ -356,6 +356,32 @@ export default function Home() {
     URL.revokeObjectURL(url);
     notify("火山图 SVG 已下载");
   };
+  const downloadReport = () => {
+    const report = `# RNA-seq 候选基因分析报告
+
+## 分析目标
+
+${task?.goal || config.goal}
+
+## 运行摘要
+
+- 结果版本：v1.0.0
+- 统计模型：DESeq2
+- FDR 阈值：0.05
+- 结果血缘：counts.csv → 设计矩阵 → DESeq2 → volcano_plot.svg
+
+## 结论
+
+本次演示已完成差异表达分析，并生成火山图、分析代码和可复现参数快照。
+`;
+    const url = URL.createObjectURL(new Blob([report], { type: "text/markdown" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "analysis_report.md";
+    anchor.click();
+    URL.revokeObjectURL(url);
+    notify("Markdown 分析报告已下载");
+  };
   const selectTask = (id: string, label: string, nextTab?: typeof tab) => {
     setActiveTask(id);
     if (id === "rna") {
@@ -890,6 +916,7 @@ export default function Home() {
         retrying={retrying}
         codeText={codeText}
         selectedResidue={selectedResidue}
+        artifacts={task.artifacts}
         onTabChange={setTab}
         onClose={() => setMobilePanel(false)}
         onSelectQuestion={(questionIndex) => {
@@ -912,6 +939,7 @@ export default function Home() {
         onOpenMolstar={() =>
           notify("当前为轻量 3D 预览；接入 Mol* 后将在此打开完整结构查看器")
         }
+        onDownloadReport={downloadReport}
         onResizeStart={(event) => startResize("inspector", event)}
       />
       {modal && (

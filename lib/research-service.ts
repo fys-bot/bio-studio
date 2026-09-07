@@ -1,4 +1,6 @@
 import type { ProjectFileRecord } from "./domain";
+import fs from "node:fs";
+import path from "node:path";
 
 export type ResearchDocument = {
   id: string;
@@ -49,6 +51,20 @@ export type AnalysisJob = {
   };
 };
 
+function localWorkerUrl() {
+  if (process.env.BIOFLOW_WORKER_URL) return process.env.BIOFLOW_WORKER_URL;
+  if (process.env.NODE_ENV === "production") return "http://127.0.0.1:8000";
+  try {
+    const line = fs
+      .readFileSync(path.join(process.cwd(), ".env.local"), "utf8")
+      .split(/\r?\n/)
+      .find((item) => item.startsWith("BIOFLOW_WORKER_URL="));
+    return line?.slice("BIOFLOW_WORKER_URL=".length).trim() || "http://127.0.0.1:8000";
+  } catch {
+    return "http://127.0.0.1:8000";
+  }
+}
+
 export async function researchResponse(path: string, init: RequestInit = {}, timeout = 30_000) {
   const headers = new Headers(init.headers);
   headers.set(
@@ -57,7 +73,7 @@ export async function researchResponse(path: string, init: RequestInit = {}, tim
   );
   let response: Response;
   try {
-    response = await fetch(`${process.env.BIOFLOW_WORKER_URL || "http://127.0.0.1:8000"}${path}`, {
+    response = await fetch(`${localWorkerUrl()}${path}`, {
       ...init,
       headers,
       cache: "no-store",

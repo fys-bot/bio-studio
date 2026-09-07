@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAuthorized, isSameOrigin } from "@/lib/auth";
 import { researchJson } from "@/lib/research-service";
 import { saveTaskPlan, taskSnapshot } from "@/lib/store";
+import { generateLlmPlan } from "@/lib/llm-client";
 
 export async function POST(request: Request) {
   if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
   if (!taskSnapshot(body.taskId))
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   try {
-    const result = await researchJson<{
+    let result: {
       provider: "openai-compatible";
       model: string;
       plan: {
@@ -28,19 +29,28 @@ export async function POST(request: Request) {
         risks: string[];
         requiredInputs: string[];
       };
-    }>(
-      "/agent/plan",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: body.query,
-          clarification: body.clarification || {},
-          evidence: body.evidence || [],
-        }),
-      },
-      120_000,
-    );
+    };
+    try {
+      result = await researchJson<typeof result>(
+        "/agent/plan",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: body.query,
+            clarification: body.clarification || {},
+            evidence: body.evidence || [],
+          }),
+        },
+        120_000,
+      );
+    } catch {
+      result = await generateLlmPlan({
+        query: body.query,
+        clarification: body.clarification || {},
+        evidence: body.evidence || [],
+      });
+    }
     const plan = {
       ...result.plan,
       provider: "llm" as const,

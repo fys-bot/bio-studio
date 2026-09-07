@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { GlobalRail } from "@/components/navigation/GlobalRail";
+import { ModuleContent } from "@/components/navigation/ModuleContent";
 import { listTaskCards } from "@/lib/store";
 
 type ModuleShellProps = {
@@ -41,7 +42,7 @@ export function ModuleShell({ section, children, activeItemId }: ModuleShellProp
           <h2>{title}</h2>
           <p>{description}</p>
         </div>
-        <nav className="module-nav" aria-label="最近任务">
+        <nav className="module-nav module-task-nav" aria-label="最近任务">
           <span className="module-nav-title">最近任务</span>
           {recentTasks.map((task) => (
             <Link key={task.id} href={`/projects/proj_a5211690a4/tasks/${task.id}`}>
@@ -72,7 +73,7 @@ export function ModuleShell({ section, children, activeItemId }: ModuleShellProp
           </nav>
         )}
       </aside>
-      <section className="module-content">{children}</section>
+      <ModuleContent>{children}</ModuleContent>
     </div>
   );
 }

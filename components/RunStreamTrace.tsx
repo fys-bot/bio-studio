@@ -1,26 +1,38 @@
 "use client";
 
-import {
-  Activity,
-  CheckCircle2,
-  ChevronDown,
-  CircleDashed,
-  CircleX,
-  LoaderCircle,
-} from "lucide-react";
+import AutorenewRounded from "@mui/icons-material/AutorenewRounded";
+import CheckCircleRounded from "@mui/icons-material/CheckCircleRounded";
+import ErrorRounded from "@mui/icons-material/ErrorRounded";
+import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
+import MonitorHeartRounded from "@mui/icons-material/MonitorHeartRounded";
+import PendingRounded from "@mui/icons-material/PendingRounded";
+import { LinearProgress } from "@mui/material";
+import type { ApiStreamEvent } from "@/lib/api-client";
 
-export type RunStreamEvent = {
-  id: number;
-  runId: string;
-  type: string;
-  createdAt: string;
-  nodeId?: string;
-  payload: Record<string, unknown>;
-};
-
-type StreamStatus = "connected" | "reconnecting" | "disconnected";
+export type RunStreamEvent = ApiStreamEvent;
+export type StreamStatus =
+  | "idle"
+  | "starting"
+  | "connecting"
+  | "connected"
+  | "reconnecting"
+  | "completed"
+  | "failed";
 
 const eventLabels: Record<string, string> = {
+  "client.run.requested": "准备运行上下文",
+  "client.run.created": "创建运行实例",
+  "client.sse.connecting": "建立鉴权事件通道",
+  "plan.started": "校验研究上下文",
+  "worker.started": "调用科研编排服务",
+  "worker.completed": "科研编排服务已响应",
+  "worker.failed": "科研编排服务不可用",
+  "llm.started": "切换大模型直连",
+  "llm.completed": "大模型计划已返回",
+  "plan.waiting": "等待上游响应",
+  "plan.persisting": "保存分析计划",
+  "plan.completed": "分析计划已生成",
+  "plan.failed": "分析计划生成失败",
   "run.started": "工作流开始",
   "rag.trace.created": "创建 RAG Trace",
   "code.delta": "生成分析代码",
@@ -44,12 +56,23 @@ const nodeLabels: Record<string, string> = {
   report: "科研报告",
 };
 
+const statusLabels: Record<StreamStatus, string> = {
+  idle: "等待启动",
+  starting: "准备运行",
+  connecting: "连接事件流",
+  connected: "SSE 已连接",
+  reconnecting: "正在重连",
+  completed: "流程已完成",
+  failed: "流程需处理",
+};
+
 function stringValue(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
 function eventSummary(event: RunStreamEvent) {
   const payload = event.payload;
+  if (stringValue(payload.detail)) return stringValue(payload.detail);
   if (stringValue(payload.message)) return stringValue(payload.message);
   if (event.type === "rag.trace.created") return `已建立 Top ${payload.topK || 0} 检索轨迹`;
   if (event.type === "code.delta") {
@@ -79,6 +102,7 @@ function eventSummary(event: RunStreamEvent) {
     );
   }
   const preview = Object.entries(payload)
+    .filter(([key]) => !["progress", "stage", "step", "totalSteps"].includes(key))
     .slice(0, 3)
     .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join("、") : String(value)}`)
     .join(" · ");
@@ -87,13 +111,14 @@ function eventSummary(event: RunStreamEvent) {
 
 function eventTone(event: RunStreamEvent, latest: boolean) {
   if (
-    event.type.includes("cancelled") ||
     event.type.includes("failed") ||
+    event.type.includes("cancelled") ||
     event.payload.status === "failed"
   ) {
     return "error";
   }
   if (
+    event.type === "plan.completed" ||
     event.type === "run.completed" ||
     event.type === "code.completed" ||
     event.type === "evidence.reranked" ||
@@ -106,10 +131,20 @@ function eventTone(event: RunStreamEvent, latest: boolean) {
 }
 
 function ToneIcon({ tone }: { tone: ReturnType<typeof eventTone> }) {
-  if (tone === "success") return <CheckCircle2 size={14} />;
-  if (tone === "error") return <CircleX size={14} />;
-  if (tone === "active") return <LoaderCircle className="is-spinning" size={14} />;
-  return <CircleDashed size={14} />;
+  if (tone === "success") return <CheckCircleRounded sx={{ fontSize: 15 }} />;
+  if (tone === "error") return <ErrorRounded sx={{ fontSize: 15 }} />;
+  if (tone === "active") return <AutorenewRounded className="is-spinning" sx={{ fontSize: 15 }} />;
+  return <PendingRounded sx={{ fontSize: 15 }} />;
+}
+
+function initialStateCopy(status: StreamStatus) {
+  if (status === "starting") return ["准备研究上下文", "正在创建运行实例并校验任务状态"];
+  if (status === "connecting") return ["建立事件通道", "正在携带访问令牌连接服务端 SSE"];
+  if (status === "connected") return ["等待首个服务端事件", "连接已建立，等待 Worker 输出执行步骤"];
+  if (status === "reconnecting") return ["恢复事件通道", "网络中断，正在从最后事件位置继续"];
+  if (status === "failed") return ["流程需要处理", "展开查看失败步骤、错误原因与回退记录"];
+  if (status === "completed") return ["流程已完成", "所有运行事件已保存，可展开审计详情"];
+  return ["等待启动", "运行工作流后，这里会实时输出每一个处理步骤"];
 }
 
 export function RunStreamTrace({
@@ -124,41 +159,58 @@ export function RunStreamTrace({
   onToggle: () => void;
 }) {
   const latestEvent = events.at(-1);
-  const connectionLabel =
-    streamStatus === "connected"
-      ? "SSE 已连接"
-      : streamStatus === "reconnecting"
-        ? "正在重连"
-        : "等待连接";
+  const [emptyTitle, emptyDetail] = initialStateCopy(streamStatus);
+  const planning = events.some((event) => event.runId.startsWith("planning:"));
+  const rawProgress = latestEvent?.payload.progress;
+  const progress =
+    typeof rawProgress === "number"
+      ? Math.min(100, Math.max(0, rawProgress))
+      : streamStatus === "completed"
+        ? 100
+        : undefined;
+  const active = ["starting", "connecting", "connected", "reconnecting"].includes(streamStatus);
 
   return (
     <section className={`run-stream-trace ${open ? "is-open" : ""}`} data-guide="evidence">
       <button className="run-trace-summary" type="button" onClick={onToggle} aria-expanded={open}>
-        <span className="run-trace-mark">
-          <Activity size={15} />
+        <span className={`run-trace-mark ${active ? "is-active" : ""}`}>
+          {active ? (
+            <span className="run-trace-molecule" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          ) : (
+            <MonitorHeartRounded sx={{ fontSize: 17 }} />
+          )}
         </span>
         <span className="run-trace-title">
-          <b>运行过程</b>
+          <b>{planning ? "计划生成过程" : "运行过程"}</b>
           <small>{events.length ? `${events.length} 个实时步骤` : "尚未启动工作流"}</small>
         </span>
         <span className="run-trace-current">
-          <b>{latestEvent ? eventLabels[latestEvent.type] || latestEvent.type : "等待运行事件"}</b>
-          <small>
-            {latestEvent ? eventSummary(latestEvent) : "运行后将在这里逐步输出处理过程"}
-          </small>
+          <b>{latestEvent ? eventLabels[latestEvent.type] || latestEvent.type : emptyTitle}</b>
+          <small>{latestEvent ? eventSummary(latestEvent) : emptyDetail}</small>
         </span>
         <span className={`run-trace-connection ${streamStatus}`}>
-          <i /> {connectionLabel}
+          <i /> {statusLabels[streamStatus]}
         </span>
-        <ChevronDown className="run-trace-chevron" size={15} />
+        <ExpandMoreRounded className="run-trace-chevron" sx={{ fontSize: 17 }} />
       </button>
+      {(active || progress !== undefined) && (
+        <LinearProgress
+          className="run-trace-progress"
+          variant={progress === undefined ? "indeterminate" : "determinate"}
+          value={progress}
+        />
+      )}
 
       {open && (
         <div className="run-trace-events" aria-live="polite">
           {events.length === 0 && (
             <div className="run-trace-empty">
-              <CircleDashed size={17} />
-              <span>完成分析信息并运行工作流后，这里会接收真实 SSE 事件。</span>
+              <PendingRounded sx={{ fontSize: 18 }} />
+              <span>{emptyDetail}</span>
             </div>
           )}
           {events.map((event, index) => {
@@ -176,11 +228,17 @@ export function RunStreamTrace({
                   </span>
                   <span className="run-trace-meta">
                     {event.nodeId && <b>{nodeLabels[event.nodeId] || event.nodeId}</b>}
+                    {typeof event.payload.step === "number" && (
+                      <b>
+                        第 {String(event.payload.step)} / {String(event.payload.totalSteps || "-")}{" "}
+                        步
+                      </b>
+                    )}
                     <time>
                       {new Date(event.createdAt).toLocaleTimeString("zh-CN", { hour12: false })}
                     </time>
                   </span>
-                  <ChevronDown size={14} />
+                  <ExpandMoreRounded sx={{ fontSize: 15 }} />
                 </summary>
                 <div className="run-trace-detail">
                   <dl>
@@ -193,6 +251,10 @@ export function RunStreamTrace({
                       <dd>
                         {new Date(event.createdAt).toLocaleString("zh-CN", { hour12: false })}
                       </dd>
+                    </div>
+                    <div>
+                      <dt>执行阶段</dt>
+                      <dd>{stringValue(event.payload.stage) || "运行工作流"}</dd>
                     </div>
                     <div>
                       <dt>节点</dt>

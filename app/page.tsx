@@ -27,7 +27,11 @@ import { DocumentationDrawer } from "@/components/DocumentationDrawer";
 import { RealAnalysisPanel } from "@/components/RealAnalysisPanel";
 import { ContentLoading } from "@/components/ContentLoading";
 import { FilePreview } from "@/components/FilePreview";
-import { RunStreamTrace, type RunStreamEvent } from "@/components/RunStreamTrace";
+import {
+  RunStreamTrace,
+  type RunStreamEvent,
+  type StreamStatus,
+} from "@/components/RunStreamTrace";
 import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
 import {
   ApiClientError,
@@ -68,6 +72,18 @@ const statusLabel: Record<string, string> = {
 const clampCanvasZoom = (value: number) => Math.min(1.6, Math.max(0.5, value));
 
 function appendStreamEvent(current: RunStreamEvent[], next: RunStreamEvent) {
+  if (next.type === "plan.waiting") {
+    const existingIndex = current.findIndex(
+      (event) =>
+        event.runId === next.runId &&
+        event.type === next.type &&
+        event.payload.stage === next.payload.stage,
+    );
+    if (existingIndex < 0) return [...current, next].slice(-160);
+    const updated = [...current];
+    updated[existingIndex] = next;
+    return updated;
+  }
   if (next.type !== "code.delta") return [...current, next].slice(-160);
   const existingIndex = current.findIndex(
     (event) => event.runId === next.runId && event.type === "code.delta",
@@ -86,6 +102,23 @@ function appendStreamEvent(current: RunStreamEvent[], next: RunStreamEvent) {
     },
   };
   return updated;
+}
+
+let clientEventSequence = 0;
+function createClientStreamEvent(
+  taskId: string,
+  type: string,
+  payload: Record<string, unknown>,
+  runId = `client:${taskId}`,
+): RunStreamEvent {
+  clientEventSequence += 1;
+  return {
+    id: Date.now() * 100 + clientEventSequence,
+    runId,
+    type,
+    payload,
+    createdAt: new Date().toISOString(),
+  };
 }
 
 function getCanvasViewportSize(viewportWidth: number, sidebarWidth: number) {
@@ -189,9 +222,7 @@ export default function Home() {
   const [messageText, setMessageText] = useState("");
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
   const [notes, setNotes] = useState("");
-  const [streamStatus, setStreamStatus] = useState<"connected" | "reconnecting" | "disconnected">(
-    "disconnected",
-  );
+  const [streamStatus, setStreamStatus] = useState<StreamStatus>("idle");
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -258,7 +289,7 @@ export default function Home() {
   const [ragTrace, setRagTrace] = useState<RagTrace | null>(null);
   const guideInitializedRef = useRef(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
-  const receivedStreamEventIdsRef = useRef<Set<number>>(new Set());
+  const receivedStreamEventIdsRef = useRef<Set<string>>(new Set());
   const uploadedFiles = useMemo(
     () => dataProfiles.map((profile) => profile.fileName),
     [dataProfiles],
@@ -293,7 +324,7 @@ export default function Home() {
     setCodeText("");
     setCodeStreaming(false);
     setLiveLogs([]);
-    setStreamStatus("disconnected");
+    setStreamStatus("idle");
     setProfileMenuOpen(false);
     setLayoutReady(false);
     setLayoutSaveState("loading");
@@ -455,7 +486,6 @@ export default function Home() {
   }, [activeTask, authed, layoutReady, serializedWorkflowLayout, workflowLayoutInput]);
   useEffect(() => {
     if (!authed || !task?.runId) {
-      setStreamStatus("disconnected");
       return;
     }
     const runId = task.runId;
@@ -472,8 +502,9 @@ export default function Home() {
     let lastEventId = 0;
     const handleEvent = (runEvent: RunStreamEvent) => {
       try {
-        if (receivedStreamEventIdsRef.current.has(runEvent.id)) return;
-        receivedStreamEventIdsRef.current.add(runEvent.id);
+        const eventKey = `${runEvent.runId}:${runEvent.id}`;
+        if (receivedStreamEventIdsRef.current.has(eventKey)) return;
+        receivedStreamEventIdsRef.current.add(eventKey);
         lastEventId = Math.max(lastEventId, runEvent.id);
         setStreamEvents((events) => appendStreamEvent(events, runEvent));
         setLiveLogs((logs) =>
@@ -507,6 +538,13 @@ export default function Home() {
         ) {
           setRunning(false);
         }
+        if (runEvent.type === "run.completed") setStreamStatus("completed");
+        if (
+          runEvent.type === "run.cancelled" ||
+          (runEvent.type === "node.updated" && runEvent.payload.status === "failed")
+        ) {
+          setStreamStatus("failed");
+        }
       } catch {}
     };
     const connect = async () => {
@@ -516,7 +554,8 @@ export default function Home() {
             `/api/runs/${encodeURIComponent(runId)}/events?after=${lastEventId}`,
             {
               signal: abortController.signal,
-              onOpen: () => setStreamStatus("connected"),
+              onOpen: () =>
+                setStreamStatus((current) => (current === "failed" ? current : "connected")),
               onEvent: handleEvent,
             },
           );
@@ -531,7 +570,7 @@ export default function Home() {
     return () => {
       stopped = true;
       abortController.abort();
-      setStreamStatus("disconnected");
+      setStreamStatus("idle");
     };
   }, [activeTask, authed, task?.runId]);
   const selectedNode = useMemo(
@@ -736,14 +775,43 @@ ${task?.goal || config.goal}
   const submitClarifications = async () => {
     if (submittingAnswers || Object.values(answers).some((answer) => !answer)) return;
     setSubmittingAnswers(true);
+    if (task?.executionMode === "real") {
+      setTraceOpen(true);
+      setStreamEvents([]);
+      setLiveLogs([]);
+      receivedStreamEventIdsRef.current.clear();
+      setStreamStatus("starting");
+    }
     try {
       const response = await bioflowApi.submitClarifications(activeTask, { answers });
       if (task?.executionMode === "real") {
-        const planResponse = await bioflowApi.generatePlan(activeTask, task.goal, answers);
+        setStreamStatus("connecting");
+        const planResponse = await bioflowApi.generatePlan(
+          activeTask,
+          task.goal,
+          answers,
+          [],
+          (event) => {
+            setStreamEvents((events) => appendStreamEvent(events, event));
+            if (event.type !== "plan.waiting") {
+              setLiveLogs((logs) =>
+                [
+                  ...logs,
+                  `[${new Date(event.createdAt).toLocaleTimeString()}] ${event.type}`,
+                ].slice(-100),
+              );
+            }
+            if (event.type === "plan.completed") setStreamStatus("completed");
+            else if (event.type === "plan.failed") setStreamStatus("failed");
+            else setStreamStatus("connected");
+          },
+          () => setStreamStatus("connected"),
+        );
         setTask(planResponse.task || response.task);
         notify("LLM 已生成分析计划，请检查证据和风险");
       } else setTask(response.task);
     } catch (error) {
+      if (task?.executionMode === "real") setStreamStatus("failed");
       if (task?.executionMode === "real")
         setTask((current) => (current ? { ...current, status: "awaiting_approval" } : current));
       notify(getApiErrorMessage(error, "澄清信息提交失败，请检查服务状态"));
@@ -792,14 +860,53 @@ ${task?.goal || config.goal}
     setLiveLogs([]);
     setCodeText("");
     setCodeStreaming(false);
+    setStreamStatus("starting");
+    setStreamEvents([
+      createClientStreamEvent(activeTask, "client.run.requested", {
+        stage: "run-bootstrap",
+        step: 1,
+        totalSteps: 3,
+        progress: 8,
+        detail: "正在校验任务审批状态并准备运行上下文",
+      }),
+    ]);
     notify("工作流已开始运行");
     try {
       const response = await bioflowApi.startRun(activeTask);
+      setStreamEvents((events) => [
+        ...events,
+        createClientStreamEvent(
+          activeTask,
+          "client.run.created",
+          {
+            stage: "run-bootstrap",
+            step: 2,
+            totalSteps: 3,
+            progress: 18,
+            detail: `运行实例 ${response.runId.slice(0, 8)} 已创建`,
+          },
+          response.runId,
+        ),
+        createClientStreamEvent(
+          activeTask,
+          "client.sse.connecting",
+          {
+            stage: "event-stream",
+            step: 3,
+            totalSteps: 3,
+            progress: 26,
+            detail: "正在携带访问令牌连接运行事件流，并从首个事件开始订阅",
+          },
+          response.runId,
+        ),
+      ]);
+      setStreamStatus("connecting");
       setTask((current) =>
         current ? { ...current, runId: response.runId, status: "running" } : current,
       );
     } catch (error) {
       setRunning(false);
+      setStreamStatus("failed");
       notify(getApiErrorMessage(error, "启动失败，请检查服务状态"));
       return;
     }
@@ -807,6 +914,8 @@ ${task?.goal || config.goal}
   const retry = async () => {
     setRetrying(true);
     setCodeText("");
+    setTraceOpen(true);
+    setStreamStatus("connecting");
     try {
       if (!task?.runId) throw new Error("当前任务没有可重试的运行");
       await bioflowApi.retryNode(task.runId, "design");

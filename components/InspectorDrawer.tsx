@@ -8,6 +8,7 @@ import { StreamingCodePanel } from "@/components/code/StreamingCodePanel";
 import type { ArtifactRecord } from "@/lib/domain";
 import type { RagTrace } from "@/lib/domain";
 import { RagTracePanel } from "@/components/RagTracePanel";
+import type { StreamStatus } from "@/components/RunStreamTrace";
 
 export type InspectorTab =
   | "todo"
@@ -37,7 +38,7 @@ type InspectorDrawerProps = {
   statusLabels: Record<string, string>;
   answers: ClarificationAnswers;
   liveLogs: string[];
-  streamStatus: "connected" | "reconnecting" | "disconnected";
+  streamStatus: StreamStatus;
   sampleCount: number;
   running: boolean;
   codeStreaming: boolean;
@@ -306,11 +307,17 @@ export function InspectorDrawer({
           <div className="log-live">
             <i /> 实时事件流
             <span className={`stream-status ${streamStatus}`}>
-              {streamStatus === "connected"
-                ? "已连接"
-                : streamStatus === "reconnecting"
-                  ? "重连中"
-                  : "已断开"}
+              {
+                {
+                  idle: "等待启动",
+                  starting: "准备运行",
+                  connecting: "连接中",
+                  connected: "已连接",
+                  reconnecting: "重连中",
+                  completed: "已完成",
+                  failed: "需处理",
+                }[streamStatus]
+              }
             </span>
           </div>
           {(liveLogs.length ? liveLogs : ["等待运行事件…"]).map((logLine, logIndex) => (

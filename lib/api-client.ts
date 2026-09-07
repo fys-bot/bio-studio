@@ -78,6 +78,21 @@ export type RagTraceResponse = { trace: RagTrace };
 export type SkillResponse = { skill: SkillRecord };
 export type ProjectFileResponse = { file: ProjectFileRecord };
 export type DeleteTaskResponse = { deletedTaskId: string; tasks: TaskResponse["tasks"] };
+export type ApiStreamEvent = {
+  id: number;
+  runId: string;
+  type: string;
+  createdAt: string;
+  nodeId?: string;
+  payload: Record<string, unknown>;
+};
+
+type PlanStreamMessage = {
+  event: ApiStreamEvent;
+  result?: TaskResponse & { plan: NonNullable<ResearchTask["plan"]> };
+  error?: string;
+  code?: string;
+};
 
 /**
  * 前端 API 适配层：统一错误转换、JSON 解析和请求方法，页面不再直接拼接接口细节。
@@ -133,14 +148,19 @@ export async function downloadAuthorizedFile(path: string, fileName: string) {
 export async function readAuthorizedSse<EventPayload>(
   path: string,
   options: {
-    signal: AbortSignal;
+    signal?: AbortSignal;
+    request?: RequestInit;
     onOpen?: () => void;
     onEvent: (event: EventPayload, eventId?: string) => void;
   },
 ) {
+  const headers = new Headers(options.request?.headers);
+  headers.set("Accept", "text/event-stream");
+  headers.set("Cache-Control", "no-cache");
   const response = await authorizedFetch(path, {
+    ...options.request,
     signal: options.signal,
-    headers: { Accept: "text/event-stream", "Cache-Control": "no-cache" },
+    headers,
   });
   if (!response.ok || !response.body) {
     throw new ApiClientError(
@@ -154,7 +174,7 @@ export async function readAuthorizedSse<EventPayload>(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  while (!options.signal.aborted) {
+  while (!options.signal?.aborted) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
@@ -315,17 +335,38 @@ export const bioflowApi = {
       method: "POST",
     }),
 
-  generatePlan: (
+  generatePlan: async (
     taskId: string,
     query: string,
     clarification: Record<string, string>,
     evidence: unknown[] = [],
-  ) =>
-    requestJson<TaskResponse>("/api/agent/plan", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify({ taskId, query, clarification, evidence }),
-    }),
+    onEvent?: (event: ApiStreamEvent) => void,
+    onOpen?: () => void,
+  ) => {
+    let result: PlanStreamMessage["result"];
+    let failure: Pick<PlanStreamMessage, "error" | "code"> | undefined;
+    await readAuthorizedSse<PlanStreamMessage>("/api/agent/plan", {
+      signal: AbortSignal.timeout(210_000),
+      request: {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({ taskId, query, clarification, evidence }),
+      },
+      onOpen,
+      onEvent: (message) => {
+        onEvent?.(message.event);
+        if (message.result) result = message.result;
+        if (message.error) failure = { error: message.error, code: message.code };
+      },
+    });
+    if (failure?.error) {
+      throw new ApiClientError(failure.error, 502, "SERVER", true);
+    }
+    if (!result) {
+      throw new ApiClientError("分析计划事件流已结束，但未返回可审批计划", 502, "SERVER", true);
+    }
+    return result;
+  },
 
   startRun: (taskId = "task_demo_rnaseq") =>
     requestJson<RunResponse>(`/api/runs?taskId=${encodeURIComponent(taskId)}`, {

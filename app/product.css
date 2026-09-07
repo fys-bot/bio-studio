@@ -5019,6 +5019,74 @@ html {
   color: #71800e;
 }
 
+.run-trace-mark.is-active {
+  background: #edf2cf;
+}
+
+.run-trace-molecule {
+  position: relative;
+  display: block;
+  width: 21px;
+  height: 16px;
+}
+
+.run-trace-molecule::before,
+.run-trace-molecule::after {
+  position: absolute;
+  top: 7px;
+  right: 2px;
+  left: 2px;
+  height: 1px;
+  background: #72801966;
+  content: "";
+  transform: rotate(24deg);
+}
+
+.run-trace-molecule::after {
+  transform: rotate(-24deg);
+}
+
+.run-trace-molecule i {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #2f765c;
+  box-shadow: 0 0 0 2px #2f765c1c;
+  animation: run-molecule-pulse 1.2s ease-in-out infinite;
+}
+
+.run-trace-molecule i:nth-child(1) {
+  top: 0;
+  left: 1px;
+}
+
+.run-trace-molecule i:nth-child(2) {
+  top: 6px;
+  right: 0;
+  background: #91a21c;
+  animation-delay: 0.18s;
+}
+
+.run-trace-molecule i:nth-child(3) {
+  bottom: 0;
+  left: 5px;
+  background: #4a73a8;
+  animation-delay: 0.36s;
+}
+
+@keyframes run-molecule-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.72);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+}
+
 .run-trace-title,
 .run-trace-current,
 .run-trace-copy {
@@ -5091,6 +5159,55 @@ html {
 
 .run-trace-connection.reconnecting i {
   background: #b08026;
+}
+
+.run-trace-connection.starting,
+.run-trace-connection.connecting {
+  background: #eef2d8;
+  color: #687817;
+}
+
+.run-trace-connection.starting i,
+.run-trace-connection.connecting i {
+  background: #879818;
+  animation: run-connection-pulse 1s ease-in-out infinite;
+}
+
+.run-trace-connection.completed {
+  background: #e8f3ec;
+  color: #28604b;
+}
+
+.run-trace-connection.completed i {
+  background: #34815f;
+}
+
+.run-trace-connection.failed {
+  background: #fbebe8;
+  color: #9b3f35;
+}
+
+.run-trace-connection.failed i {
+  background: #b2463a;
+}
+
+@keyframes run-connection-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.run-trace-progress.MuiLinearProgress-root {
+  height: 2px;
+  background: #e8ede9;
+}
+
+.run-trace-progress .MuiLinearProgress-bar {
+  background: #82921d;
 }
 
 .run-trace-chevron {
@@ -5336,5 +5453,13 @@ html {
   .run-trace-detail {
     grid-template-columns: minmax(0, 1fr);
     padding-left: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .run-trace-molecule i,
+  .run-trace-connection.starting i,
+  .run-trace-connection.connecting i {
+    animation: none;
   }
 }

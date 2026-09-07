@@ -7,19 +7,73 @@ if (fs.existsSync(".env.local") && process.loadEnvFile) process.loadEnvFile(".en
 const port = Number(process.env.BIOFLOW_RESEARCH_PORT || 8000);
 if (!Number.isInteger(port) || port < 1 || port > 65535)
   throw new Error("Invalid BIOFLOW_RESEARCH_PORT");
-const occupied = await new Promise((resolve) => {
-  const socket = net.connect({ host: "127.0.0.1", port });
-  socket.once("connect", () => {
-    socket.destroy();
-    resolve(true);
+const pause = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const portOccupied = () =>
+  new Promise((resolve) => {
+    const socket = net.connect({ host: "127.0.0.1", port });
+    socket.once("connect", () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once("error", () => resolve(false));
   });
-  socket.once("error", () => resolve(false));
-});
-if (occupied) {
-  console.log(
-    `Research Service already running on http://127.0.0.1:${port}; existing process left untouched.`,
-  );
-  process.exit(0);
+const workerToken = process.env.BIOFLOW_WORKER_TOKEN || "local-development-only";
+const currentWorkerIsCompatible = async () => {
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/health`, {
+      headers: { "X-Bioflow-Worker-Token": workerToken },
+      signal: AbortSignal.timeout(1500),
+    });
+    if (!response.ok) return false;
+    const health = await response.json();
+    return health.apiVersion >= 2 && health.features?.includes("agent-plan");
+  } catch {
+    return false;
+  }
+};
+if (await portOccupied()) {
+  if (await currentWorkerIsCompatible()) {
+    console.log(
+      `Research Service already running on http://127.0.0.1:${port}; existing process left untouched.`,
+    );
+    process.exit(0);
+  }
+  const listenerPid = spawnSync("lsof", ["-tiTCP:" + String(port), "-sTCP:LISTEN"], {
+    encoding: "utf8",
+  })
+    .stdout.trim()
+    .split("\n")[0];
+  const listenerCwd = listenerPid
+    ? spawnSync("lsof", ["-a", "-p", listenerPid, "-d", "cwd", "-Fn"], {
+        encoding: "utf8",
+      })
+        .stdout.split("\n")
+        .find((line) => line.startsWith("n"))
+        ?.slice(1)
+    : "";
+  if (!listenerPid || path.resolve(listenerCwd || "") !== path.resolve(process.cwd())) {
+    console.error(
+      `Port ${port} is occupied by an incompatible external service. Stop it or set BIOFLOW_RESEARCH_PORT.`,
+    );
+    process.exit(2);
+  }
+  console.log(`Restarting stale Research Service on port ${port} (PID ${listenerPid}).`);
+  try {
+    process.kill(Number(listenerPid), "SIGTERM");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(
+      `Cannot stop stale Research Service PID ${listenerPid}: ${detail}. Stop it in the host terminal or use another BIOFLOW_RESEARCH_PORT.`,
+    );
+    process.exit(2);
+  }
+  for (let attempt = 0; attempt < 40 && (await portOccupied()); attempt += 1) {
+    await pause(100);
+  }
+  if (await portOccupied()) {
+    console.error(`Research Service PID ${listenerPid} did not stop cleanly.`);
+    process.exit(2);
+  }
 }
 if (!process.env.QDRANT_URL) {
   const dataRoot = path.resolve(process.env.BIOFLOW_DATA_DIR || "data/runtime");

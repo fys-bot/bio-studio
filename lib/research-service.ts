@@ -2,6 +2,16 @@ import type { ProjectFileRecord } from "./domain";
 import fs from "node:fs";
 import path from "node:path";
 
+export class ResearchServiceError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ResearchServiceError";
+    this.status = status;
+  }
+}
+
 export type ResearchDocument = {
   id: string;
   name: string;
@@ -84,8 +94,9 @@ export async function researchResponse(path: string, init: RequestInit = {}, tim
   }
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(
+    throw new ResearchServiceError(
       typeof body.detail === "string" ? body.detail : `科研服务返回 ${response.status}`,
+      response.status,
     );
   }
   return response;

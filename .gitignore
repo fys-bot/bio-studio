@@ -9,7 +9,7 @@ data/state.json
 tsconfig.tsbuildinfo
 work/
 .venv/
-data/runtime/
+data/runtime*/
 __pycache__/
 .pytest_cache/
 :memory:.ses

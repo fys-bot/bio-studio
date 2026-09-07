@@ -16,7 +16,13 @@ async function workerReady() {
       },
       signal: AbortSignal.timeout(1000),
     });
-    return response.ok && (await response.json()).compute === "PyDESeq2";
+    if (!response.ok) return false;
+    const health = await response.json();
+    return (
+      health.compute === "PyDESeq2" &&
+      health.apiVersion >= 2 &&
+      health.features?.includes("agent-plan")
+    );
   } catch {
     return false;
   }

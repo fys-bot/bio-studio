@@ -113,7 +113,11 @@ async function requestJson<ResponsePayload extends object>(
         signal:
           init?.signal ||
           AbortSignal.timeout(
-            path.includes("/files/profile") || path.includes("/rag/query") ? 120_000 : 15_000,
+            path.includes("/files/profile") ||
+              path.includes("/rag/query") ||
+              path.includes("/agent/plan")
+              ? 140_000
+              : 15_000,
           ),
       });
       const payload = (await response.json().catch(() => ({}))) as

@@ -14,11 +14,12 @@ import {
 } from "@mui/material";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
 import type { SkillRecord } from "@/lib/domain";
 import { CatalogPagination } from "./ui/CatalogPagination";
 import { CatalogSearch } from "./ui/CatalogSearch";
+import { ResourceLoading } from "./ui/ResourceLoading";
 import { ResponsiveDialog } from "./ui/ResponsiveDialog";
 import { SelectControl } from "./ui/SelectControl";
 
@@ -167,6 +168,7 @@ function SkillCard({
 
 export function SkillCatalog() {
   const router = useRouter();
+  const catalogRef = useRef<HTMLElement>(null);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState("");
@@ -212,16 +214,39 @@ export function SkillCatalog() {
   }, [availability, category, page, pageSize, query, source]);
 
   useEffect(() => {
+    const catalog = catalogRef.current;
+    const viewport = catalog?.closest<HTMLElement>(".module-content");
+    if (!catalog || !viewport) return;
+    let frame = 0;
     const updatePageSize = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      const next = width >= 1700 && height >= 920 ? 12 : width >= 1180 ? 6 : width >= 760 ? 6 : 4;
-      setPageSize(next);
-      setPage(1);
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const style = window.getComputedStyle(catalog);
+        const contentWidth =
+          catalog.clientWidth -
+          Number.parseFloat(style.paddingLeft) -
+          Number.parseFloat(style.paddingRight);
+        const stickyHeight =
+          catalog.querySelector<HTMLElement>(".catalog-sticky")?.offsetHeight ?? 170;
+        const columns = Math.max(1, Math.floor((contentWidth + 9) / (228 + 9)));
+        const availableGridHeight = Math.max(188, viewport.clientHeight - stickyHeight - 112);
+        const rows = Math.max(1, Math.min(3, Math.floor((availableGridHeight + 9) / (188 + 9))));
+        const next = Math.max(1, Math.min(12, columns * rows));
+        setPageSize((current) => {
+          if (current === next) return current;
+          setPage(1);
+          return next;
+        });
+      });
     };
+    const observer = new ResizeObserver(updatePageSize);
+    observer.observe(catalog);
+    observer.observe(viewport);
     updatePageSize();
-    window.addEventListener("resize", updatePageSize);
-    return () => window.removeEventListener("resize", updatePageSize);
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   useEffect(() => {
@@ -247,7 +272,7 @@ export function SkillCatalog() {
   };
 
   return (
-    <main className="catalog-page">
+    <main className="catalog-page" ref={catalogRef}>
       <div className="catalog-sticky">
         <header className="catalog-header">
           <h1>能力中心</h1>
@@ -287,16 +312,7 @@ export function SkillCatalog() {
           }}
         />
       </div>
-      <section className="catalog-meta">
-        <span>{total} 个技能</span>
-        <small>服务端目录快照 · 状态跨刷新持久化 · 运行前可审计版本</small>
-      </section>
-      {loading && (
-        <section className="catalog-state catalog-loading">
-          <CircularProgress size={18} />
-          <span>正在读取能力目录…</span>
-        </section>
-      )}
+      {loading && <ResourceLoading variant="skills" label="正在读取能力目录" />}
       {error && (
         <section className="catalog-state error">
           <span>{error}</span>
@@ -318,6 +334,10 @@ export function SkillCatalog() {
           ))}
         </section>
       )}
+      <section className="catalog-meta">
+        <span>{total} 个技能</span>
+        <small>服务端目录快照 · 状态跨刷新持久化 · 运行前可审计版本</small>
+      </section>
       <CatalogPagination
         page={page}
         count={Math.max(1, Math.ceil(total / pageSize))}

@@ -1,14 +1,10 @@
 const base = process.argv[2] || "http://127.0.0.1:3000";
-let cookie = "";
 let accessToken = "";
 
 async function request(path, options = {}) {
   const headers = new Headers(options.headers || {});
-  if (cookie) headers.set("cookie", cookie);
   if (accessToken) headers.set("authorization", `Bearer ${accessToken}`);
   const response = await fetch(base + path, { ...options, headers, redirect: "manual" });
-  const setCookie = response.headers.get("set-cookie");
-  if (setCookie) cookie = setCookie.split(";")[0];
   const text = await response.text();
   let body = text;
   try {
@@ -22,7 +18,6 @@ async function request(path, options = {}) {
 
 async function expectStatus(path, status, options = {}) {
   const headers = new Headers(options.headers || {});
-  if (cookie) headers.set("cookie", cookie);
   if (accessToken) headers.set("authorization", `Bearer ${accessToken}`);
   const response = await fetch(base + path, { ...options, headers, redirect: "manual" });
   if (response.status !== status)
@@ -47,7 +42,7 @@ async function readEvents(runId, after = 0, duration = 1800) {
   let response;
   try {
     response = await fetch(`${base}/api/runs/${runId}/events?after=${after}`, {
-      headers: accessToken ? { authorization: `Bearer ${accessToken}` } : cookie ? { cookie } : {},
+      headers: accessToken ? { authorization: `Bearer ${accessToken}` } : {},
       signal: controller.signal,
     });
   } catch (error) {

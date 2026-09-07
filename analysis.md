@@ -138,7 +138,7 @@ Biomni 的任务页至少需要表达以下状态：
 ### 3.1 已有真实能力
 
 - Next.js App Router + TypeScript，页面和领域组件已拆分；
-- HMAC HttpOnly Cookie 鉴权、Origin/Host 写保护、类型化 API 客户端；
+- HMAC Bearer Token 鉴权、Origin/Host 写保护、类型化 API 客户端；
 - 任务、配置、文件摘要、工作流布局和 Artifact 的服务端持久化；
 - CSV/TSV、PDF、XLSX、DOCX 服务端策略解析，字段、正文、表格、来源定位和分组建议来自真实上传文件；
 - OpenAI-compatible 真实 LLM 计划生成，计划摘要、步骤、风险和必需输入写回任务快照；
@@ -248,7 +248,7 @@ app/
 - 页面只调用 `lib/api-client.ts`，不在组件内拼接接口；
 - `ProjectService`、`TaskService`、`SkillCatalogService`、`FileProfileService`、`RunService` 分离；
 - 演示模式与真实模式使用相同领域 DTO，差异通过 Adapter 注入；
-- 所有写 API 继续使用 HttpOnly 会话和同源校验；
+- 所有写 API 继续使用 Bearer Token 和同源校验，前端仅在当前标签页会话中保存令牌；
 - 任务状态以服务端持久化为真相，SSE 只负责增量通知；
 - 技能、文件、任务和 Artifact 均返回 `id/version/updatedAt/source/status`，前端不使用静态数量冒充服务端状态。
 

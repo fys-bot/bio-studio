@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { demoSession, isSameOrigin, safeCredentialEqual, SESSION_COOKIE } from "@/lib/auth";
+import { demoSession, isSameOrigin, safeCredentialEqual } from "@/lib/auth";
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request))
@@ -19,18 +19,10 @@ export async function POST(request: Request) {
 
   const accessToken = demoSession();
   const expiresAt = Date.now() + 8 * 60 * 60 * 1000;
-  const response = NextResponse.json({
+  return NextResponse.json({
     authenticated: true,
     accessToken,
     expiresAt,
     user: { name: "DF 研究员", role: "researcher" },
   });
-  response.cookies.set(SESSION_COOKIE, accessToken, {
-    httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 8,
-  });
-  return response;
 }

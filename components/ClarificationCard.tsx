@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowRight, Database } from "lucide-react";
+import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
+import StorageOutlined from "@mui/icons-material/StorageOutlined";
 
 export type ClarificationKey = "format" | "comparison" | "organism" | "deliverable";
 
@@ -145,7 +146,7 @@ export function ClarificationCard({
               disabled={submitting}
               onClick={onUseDemoData}
             >
-              <Database size={15} />
+              <StorageOutlined sx={{ fontSize: 16 }} />
               <span>
                 <b>载入示例输入</b>
                 <small>Count 矩阵与样本元数据</small>
@@ -158,7 +159,7 @@ export function ClarificationCard({
             disabled={submitting || Object.values(answers).some((value) => !value)}
           >
             {submitting ? "正在生成计划…" : "生成分析计划"}
-            {!submitting && <ArrowRight size={15} />}
+            {!submitting && <ArrowForwardRounded sx={{ fontSize: 16 }} />}
           </button>
         </div>
       </div>

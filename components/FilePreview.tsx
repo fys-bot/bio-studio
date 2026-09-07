@@ -1,14 +1,12 @@
 "use client";
 
-import {
-  Download,
-  ExternalLink,
-  FileSearch,
-  Maximize2,
-  Minimize2,
-  RefreshCw,
-  X,
-} from "lucide-react";
+import CloseRounded from "@mui/icons-material/CloseRounded";
+import DownloadRounded from "@mui/icons-material/DownloadRounded";
+import FindInPageRounded from "@mui/icons-material/FindInPageRounded";
+import FullscreenExitRounded from "@mui/icons-material/FullscreenExitRounded";
+import FullscreenRounded from "@mui/icons-material/FullscreenRounded";
+import OpenInNewRounded from "@mui/icons-material/OpenInNewRounded";
+import RefreshRounded from "@mui/icons-material/RefreshRounded";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -72,7 +70,7 @@ function StructuredPreview({ document }: { document: ResearchDocument }) {
       ))}
       {!document.sections.length && (
         <div className="document-empty">
-          <FileSearch size={24} />
+          <FindInPageRounded sx={{ fontSize: 25 }} />
           <b>当前文件没有可显示的结构化正文</b>
           <span>可以下载原文件，或重新运行解析与 OCR 路由。</span>
         </div>
@@ -267,7 +265,7 @@ export function FilePreview({ fileId, mode = "modal", onClose, onFileUpdated }: 
             onClick={() => void reparse()}
             title="重新解析并索引"
           >
-            <RefreshCw size={15} className={busy ? "is-spinning" : ""} />
+            <RefreshRounded sx={{ fontSize: 17 }} className={busy ? "is-spinning" : ""} />
           </button>
           <button
             type="button"
@@ -281,18 +279,22 @@ export function FilePreview({ fileId, mode = "modal", onClose, onFileUpdated }: 
             }
             title="下载原文件"
           >
-            <Download size={15} />
+            <DownloadRounded sx={{ fontSize: 17 }} />
           </button>
           <button
             type="button"
             onClick={() => setFullscreen((current) => !current)}
             title={fullscreen ? "退出全屏" : "全屏预览"}
           >
-            {fullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            {fullscreen ? (
+              <FullscreenExitRounded sx={{ fontSize: 17 }} />
+            ) : (
+              <FullscreenRounded sx={{ fontSize: 17 }} />
+            )}
           </button>
           {onClose && (
             <button type="button" aria-label="关闭文件预览" onClick={onClose} title="关闭预览">
-              <X size={16} />
+              <CloseRounded sx={{ fontSize: 18 }} />
             </button>
           )}
         </div>
@@ -348,7 +350,7 @@ export function FilePreview({ fileId, mode = "modal", onClose, onFileUpdated }: 
                 }
               }}
             >
-              <ExternalLink size={14} />
+              <OpenInNewRounded sx={{ fontSize: 15 }} />
               新建分析任务
             </button>
           </footer>

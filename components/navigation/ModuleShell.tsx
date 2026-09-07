@@ -1,3 +1,5 @@
+import ArrowOutwardRounded from "@mui/icons-material/ArrowOutwardRounded";
+import ScienceOutlined from "@mui/icons-material/ScienceOutlined";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { GlobalRail } from "@/components/navigation/GlobalRail";
@@ -15,6 +17,13 @@ const skillLinks = [
   ["single-cell", "单细胞聚类与注释", "单细胞"],
   ["protein-structure", "蛋白质结构分析", "结构生物学"],
 ] as const;
+
+function taskGroupTone(task: { id: string; title: string }) {
+  if (task.id.includes("literature") || task.title.includes("文献")) return "evidence";
+  if (task.id.includes("structure") || task.title.includes("蛋白")) return "structure";
+  if (task.title.toLowerCase().includes("rna") || task.title.includes("差异表达")) return "rnaseq";
+  return "custom";
+}
 
 /** 二级模块壳层：在页面级路由中保留项目、任务和当前模块上下文。 */
 export function ModuleShell({ section, children, activeItemId }: ModuleShellProps) {
@@ -35,7 +44,7 @@ export function ModuleShell({ section, children, activeItemId }: ModuleShellProp
             <small>项目</small>
             <strong>BioFlow 生命科学实验室</strong>
           </div>
-          <span>↗</span>
+          <ArrowOutwardRounded sx={{ fontSize: 18 }} />
         </Link>
         <div className="module-context">
           <small>当前位置</small>
@@ -46,7 +55,7 @@ export function ModuleShell({ section, children, activeItemId }: ModuleShellProp
           <span className="module-nav-title">最近任务</span>
           {recentTasks.map((task) => (
             <Link key={task.id} href={`/projects/proj_a5211690a4/tasks/${task.id}`}>
-              <i className="dot gray" />
+              <i className={`dot task-group-dot ${taskGroupTone(task)}`} />
               <span>
                 <b>{task.title}</b>
                 <small>{task.progress}%</small>
@@ -63,7 +72,9 @@ export function ModuleShell({ section, children, activeItemId }: ModuleShellProp
                 className={activeItemId === id ? "selected" : ""}
                 href={`/skills/${id}`}
               >
-                <span className="module-nav-icon">◇</span>
+                <span className="module-nav-icon">
+                  <ScienceOutlined sx={{ fontSize: 16 }} />
+                </span>
                 <span>
                   <b>{label}</b>
                   <small>{category}</small>

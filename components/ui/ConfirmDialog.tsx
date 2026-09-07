@@ -31,6 +31,7 @@ export function ConfirmDialog({
       title={title}
       eyebrow="不可逆操作"
       busy={busy}
+      maxWidth="xs"
       onClose={onClose}
       className="confirm-dialog"
       actions={

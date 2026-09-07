@@ -1,5 +1,6 @@
 "use client";
 
+import CloseRounded from "@mui/icons-material/CloseRounded";
 import { useState, type PointerEvent as ReactPointerEvent } from "react";
 import { clarificationQuestions, type ClarificationAnswers } from "@/components/ClarificationCard";
 import { ResultsPanel } from "@/components/results/ResultsPanel";
@@ -152,7 +153,7 @@ export function InspectorDrawer({
           </b>
         </div>
         <button className="close-inspector" onClick={onClose} aria-label="关闭工具抽屉">
-          ×
+          <CloseRounded sx={{ fontSize: 18 }} />
         </button>
       </div>
       <div className="inspector-tabs">

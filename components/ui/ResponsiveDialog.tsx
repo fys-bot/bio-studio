@@ -49,11 +49,12 @@ export function ResponsiveDialog({
         },
         paper: {
           sx: {
-            m: { xs: 0, sm: 2 },
-            width: { xs: "100%", sm: "calc(100% - 32px)" },
-            maxHeight: { xs: "calc(100dvh - 10px)", sm: "calc(100dvh - 32px)" },
+            m: { xs: 0.75, sm: 2 },
+            width: { xs: "calc(100% - 12px)", sm: "calc(100% - 32px)" },
+            maxHeight: { xs: "calc(100dvh - 12px)", sm: "calc(100dvh - 32px)" },
             borderRadius: { xs: "10px 10px 0 0", sm: "8px" },
             alignSelf: { xs: "flex-end", sm: "center" },
+            overflow: "hidden",
           },
         },
       }}

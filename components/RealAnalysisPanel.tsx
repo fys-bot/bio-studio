@@ -1,5 +1,5 @@
 "use client";
-import { Database } from "lucide-react";
+import StorageOutlined from "@mui/icons-material/StorageOutlined";
 import { useEffect, useState } from "react";
 import type { ProjectFileRecord, ResearchTask } from "@/lib/domain";
 import type { AnalysisJob } from "@/lib/research-service";
@@ -162,7 +162,7 @@ export function RealAnalysisPanel({
           <span className={`analysis-status ${readyToRun ? "ready" : ""}`}>{statusLabel}</span>
           {computeSupported && (
             <button disabled={busy} onClick={() => void post("samples")}>
-              <Database size={14} />
+              <StorageOutlined sx={{ fontSize: 15 }} />
               载入示例输入
             </button>
           )}

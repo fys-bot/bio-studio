@@ -1,7 +1,5 @@
 import { createHmac, timingSafeEqual } from "crypto";
-import { cookies, headers } from "next/headers";
-
-export const SESSION_COOKIE = "bioflow_session";
+import { headers } from "next/headers";
 const secret = () => process.env.BIOFLOW_SESSION_SECRET || "local-demo-secret-change-in-production";
 
 export type SessionPayload = {
@@ -37,8 +35,7 @@ export function readSession(token?: string | null): SessionPayload | null {
 
 export function currentSessionToken() {
   const authorization = headers().get("authorization");
-  const bearer = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
-  return bearer || cookies().get(SESSION_COOKIE)?.value || null;
+  return authorization?.match(/^Bearer\s+(.+)$/i)?.[1] || null;
 }
 
 export function isAuthorized() {

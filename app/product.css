@@ -5463,3 +5463,402 @@ html {
     animation: none;
   }
 }
+
+/* 资源目录响应式收口：内容占满模块区，页容量与可视区联动，分页保留在首屏底部。 */
+.module-shell .catalog-sticky,
+.module-shell .catalog-meta,
+.module-shell .skill-grid,
+.module-shell .catalog-pagination {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin-right: 0;
+  margin-left: 0;
+  align-self: stretch;
+}
+
+.module-shell .catalog-sticky {
+  background: color-mix(in srgb, var(--bf-bg) 96%, transparent);
+}
+
+.module-shell .catalog-meta {
+  flex: none;
+  margin-block: 10px;
+}
+
+.module-shell .skill-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 228px), 1fr));
+  align-content: start;
+  gap: 9px;
+}
+
+.module-shell .skill-card {
+  height: 188px;
+  min-height: 0;
+}
+
+.module-shell .catalog-pagination {
+  position: sticky;
+  bottom: 0;
+  z-index: 8;
+  min-height: 48px;
+  margin-top: 9px;
+  padding: 7px 10px;
+  border-top: 1px solid #dce3df;
+  background: color-mix(in srgb, var(--bf-bg) 96%, transparent);
+  box-shadow: 0 -8px 18px #53685d0b;
+  backdrop-filter: blur(10px);
+}
+
+.file-browser-pane > .catalog-pagination {
+  position: static;
+  width: auto;
+  min-height: 44px;
+  margin: 0;
+  padding: 6px 8px;
+  border-top: 1px solid var(--bf-line);
+  background: #fff;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.brand svg,
+.rail-btn .rail-icon {
+  display: block;
+  flex: none;
+}
+
+.task-group-dot {
+  border: 1px solid color-mix(in srgb, currentColor 72%, #233129);
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.task-item-row.selected .task-group-dot {
+  box-shadow:
+    0 0 0 2px #f0efbd,
+    0 0 0 3px color-mix(in srgb, currentColor 35%, transparent);
+}
+
+.task-item-row .task-row-actions {
+  z-index: 2;
+}
+
+.task-item-row.selected.has-delete:hover .task-favorite,
+.task-item-row.selected.has-delete:focus-within .task-favorite {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.task-item-row.selected.has-delete:hover .task-delete,
+.task-item-row.selected.has-delete:focus-within .task-delete {
+  pointer-events: auto;
+  border-left-color: #c8d1cb;
+  opacity: 1;
+}
+
+.responsive-dialog .MuiDialog-paper {
+  max-width: min(560px, calc(100vw - 32px));
+}
+
+.responsive-dialog.workspace-responsive-dialog .MuiDialog-paperWidthMd {
+  max-width: min(760px, calc(100vw - 32px));
+}
+
+.responsive-dialog.confirm-dialog .MuiDialog-paper {
+  max-width: min(440px, calc(100vw - 24px));
+}
+
+.responsive-dialog.confirm-dialog {
+  width: auto;
+  max-width: none;
+  overflow: visible;
+  background: transparent;
+}
+
+.responsive-dialog-title b {
+  font-size: 15px;
+}
+
+.responsive-dialog-content.MuiDialogContent-root {
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .module-shell .skill-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 218px), 1fr));
+  }
+
+  .responsive-dialog-title b {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 760px) {
+  .module-shell .catalog-sticky {
+    margin-inline: -2px;
+  }
+
+  .module-shell .mui-filter-row {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .module-shell .catalog-toggle-group {
+    width: 100%;
+  }
+
+  .module-shell .mui-filter-row .MuiToggleButton-root:nth-of-type(n + 4) {
+    display: inline-flex;
+  }
+
+  .module-shell .catalog-selects {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .module-shell .mui-filter-row .select-control {
+    grid-column: auto;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .module-shell .skill-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .module-shell .skill-card {
+    height: 180px;
+  }
+
+  .responsive-dialog .MuiDialog-paper,
+  .responsive-dialog.workspace-responsive-dialog .MuiDialog-paperWidthMd,
+  .responsive-dialog.confirm-dialog .MuiDialog-paper {
+    max-width: calc(100vw - 12px);
+  }
+}
+
+@media (max-width: 700px) {
+  .module-shell .module-content-files {
+    height: calc(100dvh - 58px);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .module-shell .file-catalog-page {
+    height: 100%;
+    min-height: 0;
+    padding: 9px 9px 70px;
+    overflow: hidden;
+  }
+
+  .file-catalog-page .catalog-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 18;
+  }
+
+  .file-workspace,
+  .file-workspace.has-preview {
+    display: block;
+    flex: 1;
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .file-browser-pane {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+/* 资源模块状态反馈：技能同步强调能力节点，文件同步强调文档扫描。 */
+.resource-loading {
+  display: flex;
+  min-height: 124px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--bf-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--bf-text);
+}
+
+.resource-loading > span:last-child,
+.resource-loading b,
+.resource-loading small {
+  display: block;
+}
+
+.resource-loading b {
+  font-size: 11px;
+}
+
+.resource-loading small {
+  margin-top: 3px;
+  color: var(--bf-text-muted);
+  font-size: 9px;
+}
+
+.resource-loading-visual {
+  position: relative;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  place-items: center;
+  border: 1px solid #ced8d2;
+  border-radius: 7px;
+  background: #f3f6e3;
+  color: #687719;
+}
+
+.resource-loading-visual i {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #168579;
+  animation: resource-node 1.25s ease-in-out infinite;
+}
+
+.resource-loading-visual i:nth-of-type(1) {
+  top: -3px;
+  left: 8px;
+}
+
+.resource-loading-visual i:nth-of-type(2) {
+  top: 13px;
+  right: -3px;
+  animation-delay: 0.16s;
+}
+
+.resource-loading-visual i:nth-of-type(3) {
+  right: 7px;
+  bottom: -3px;
+  animation-delay: 0.32s;
+}
+
+.resource-loading.files .resource-loading-visual {
+  overflow: hidden;
+  background: #eef5f1;
+  color: #176e64;
+}
+
+.resource-loading.files .resource-loading-visual::after {
+  position: absolute;
+  right: 5px;
+  left: 5px;
+  height: 1px;
+  background: #9cab2f;
+  box-shadow: 0 0 8px #9cab2f;
+  content: "";
+  animation: document-scan 1.2s ease-in-out infinite;
+}
+
+.resource-loading.files .resource-loading-visual i {
+  display: none;
+}
+
+@keyframes resource-node {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.7);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes document-scan {
+  0%,
+  100% {
+    top: 8px;
+    opacity: 0.35;
+  }
+  50% {
+    top: 29px;
+    opacity: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .module-shell {
+    padding-bottom: 58px;
+  }
+
+  .module-shell .global-rail {
+    z-index: 40;
+    gap: 2px;
+    padding: 4px 8px;
+  }
+
+  .module-shell .global-rail .avatar {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex: none;
+    place-items: center;
+    margin: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #d78df4;
+    color: #30213a;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .module-shell .global-rail .rail-btn {
+    min-width: 62px;
+    padding-inline: 7px;
+  }
+
+  .module-shell .catalog-page:not(.file-catalog-page) {
+    padding-bottom: 128px;
+  }
+
+  .module-shell .catalog-page:not(.file-catalog-page) > .catalog-pagination,
+  .file-browser-pane > .catalog-pagination {
+    position: fixed;
+    right: 10px;
+    bottom: 58px;
+    left: 10px;
+    z-index: 24;
+    width: auto;
+    min-height: 48px;
+    margin: 0;
+    padding: 7px 8px;
+    border: 1px solid #d5ddd8;
+    border-radius: 8px 8px 0 0;
+    background: color-mix(in srgb, #f7f9f8 96%, transparent);
+    box-shadow: 0 -10px 28px #4052471f;
+    backdrop-filter: blur(12px);
+  }
+
+  .module-shell .catalog-meta {
+    justify-content: center;
+    margin-block: 8px 2px;
+  }
+
+  .resource-loading {
+    min-height: 160px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resource-loading-visual i,
+  .resource-loading.files .resource-loading-visual::after {
+    animation: none;
+  }
+}

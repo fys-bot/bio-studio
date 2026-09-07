@@ -23,6 +23,13 @@ export function CatalogPagination({
         size="small"
         siblingCount={0}
         boundaryCount={1}
+        getItemAriaLabel={(type, itemPage, selected) => {
+          if (type === "previous") return "上一页";
+          if (type === "next") return "下一页";
+          if (type === "first") return "第一页";
+          if (type === "last") return "最后一页";
+          return selected ? `当前第 ${itemPage} 页` : `前往第 ${itemPage} 页`;
+        }}
         renderItem={(item) => (
           <PaginationItem
             {...item}

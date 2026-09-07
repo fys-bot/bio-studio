@@ -1,13 +1,20 @@
 "use client";
-import {
-  AlertCircle,
-  BookOpen,
-  ChevronDown,
-  CircleHelp,
-  FileInput,
-  LayoutPanelTop,
-} from "lucide-react";
+import BiotechRounded from "@mui/icons-material/BiotechRounded";
+import AssessmentOutlined from "@mui/icons-material/AssessmentOutlined";
+import ChecklistRounded from "@mui/icons-material/ChecklistRounded";
+import DashboardCustomizeRounded from "@mui/icons-material/DashboardCustomizeRounded";
+import DescriptionOutlined from "@mui/icons-material/DescriptionOutlined";
+import EditNoteRounded from "@mui/icons-material/EditNoteRounded";
+import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
+import ExtensionRounded from "@mui/icons-material/ExtensionRounded";
+import FolderOutlined from "@mui/icons-material/FolderOutlined";
+import HelpOutlineRounded from "@mui/icons-material/HelpOutlineRounded";
+import InputRounded from "@mui/icons-material/InputRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
+import MenuBookRounded from "@mui/icons-material/MenuBookRounded";
+import MemoryRounded from "@mui/icons-material/MemoryRounded";
+import ViewQuiltRounded from "@mui/icons-material/ViewQuiltRounded";
+import WarningAmberRounded from "@mui/icons-material/WarningAmberRounded";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { ParticleLoader } from "@/components/ParticleLoader";
@@ -1200,25 +1207,30 @@ ${task?.goal || config.goal}
       }}
     >
       <aside className="rail">
-        <div className="brand">⦿</div>
+        <div className="brand" aria-hidden="true">
+          <BiotechRounded sx={{ fontSize: 24 }} />
+        </div>
         <button
           className={`rail-btn ${activeNav === "workspace" ? "active" : ""}`}
           onClick={() => switchNav("workspace")}
         >
-          ⌘<span>工作台</span>
+          <DashboardCustomizeRounded className="rail-icon" sx={{ fontSize: 19 }} />
+          <span>工作台</span>
         </button>
         <button
           className={`rail-btn ${activeNav === "skills" ? "active" : ""}`}
           onClick={() => switchNav("skills")}
         >
-          ◇<span>能力中心</span>
+          <ExtensionRounded className="rail-icon" sx={{ fontSize: 19 }} />
+          <span>能力中心</span>
         </button>
         <button
           data-guide="files-nav"
           className={`rail-btn ${activeNav === "files" ? "active" : ""}`}
           onClick={() => switchNav("files")}
         >
-          ◈<span>文件</span>
+          <FolderOutlined className="rail-icon" sx={{ fontSize: 19 }} />
+          <span>文件</span>
         </button>
         <div className="rail-spacer" />
         <div className="rail-account" ref={profileMenuRef}>
@@ -1244,7 +1256,7 @@ ${task?.goal || config.goal}
                   setModal({ kind: "layout", title: "工作区布局" });
                 }}
               >
-                <LayoutPanelTop size={15} />
+                <ViewQuiltRounded sx={{ fontSize: 16 }} />
                 <span>
                   <b>工作区布局</b>
                   <small>调整面板与画布</small>
@@ -1258,7 +1270,7 @@ ${task?.goal || config.goal}
                   setDocsOpen(true);
                 }}
               >
-                <BookOpen size={15} />
+                <MenuBookRounded sx={{ fontSize: 16 }} />
                 <span>
                   <b>开发文档</b>
                   <small>接口与前端接入说明</small>
@@ -1272,7 +1284,7 @@ ${task?.goal || config.goal}
                   setGuideOpen(true);
                 }}
               >
-                <CircleHelp size={15} />
+                <HelpOutlineRounded sx={{ fontSize: 16 }} />
                 <span>
                   <b>使用指引</b>
                   <small>从零开始完成工作流</small>
@@ -1485,7 +1497,7 @@ ${task?.goal || config.goal}
                   <summary>
                     <span>{step.id}</span>
                     <b>{step.title}</b>
-                    <ChevronDown size={14} aria-hidden="true" />
+                    <ExpandMoreRounded sx={{ fontSize: 15 }} aria-hidden="true" />
                   </summary>
                   <p>{step.detail}</p>
                 </details>
@@ -1496,7 +1508,7 @@ ${task?.goal || config.goal}
                 {task.plan.requiredInputs.length > 0 && (
                   <section>
                     <span>
-                      <FileInput size={14} /> 必需输入
+                      <InputRounded sx={{ fontSize: 15 }} /> 必需输入
                     </span>
                     <p>{task.plan.requiredInputs.join("；")}</p>
                   </section>
@@ -1504,7 +1516,7 @@ ${task?.goal || config.goal}
                 {task.plan.risks.length > 0 && (
                   <section>
                     <span>
-                      <AlertCircle size={14} /> 运行前风险
+                      <WarningAmberRounded sx={{ fontSize: 15 }} /> 运行前风险
                     </span>
                     <p>{task.plan.risks.join("；")}</p>
                   </section>
@@ -1599,12 +1611,12 @@ ${task?.goal || config.goal}
       </section>
       <nav className="tool-dock" aria-label="研究工具">
         {[
-          ["todo", "待办", "☷"],
-          ["results", "结果", "▧"],
-          ["compute", "计算", "◉"],
-          ["notes", "笔记", "✎"],
-          ["docs", "文档", "▤"],
-        ].map(([key, label, icon]) => (
+          { key: "todo", label: "待办", Icon: ChecklistRounded },
+          { key: "results", label: "结果", Icon: AssessmentOutlined },
+          { key: "compute", label: "计算", Icon: MemoryRounded },
+          { key: "notes", label: "笔记", Icon: EditNoteRounded },
+          { key: "docs", label: "文档", Icon: DescriptionOutlined },
+        ].map(({ key, label, Icon }) => (
           <button
             key={key}
             className={tab === key && mobilePanel ? "active" : ""}
@@ -1621,7 +1633,9 @@ ${task?.goal || config.goal}
               setMobilePanel(true);
             }}
           >
-            <i>{icon}</i>
+            <i>
+              <Icon sx={{ fontSize: 17 }} />
+            </i>
             <span>{label}</span>
           </button>
         ))}

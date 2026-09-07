@@ -4,7 +4,9 @@ import RefreshRounded from "@mui/icons-material/RefreshRounded";
 import { Button, CircularProgress } from "@mui/material";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ApiClientError, bioflowApi, clearAccessToken } from "@/lib/api-client";
+import { ApiClientError, bioflowApi, clearAccessToken, getAccessToken } from "@/lib/api-client";
+
+let sessionVerified = false;
 
 export function AuthSessionGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -16,11 +18,17 @@ export function AuthSessionGate({ children }: { children: ReactNode }) {
       setStatus("ready");
       return;
     }
+    if (sessionVerified && getAccessToken()) {
+      setStatus("ready");
+      return;
+    }
     setStatus("checking");
     try {
       await bioflowApi.restoreSession();
+      sessionVerified = true;
       setStatus("ready");
     } catch (error) {
+      sessionVerified = false;
       clearAccessToken();
       if (error instanceof ApiClientError && error.status === 401) {
         const next = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";

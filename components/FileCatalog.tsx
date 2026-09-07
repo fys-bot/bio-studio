@@ -27,6 +27,7 @@ import type { ProjectFileRecord } from "@/lib/domain";
 import { FilePreview } from "./FilePreview";
 import { CatalogPagination } from "./ui/CatalogPagination";
 import { CatalogSearch } from "./ui/CatalogSearch";
+import { ResourceLoading } from "./ui/ResourceLoading";
 
 const filterOptions: Array<{ label: string; value?: ProjectFileRecord["status"] }> = [
   { label: "全部" },
@@ -58,6 +59,7 @@ export function FileCatalog() {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [uploadingFileName, setUploadingFileName] = useState("");
   const [error, setError] = useState("");
   const [browserWidth, setBrowserWidth] = useState(400);
   const [sourceMenuAnchor, setSourceMenuAnchor] = useState<HTMLElement | null>(null);
@@ -69,13 +71,15 @@ export function FileCatalog() {
       const items = (await bioflowApi.listProjectFiles()).items;
       setFiles(items);
       setSelected((current) => {
-        if (current) return items.find((item) => item.id === current.id) ?? items[0] ?? null;
-        return (
-          items.find((item) => item.name === requestedPreviewName) ??
-          items.find((item) => item.source === "user-upload") ??
-          items[0] ??
-          null
-        );
+        if (current) return items.find((item) => item.id === current.id) ?? null;
+        const requested = requestedPreviewName
+          ? items.find((item) => item.name === requestedPreviewName)
+          : undefined;
+        if (requested) return requested;
+        const desktopPreview =
+          typeof window !== "undefined" && window.matchMedia("(min-width: 701px)").matches;
+        if (!desktopPreview) return null;
+        return items.find((item) => item.source === "user-upload") ?? items[0] ?? null;
       });
       return items;
     } catch (loadError) {
@@ -112,12 +116,15 @@ export function FileCatalog() {
 
   const handleUpload = async (file: File) => {
     setError("");
+    setUploadingFileName(file.name);
     try {
       await bioflowApi.profileTabularFile(file);
       const items = await loadFiles();
       setSelected(items.find((item) => item.name === file.name) ?? items[0] ?? null);
     } catch (uploadError) {
       setError(getApiErrorMessage(uploadError, "文件解析失败"));
+    } finally {
+      setUploadingFileName("");
     }
   };
 
@@ -150,12 +157,20 @@ export function FileCatalog() {
             component="label"
             variant="contained"
             className="primary upload-button"
-            startIcon={<CloudUploadOutlined />}
+            disabled={Boolean(uploadingFileName)}
+            startIcon={
+              uploadingFileName ? (
+                <CircularProgress size={14} color="inherit" />
+              ) : (
+                <CloudUploadOutlined />
+              )
+            }
           >
-            上传文件
+            {uploadingFileName ? "解析中" : "上传文件"}
             <input
               type="file"
               accept=".csv,.tsv,.txt,.md,.xlsx,.pdf,.docx,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg"
+              disabled={Boolean(uploadingFileName)}
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 if (file) void handleUpload(file);
@@ -264,12 +279,7 @@ export function FileCatalog() {
             <span>状态 / 更新</span>
           </header>
           <div className="file-list" aria-busy={loading}>
-            {loading && (
-              <div className="catalog-state catalog-loading">
-                <CircularProgress size={18} />
-                <span>正在读取文件目录…</span>
-              </div>
-            )}
+            {loading && <ResourceLoading variant="files" label="正在读取文件目录" />}
             {!loading &&
               visibleFiles.map((file) => (
                 <button

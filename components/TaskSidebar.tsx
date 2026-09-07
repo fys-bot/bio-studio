@@ -123,12 +123,14 @@ export function TaskSidebar({
           .includes(normalizedQuery);
       })
       .sort((left, right) => {
+        if (left.id === activeTaskId && right.id !== activeTaskId) return -1;
+        if (right.id === activeTaskId && left.id !== activeTaskId) return 1;
         const leftFavorite = favoriteTaskIds.includes(left.id) ? 1 : 0;
         const rightFavorite = favoriteTaskIds.includes(right.id) ? 1 : 0;
         if (leftFavorite !== rightFavorite) return rightFavorite - leftFavorite;
         return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
       });
-  }, [favoriteTaskIds, statusLabels, task, taskCards, taskQuery]);
+  }, [activeTaskId, favoriteTaskIds, statusLabels, task, taskCards, taskQuery]);
 
   const toggleFavorite = (taskId: string) => {
     setFavoriteTaskIds((current) => {
@@ -143,12 +145,20 @@ export function TaskSidebar({
     ? [{ label: `搜索结果 ${visibleTaskCards.length}`, items: visibleTaskCards }]
     : [
         {
-          label: "收藏",
-          items: visibleTaskCards.filter((card) => favoriteTaskIds.includes(card.id)),
+          label: "当前任务",
+          items: visibleTaskCards.filter((card) => card.id === activeTaskId),
         },
         {
-          label: favoriteTaskIds.length ? "其他任务" : "全部任务",
-          items: visibleTaskCards.filter((card) => !favoriteTaskIds.includes(card.id)),
+          label: "收藏",
+          items: visibleTaskCards.filter(
+            (card) => card.id !== activeTaskId && favoriteTaskIds.includes(card.id),
+          ),
+        },
+        {
+          label: favoriteTaskIds.length ? "其他任务" : "最近任务",
+          items: visibleTaskCards.filter(
+            (card) => card.id !== activeTaskId && !favoriteTaskIds.includes(card.id),
+          ),
         },
       ].filter((group) => group.items.length);
 

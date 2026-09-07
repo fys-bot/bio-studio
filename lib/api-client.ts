@@ -123,7 +123,7 @@ function withAuthorization(headers?: HeadersInit) {
 export function authorizedFetch(input: RequestInfo | URL, init?: RequestInit) {
   return fetch(input, {
     ...init,
-    credentials: "same-origin",
+    credentials: "omit",
     headers: withAuthorization(init?.headers),
   });
 }

@@ -11,7 +11,12 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
+import {
+  authorizedFetch,
+  bioflowApi,
+  downloadAuthorizedFile,
+  getApiErrorMessage,
+} from "@/lib/api-client";
 import type { ProjectFileRecord } from "@/lib/domain";
 import type { ResearchDocument } from "@/lib/research-service";
 
@@ -95,7 +100,9 @@ function DocxPreview({ document }: { document: ResearchDocument }) {
       setRenderError("");
       container.replaceChildren();
       try {
-        const response = await fetch(`/api/files/${encodeURIComponent(document.id)}/original`);
+        const response = await authorizedFetch(
+          `/api/files/${encodeURIComponent(document.id)}/original`,
+        );
         if (!response.ok) throw new Error("原始 DOCX 文件读取失败");
         const [{ renderAsync }, data] = await Promise.all([
           import("docx-preview"),
@@ -198,7 +205,7 @@ export function FilePreview({ fileId, mode = "modal", onClose, onFileUpdated }: 
     setError("");
     const load = async () => {
       try {
-        const response = await fetch(`/api/files/${encodeURIComponent(fileId)}`);
+        const response = await authorizedFetch(`/api/files/${encodeURIComponent(fileId)}`);
         const body = await response.json();
         if (!response.ok) throw new Error(body.error);
         if (!stopped) {
@@ -262,12 +269,20 @@ export function FilePreview({ fileId, mode = "modal", onClose, onFileUpdated }: 
           >
             <RefreshCw size={15} className={busy ? "is-spinning" : ""} />
           </button>
-          <a
-            href={`/api/files/${encodeURIComponent(fileId)}/original?download=1`}
+          <button
+            type="button"
+            onClick={() =>
+              void downloadAuthorizedFile(
+                `/api/files/${encodeURIComponent(fileId)}/original?download=1`,
+                document?.name || "bioflow-file",
+              ).catch((downloadError) =>
+                setError(getApiErrorMessage(downloadError, "下载原文件失败")),
+              )
+            }
             title="下载原文件"
           >
             <Download size={15} />
-          </a>
+          </button>
           <button
             type="button"
             onClick={() => setFullscreen((current) => !current)}

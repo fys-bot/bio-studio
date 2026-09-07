@@ -7,6 +7,7 @@ import {
   FileInput,
   LayoutPanelTop,
 } from "lucide-react";
+import LogoutRounded from "@mui/icons-material/LogoutRounded";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { ParticleLoader } from "@/components/ParticleLoader";
@@ -28,7 +29,13 @@ import { ContentLoading } from "@/components/ContentLoading";
 import { FilePreview } from "@/components/FilePreview";
 import { RunStreamTrace, type RunStreamEvent } from "@/components/RunStreamTrace";
 import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
-import { ApiClientError, bioflowApi, getApiErrorMessage } from "@/lib/api-client";
+import {
+  ApiClientError,
+  authorizedFetch,
+  bioflowApi,
+  getApiErrorMessage,
+  readAuthorizedSse,
+} from "@/lib/api-client";
 import type {
   ConversationMessage,
   DataFileProfile,
@@ -345,7 +352,6 @@ export default function Home() {
       try {
         setInitializationError("");
         setTaskLoadError("");
-        await bioflowApi.login();
         const [taskResponse, configResponse, layoutResponse, conversationResponse, notesResponse] =
           await Promise.all([
             bioflowApi.getTask(routeTaskId),
@@ -452,6 +458,7 @@ export default function Home() {
       setStreamStatus("disconnected");
       return;
     }
+    const runId = task.runId;
     const sync = () =>
       bioflowApi
         .getTask(activeTask)
@@ -460,13 +467,14 @@ export default function Home() {
           if (response.tasks) setTaskList(response.tasks);
         })
         .catch(() => undefined);
-    const es = new EventSource(`/api/runs/${encodeURIComponent(task.runId)}/events`);
-    es.onopen = () => setStreamStatus("connected");
-    es.onmessage = (message) => {
+    const abortController = new AbortController();
+    let stopped = false;
+    let lastEventId = 0;
+    const handleEvent = (runEvent: RunStreamEvent) => {
       try {
-        const runEvent = JSON.parse(message.data) as RunStreamEvent;
         if (receivedStreamEventIdsRef.current.has(runEvent.id)) return;
         receivedStreamEventIdsRef.current.add(runEvent.id);
+        lastEventId = Math.max(lastEventId, runEvent.id);
         setStreamEvents((events) => appendStreamEvent(events, runEvent));
         setLiveLogs((logs) =>
           [
@@ -501,9 +509,28 @@ export default function Home() {
         }
       } catch {}
     };
-    es.onerror = () => setStreamStatus("reconnecting");
+    const connect = async () => {
+      while (!stopped && !abortController.signal.aborted) {
+        try {
+          await readAuthorizedSse<RunStreamEvent>(
+            `/api/runs/${encodeURIComponent(runId)}/events?after=${lastEventId}`,
+            {
+              signal: abortController.signal,
+              onOpen: () => setStreamStatus("connected"),
+              onEvent: handleEvent,
+            },
+          );
+        } catch {
+          if (abortController.signal.aborted) return;
+          setStreamStatus("reconnecting");
+        }
+        if (!stopped) await new Promise((resolve) => window.setTimeout(resolve, 800));
+      }
+    };
+    void connect();
     return () => {
-      es.close();
+      stopped = true;
+      abortController.abort();
       setStreamStatus("disconnected");
     };
   }, [activeTask, authed, task?.runId]);
@@ -1142,6 +1169,21 @@ ${task?.goal || config.goal}
                   <small>从零开始完成工作流</small>
                 </span>
               </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="account-menu-logout"
+                onClick={() => {
+                  setProfileMenuOpen(false);
+                  void bioflowApi.logout().finally(() => router.push("/login"));
+                }}
+              >
+                <LogoutRounded sx={{ fontSize: 16 }} />
+                <span>
+                  <b>退出登录</b>
+                  <small>清除当前访问令牌</small>
+                </span>
+              </button>
             </div>
           )}
         </div>
@@ -1277,7 +1319,7 @@ ${task?.goal || config.goal}
             onSubmit={submitClarifications}
             onUseDemoData={() => {
               if (task.executionMode === "real") {
-                void fetch(`/api/tasks/${activeTask}/analysis`, {
+                void authorizedFetch(`/api/tasks/${activeTask}/analysis`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ action: "samples" }),

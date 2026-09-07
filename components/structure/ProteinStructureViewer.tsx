@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useProteinStructureRenderer } from "@/components/structure/useProteinStructureRenderer";
 import type { CandidateGene, StructureAdapterState } from "@/lib/domain";
+import { authorizedFetch } from "@/lib/api-client";
 import { getStructureMetadata, structurePoints } from "@/lib/structure-model";
 
 type ProteinStructureViewerProps = {
@@ -42,7 +43,7 @@ export function ProteinStructureViewer({
       accession: structure.accession,
       message: "正在加载 PDB 结构文件…",
     });
-    fetch(`/api/structures/${structure.accession}?format=pdb`)
+    authorizedFetch(`/api/structures/${structure.accession}?format=pdb`)
       .then(async (response) => {
         if (!response.ok) throw new Error("结构接口不可用");
         return (await response.json()) as {

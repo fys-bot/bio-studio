@@ -488,6 +488,327 @@
   }
 }
 
+/* 登录与会话校验：生命科学视觉保持轻量，不与工作台浅色主题割裂。 */
+.session-gate {
+  display: flex;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  background: #f4f7f4;
+  color: #2c3a32;
+}
+
+.session-gate > div:nth-child(2) {
+  display: grid;
+  gap: 4px;
+}
+
+.session-gate b {
+  font-size: 13px;
+}
+
+.session-gate small {
+  color: #78847d;
+  font-size: 10px;
+}
+
+.session-gate-mark {
+  position: relative;
+  width: 42px;
+  height: 30px;
+}
+
+.session-gate-mark::before,
+.session-gate-mark::after {
+  position: absolute;
+  top: 14px;
+  right: 5px;
+  left: 5px;
+  height: 1px;
+  background: #95a66a;
+  content: "";
+  transform: rotate(24deg);
+}
+
+.session-gate-mark::after {
+  transform: rotate(-24deg);
+}
+
+.session-gate-mark i {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #6c7e17;
+  box-shadow: 0 0 0 1px #9fac7d;
+  animation: session-node 1.2s ease-in-out infinite;
+}
+
+.session-gate-mark i:nth-child(1) {
+  top: 2px;
+  left: 3px;
+}
+
+.session-gate-mark i:nth-child(2) {
+  top: 11px;
+  right: 2px;
+  animation-delay: 0.18s;
+  background: #287665;
+}
+
+.session-gate-mark i:nth-child(3) {
+  bottom: 0;
+  left: 14px;
+  animation-delay: 0.34s;
+  background: #5179ad;
+}
+
+@keyframes session-node {
+  50% {
+    transform: scale(1.28);
+    opacity: 0.72;
+  }
+}
+
+.login-page {
+  position: relative;
+  display: grid;
+  min-height: 100dvh;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
+  align-items: center;
+  gap: clamp(30px, 7vw, 110px);
+  padding: clamp(28px, 6vw, 90px);
+  overflow: hidden;
+  background: #f2f6f3;
+  color: #27362e;
+}
+
+.login-molecule-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.login-page::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: #cfd9d3;
+  content: "";
+}
+
+.login-context,
+.login-panel {
+  position: relative;
+  z-index: 1;
+}
+
+.login-context {
+  display: grid;
+  max-width: 650px;
+  gap: 28px;
+}
+
+.login-brand-mark {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border: 1px solid #aebdb4;
+  border-radius: 8px;
+  background: #fff;
+  color: #526314;
+  box-shadow: 0 10px 28px #445b4e12;
+}
+
+.login-brand-mark svg {
+  font-size: 31px;
+}
+
+.login-context small,
+.login-panel-head small {
+  color: #708078;
+  font:
+    600 10px "DM Mono",
+    monospace;
+  letter-spacing: 0;
+}
+
+.login-context h1 {
+  max-width: 620px;
+  margin: 9px 0 14px;
+  color: #203129;
+  font-size: clamp(30px, 4vw, 56px);
+  line-height: 1.12;
+}
+
+.login-context p {
+  max-width: 590px;
+  margin: 0;
+  color: #617068;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.login-context ul {
+  display: grid;
+  max-width: 520px;
+  gap: 11px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.login-context li {
+  position: relative;
+  padding-left: 18px;
+  color: #46584e;
+  font-size: 12px;
+}
+
+.login-context li::before {
+  position: absolute;
+  top: 5px;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9caf22;
+  box-shadow: 0 0 0 3px #9caf221b;
+  content: "";
+}
+
+.login-panel {
+  display: grid;
+  gap: 22px;
+  width: 100%;
+  padding: 28px;
+  border: 1px solid #d3ddd7;
+  border-radius: 8px;
+  background: #ffffffed;
+  box-shadow: 0 22px 60px #30443a1f;
+  backdrop-filter: blur(9px);
+}
+
+.login-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.login-panel-head > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 7px;
+  background: #eef2cc;
+  color: #5e6d15;
+}
+
+.login-panel-head h2 {
+  margin: 3px 0 0;
+  color: #25352d;
+  font-size: 22px;
+}
+
+.login-panel form {
+  display: grid;
+  gap: 14px;
+}
+
+.login-panel .MuiTextField-root .MuiOutlinedInput-root {
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+}
+
+.login-panel .MuiButton-root {
+  min-height: 44px;
+  margin-top: 2px;
+  background: #687719;
+  font-size: 13px;
+}
+
+.login-demo-note {
+  display: grid;
+  gap: 4px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e6e2;
+}
+
+.login-demo-note b {
+  color: #4f5f56;
+  font-size: 10px;
+}
+
+.login-demo-note span {
+  color: #7a867f;
+  font-size: 9px;
+}
+
+@media (max-width: 900px) {
+  .login-page {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+    gap: 32px;
+    padding: 34px;
+  }
+
+  .login-context h1 {
+    font-size: 34px;
+  }
+}
+
+@media (max-width: 700px) {
+  .login-page {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+    justify-content: center;
+    gap: 24px;
+    padding: 24px 16px;
+  }
+
+  .login-context {
+    width: min(100%, 430px);
+    gap: 12px;
+  }
+
+  .login-brand-mark {
+    width: 42px;
+    height: 42px;
+  }
+
+  .login-brand-mark svg {
+    font-size: 24px;
+  }
+
+  .login-context h1 {
+    margin-block: 6px 8px;
+    font-size: 26px;
+  }
+
+  .login-context p {
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .login-context ul {
+    display: none;
+  }
+
+  .login-panel {
+    width: min(100%, 430px);
+    gap: 17px;
+    padding: 20px;
+  }
+}
+
 /* MUI 交互基础层：统一吸顶、筛选、分页、任务操作和弹窗密度。 */
 .workspace {
   position: relative;

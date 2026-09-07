@@ -46,6 +46,9 @@ export function getApiErrorMessage(error: unknown, fallback: string) {
 
 export type LoginResponse = {
   authenticated: boolean;
+  accessToken: string;
+  expiresAt: number;
+  user: { name: string; role: "researcher" };
 };
 
 export type RunResponse = {
@@ -80,6 +83,99 @@ export type DeleteTaskResponse = { deletedTaskId: string; tasks: TaskResponse["t
  * 前端 API 适配层：统一错误转换、JSON 解析和请求方法，页面不再直接拼接接口细节。
  */
 const retryDelayMs = 180;
+const ACCESS_TOKEN_KEY = "bioflow_access_token_v1";
+
+export function getAccessToken() {
+  if (typeof window === "undefined") return "";
+  return window.sessionStorage.getItem(ACCESS_TOKEN_KEY) || "";
+}
+
+export function setAccessToken(token: string) {
+  if (typeof window !== "undefined") window.sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
+}
+
+export function clearAccessToken() {
+  if (typeof window !== "undefined") window.sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+}
+
+function withAuthorization(headers?: HeadersInit) {
+  const nextHeaders = new Headers(headers);
+  const token = getAccessToken();
+  if (token) nextHeaders.set("Authorization", `Bearer ${token}`);
+  return nextHeaders;
+}
+
+export function authorizedFetch(input: RequestInfo | URL, init?: RequestInit) {
+  return fetch(input, {
+    ...init,
+    credentials: "same-origin",
+    headers: withAuthorization(init?.headers),
+  });
+}
+
+export async function downloadAuthorizedFile(path: string, fileName: string) {
+  const response = await authorizedFetch(path);
+  if (!response.ok)
+    throw new ApiClientError(
+      "文件下载失败",
+      response.status,
+      classifyStatus(response.status),
+      response.status >= 500,
+    );
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function readAuthorizedSse<EventPayload>(
+  path: string,
+  options: {
+    signal: AbortSignal;
+    onOpen?: () => void;
+    onEvent: (event: EventPayload, eventId?: string) => void;
+  },
+) {
+  const response = await authorizedFetch(path, {
+    signal: options.signal,
+    headers: { Accept: "text/event-stream", "Cache-Control": "no-cache" },
+  });
+  if (!response.ok || !response.body) {
+    throw new ApiClientError(
+      response.status === 401 ? "登录状态已失效" : "事件流连接失败",
+      response.status,
+      classifyStatus(response.status),
+      response.status >= 500,
+    );
+  }
+  options.onOpen?.();
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (!options.signal.aborted) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary >= 0) {
+      const block = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      const lines = block.split("\n");
+      const eventId = lines
+        .find((line) => line.startsWith("id:"))
+        ?.slice(3)
+        .trim();
+      const data = lines
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trimStart())
+        .join("\n");
+      if (data) options.onEvent(JSON.parse(data) as EventPayload, eventId);
+      boundary = buffer.indexOf("\n\n");
+    }
+  }
+}
 
 const classifyStatus = (status: number): ApiErrorCode => {
   if (status === 401) return "UNAUTHORIZED";
@@ -109,7 +205,7 @@ async function requestJson<ResponsePayload extends object>(
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      const response = await fetch(path, {
+      const response = await authorizedFetch(path, {
         ...init,
         signal:
           init?.signal ||
@@ -160,7 +256,29 @@ const jsonHeaders = {
 };
 
 export const bioflowApi = {
-  login: () => requestJson<LoginResponse>("/api/auth/login", { method: "POST" }),
+  login: async (credentials: { username: string; password: string }) => {
+    const response = await requestJson<LoginResponse>("/api/auth/login", {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(credentials),
+    });
+    setAccessToken(response.accessToken);
+    return response;
+  },
+
+  restoreSession: async () => {
+    const response = await requestJson<LoginResponse>("/api/auth/session");
+    setAccessToken(response.accessToken);
+    return response;
+  },
+
+  logout: async () => {
+    try {
+      await requestJson<{ ok: boolean }>("/api/auth/logout", { method: "POST" });
+    } finally {
+      clearAccessToken();
+    }
+  },
 
   getTask: (taskId = "task_demo_rnaseq") =>
     requestJson<TaskResponse>(`/api/tasks/${encodeURIComponent(taskId)}`),

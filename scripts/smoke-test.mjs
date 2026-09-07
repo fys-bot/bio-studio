@@ -1,9 +1,11 @@
 const base = process.argv[2] || "http://127.0.0.1:3000";
 let cookie = "";
+let accessToken = "";
 
 async function request(path, options = {}) {
   const headers = new Headers(options.headers || {});
   if (cookie) headers.set("cookie", cookie);
+  if (accessToken) headers.set("authorization", `Bearer ${accessToken}`);
   const response = await fetch(base + path, { ...options, headers, redirect: "manual" });
   const setCookie = response.headers.get("set-cookie");
   if (setCookie) cookie = setCookie.split(";")[0];
@@ -14,12 +16,14 @@ async function request(path, options = {}) {
   } catch {}
   if (!response.ok)
     throw new Error(`${options.method || "GET"} ${path} -> ${response.status}: ${text}`);
+  if (path === "/api/auth/login" && body?.accessToken) accessToken = body.accessToken;
   return body;
 }
 
 async function expectStatus(path, status, options = {}) {
   const headers = new Headers(options.headers || {});
   if (cookie) headers.set("cookie", cookie);
+  if (accessToken) headers.set("authorization", `Bearer ${accessToken}`);
   const response = await fetch(base + path, { ...options, headers, redirect: "manual" });
   if (response.status !== status)
     throw new Error(`${options.method || "GET"} ${path} -> ${response.status}, expected ${status}`);
@@ -43,7 +47,7 @@ async function readEvents(runId, after = 0, duration = 1800) {
   let response;
   try {
     response = await fetch(`${base}/api/runs/${runId}/events?after=${after}`, {
-      headers: cookie ? { cookie } : {},
+      headers: accessToken ? { authorization: `Bearer ${accessToken}` } : cookie ? { cookie } : {},
       signal: controller.signal,
     });
   } catch (error) {
@@ -110,7 +114,12 @@ for (const routePath of [
   await expectStatus(routePath, 200);
 }
 log("项目、任务、能力中心、技能详情和文件中心路由可访问");
-await request("/api/auth/login", { method: "POST" });
+const login = await request("/api/auth/login", {
+  method: "POST",
+  headers: { "content-type": "application/json", origin: base },
+  body: JSON.stringify({ username: "researcher", password: "bioflow2026" }),
+});
+if (!login.accessToken || !login.authenticated) throw new Error("登录接口未返回访问令牌");
 log("页面、文件解析与工作流布局接口登录鉴权");
 const structure = await request("/api/structures/AF-Q01094-F1?format=pdb");
 if (structure.state?.status !== "ready" || structure.state?.source !== "pdb") {

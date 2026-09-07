@@ -22,7 +22,9 @@ def request(method, path, **kwargs):
 
 
 assert client.get("/api/files").status_code == 401
-request("POST", "/api/auth/login")
+login = request("POST", "/api/auth/login", json={"username": "researcher", "password": "bioflow2026"})
+assert login["authenticated"] and login["accessToken"]
+client.headers["Authorization"] = "Bearer " + login["accessToken"]
 stamp = str(int(time.time()))
 skill = request("POST", "/api/skills", json={"name": "Integration " + stamp, "category": "转录组", "description": "Integration protocol", "inputs": "counts,metadata", "outputs": "report", "instructions": "Validate input before analysis"})["skill"]
 assert request("GET", "/api/skills/" + skill["id"])["skill"]["instructions"]

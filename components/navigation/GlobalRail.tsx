@@ -1,7 +1,12 @@
 "use client";
 
+import LogoutRounded from "@mui/icons-material/LogoutRounded";
+import PersonOutlineRounded from "@mui/icons-material/PersonOutlineRounded";
+import { ListItemIcon, Menu, MenuItem } from "@mui/material";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, type MouseEvent } from "react";
+import { bioflowApi } from "@/lib/api-client";
 
 const items = [
   {
@@ -22,6 +27,10 @@ const items = [
 /** 全站一级导航，保证资源中心与 Agent 工作台共享一致的产品上下文。 */
 export function GlobalRail() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [accountAnchor, setAccountAnchor] = useState<HTMLElement | null>(null);
+  const openAccount = (event: MouseEvent<HTMLButtonElement>) =>
+    setAccountAnchor(event.currentTarget);
   return (
     <aside className="rail global-rail" aria-label="BioFlow 主导航">
       <Link
@@ -43,9 +52,40 @@ export function GlobalRail() {
         </Link>
       ))}
       <div className="rail-spacer" />
-      <button className="avatar" aria-label="当前账户：DF 研究员">
+      <button
+        className="avatar"
+        aria-label="当前账户：DF 研究员"
+        aria-haspopup="menu"
+        aria-expanded={Boolean(accountAnchor)}
+        onClick={openAccount}
+      >
         DF
       </button>
+      <Menu
+        anchorEl={accountAnchor}
+        open={Boolean(accountAnchor)}
+        onClose={() => setAccountAnchor(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        transformOrigin={{ vertical: "bottom", horizontal: "left" }}
+      >
+        <MenuItem disabled>
+          <ListItemIcon>
+            <PersonOutlineRounded fontSize="small" />
+          </ListItemIcon>
+          DF 研究员
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAccountAnchor(null);
+            void bioflowApi.logout().finally(() => router.push("/login"));
+          }}
+        >
+          <ListItemIcon>
+            <LogoutRounded fontSize="small" />
+          </ListItemIcon>
+          退出登录
+        </MenuItem>
+      </Menu>
     </aside>
   );
 }

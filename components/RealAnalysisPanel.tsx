@@ -3,7 +3,7 @@ import { Database } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ProjectFileRecord, ResearchTask } from "@/lib/domain";
 import type { AnalysisJob } from "@/lib/research-service";
-import { bioflowApi } from "@/lib/api-client";
+import { authorizedFetch, bioflowApi, downloadAuthorizedFile } from "@/lib/api-client";
 import { FilePreview } from "./FilePreview";
 import { SelectControl } from "./ui/SelectControl";
 
@@ -19,6 +19,7 @@ export function RealAnalysisPanel({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState("");
+  const [volcanoUrl, setVolcanoUrl] = useState("");
   const [config, setConfig] = useState({
     countsId: "",
     metadataId: "",
@@ -62,7 +63,7 @@ export function RealAnalysisPanel({
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
       try {
-        const res = await fetch(`/api/tasks/${task.id}/analysis`);
+        const res = await authorizedFetch(`/api/tasks/${task.id}/analysis`);
         const result = await res.json();
         if (!res.ok) throw new Error(result.error);
         if (stopped) return;
@@ -84,7 +85,7 @@ export function RealAnalysisPanel({
     setBusy(true);
     setError("");
     try {
-      const res = await fetch(`/api/tasks/${task.id}/analysis`, {
+      const res = await authorizedFetch(`/api/tasks/${task.id}/analysis`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, ...config }),
@@ -99,6 +100,31 @@ export function RealAnalysisPanel({
       setBusy(false);
     }
   };
+  useEffect(() => {
+    if (!job?.result) {
+      setVolcanoUrl("");
+      return;
+    }
+    let stopped = false;
+    let objectUrl = "";
+    void authorizedFetch(`/api/tasks/${task.id}/analysis/volcano.png`)
+      .then((response) => {
+        if (!response.ok) throw new Error("火山图加载失败");
+        return response.blob();
+      })
+      .then((blob) => {
+        if (stopped) return;
+        objectUrl = URL.createObjectURL(blob);
+        setVolcanoUrl(objectUrl);
+      })
+      .catch((loadError) => {
+        if (!stopped) setError(loadError instanceof Error ? loadError.message : "火山图加载失败");
+      });
+    return () => {
+      stopped = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [job?.result, task.id]);
   const active = job && ["queued", "running"].includes(job.status);
   const computeSupported = !task.skill || task.skill.id === "rnaseq-deseq2";
   const selectedCountsFile = files.find((file) => file.id === config.countsId);
@@ -333,16 +359,27 @@ export function RealAnalysisPanel({
             {job.result.sampleCount} 样本 · {job.result.summary.testedGeneCount} 检测基因 ·{" "}
             {job.result.summary.significantGeneCount} 显著基因 · {job.result.design}
           </p>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`/api/tasks/${task.id}/analysis/volcano.png`}
-            alt="根据上传 Count 矩阵计算的差异表达火山图"
-          />
+          {volcanoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={volcanoUrl} alt="根据上传 Count 矩阵计算的差异表达火山图" />
+          ) : (
+            <div className="real-result-loading">正在读取火山图产物…</div>
+          )}
           <nav>
             {job.result.artifacts.map((name) => (
-              <a key={name} href={`/api/tasks/${task.id}/analysis/${name}`}>
+              <button
+                key={name}
+                onClick={() =>
+                  void downloadAuthorizedFile(`/api/tasks/${task.id}/analysis/${name}`, name).catch(
+                    (downloadError) =>
+                      setError(
+                        downloadError instanceof Error ? downloadError.message : "结果下载失败",
+                      ),
+                  )
+                }
+              >
                 {name}
-              </a>
+              </button>
             ))}
           </nav>
           <table>

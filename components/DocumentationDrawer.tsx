@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { downloadAuthorizedFile } from "@/lib/api-client";
 
 type DocumentationDrawerProps = {
   open: boolean;
@@ -11,7 +12,7 @@ type DocumentationDrawerProps = {
 type DocumentationTab = "guide" | "api" | "frontend" | "rag";
 
 const apiRows = [
-  ["POST", "/api/auth/login", "建立 HttpOnly 会话"],
+  ["POST", "/api/auth/login", "返回 HMAC-SHA256 访问令牌并建立 HttpOnly 会话"],
   ["GET", "/api/tasks/:taskId", "读取任务、节点、文件摘要和当前运行"],
   ["POST", "/api/skills", "创建并持久化技能配置"],
   ["GET", "/api/files/:fileId", "读取正文、表格预览和来源定位"],
@@ -133,12 +134,24 @@ export function DocumentationDrawer({ open, onClose, activeTaskId }: Documentati
             <>
               <div className="documentation-callout">
                 <b>接口边界</b>
-                <span>写接口要求会话和同源 Origin；运行事件通过 SSE 按 runId 隔离。</span>
+                <span>
+                  前端请求统一携带 Bearer Token，写接口额外校验同源 Origin；运行事件通过 SSE 按
+                  runId 隔离。
+                </span>
               </div>
               <div className="documentation-section-head">
                 <small>HTTP API / TASK LIFECYCLE</small>
                 <h3>核心接口</h3>
-                <a href="/api/research/openapi">下载 Research Service OpenAPI</a>
+                <button
+                  onClick={() =>
+                    void downloadAuthorizedFile(
+                      "/api/research/openapi",
+                      "bioflow-research-openapi.json",
+                    )
+                  }
+                >
+                  下载 Research Service OpenAPI
+                </button>
               </div>
               <div className="api-doc-list">
                 {apiRows.map(([method, path, purpose]) => (

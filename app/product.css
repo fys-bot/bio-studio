@@ -648,3 +648,219 @@ html {
     min-height: calc(100dvh - 58px);
   }
 }
+
+/* 浅色研究界面收口：RAG、知识图谱和工具抽屉不再混入旧深色面板。 */
+.rag-trace-panel,
+.rag-trace-empty,
+.rag-explorer {
+  border-color: #d1d0c5;
+  background: #fffef8;
+  color: #34372f;
+  box-shadow: 0 6px 18px #7d806b12;
+}
+
+.rag-trace-panel > header,
+.rag-heading,
+.rag-stage,
+.knowledge-graph {
+  border-color: #e0dfd5;
+}
+
+.rag-trace-panel header small,
+.rag-heading small,
+.knowledge-graph-head small {
+  color: #777970;
+}
+
+.rag-trace-panel h3,
+.rag-heading b,
+.rag-query b,
+.rag-stage b,
+.knowledge-graph-head {
+  color: #34372f;
+}
+
+.rag-query {
+  background: #f6f8f1;
+  color: #34372f;
+}
+
+.rag-query span,
+.rag-query small,
+.rag-stage small,
+.rag-stage em,
+.rag-group > small,
+.rag-source em,
+.rag-detail > p,
+.rag-trace-panel footer small {
+  color: #777970;
+}
+
+.rag-stage > button,
+.rag-source {
+  color: #34372f;
+}
+
+.rag-stage > button:hover,
+.rag-stage > button:focus-visible,
+.rag-source:hover,
+.rag-source.active {
+  background: #f1f3d8;
+  border-color: #c8cf7a;
+}
+
+.rag-stage-index,
+.rag-detail-head span,
+.trace-success {
+  color: #69751a;
+}
+
+.rag-stage-content,
+.rag-detail {
+  background: #faf9f4;
+  color: #4e554c;
+}
+
+.rag-groups {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rag-group {
+  min-width: 0;
+}
+
+.rag-stage-content pre {
+  color: #4e5b51;
+  background: transparent;
+}
+
+.retrieval-head {
+  color: #777970;
+}
+
+.retrieval-row {
+  color: #4e554c;
+  border-color: #e0dfd5;
+}
+
+.retrieval-row:hover,
+.retrieval-row.selected {
+  background: #eef1d4;
+}
+
+.rag-trace-panel > footer {
+  background: #edf0c9;
+}
+
+.rag-trace-empty > span {
+  color: #69751a;
+}
+
+.rag-trace-empty p,
+.rag-trace-empty b {
+  color: #5c625a;
+}
+
+.rag-heading > span {
+  color: #596515;
+  background: #edf0c9;
+}
+
+.rag-source-icon {
+  color: #657118;
+  background: #e1ecc9;
+}
+
+.rag-detail {
+  border-left-color: #aab535;
+}
+
+.rag-io div {
+  border-color: #dbe2d6;
+}
+
+.rag-io small {
+  color: #777970;
+}
+
+.rag-io b {
+  color: #4e554c;
+}
+
+.knowledge-graph-canvas {
+  border-color: #d1d8ca;
+  background: radial-gradient(circle at 50% 45%, #f5f7e9, #e9efe8 72%);
+}
+
+.knowledge-edge {
+  stroke: #91a18f;
+}
+
+.knowledge-node circle {
+  stroke: #fffef8;
+}
+
+.knowledge-node text {
+  fill: #30352f;
+}
+
+.knowledge-node .knowledge-node-label {
+  fill: #59635a;
+}
+
+.knowledge-node:hover circle,
+.knowledge-node:focus circle {
+  stroke: #aab535;
+}
+
+/* 统一截断规则，避免中英文长标题在 hover 时把父容器撑开。 */
+.rag-source > span:last-child,
+.rag-stage > button > span:nth-child(2),
+.rag-detail-head b,
+.rag-query b,
+.retrieval-row > span:nth-child(2),
+.candidate-row > td,
+.candidate-row > span {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rag-source > span:last-child,
+.retrieval-row > span:nth-child(2) {
+  display: block;
+}
+
+.rag-detail-head b,
+.rag-query b {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.candidate-row:hover,
+.candidate-row:focus-visible,
+.candidate-row.active {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-radius: 5px;
+}
+
+.inspector .code-scroll-viewport,
+.inspector .code-view pre {
+  border-color: #d1d0c5;
+  background: #f4f6f0;
+  color: #3f4a41;
+  scrollbar-color: #aeb770 #eef0e9;
+}
+
+.inspector .python-code-block {
+  color: #3f4a41;
+}
+
+.inspector .python-code-line:hover {
+  background: #e9edcf;
+}

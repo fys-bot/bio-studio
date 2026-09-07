@@ -1,86 +1,72 @@
-import { execFileSync, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
+import fs from "node:fs";
+import net from "node:net";
+if (fs.existsSync(".env.local") && process.loadEnvFile) process.loadEnvFile(".env.local");
 
 const port = Number(process.env.PORT || 3000);
-const command = process.platform === "win32" ? "netstat" : "lsof";
-
-const wait = (durationMs) => new Promise((resolve) => setTimeout(resolve, durationMs));
-
-/**
- * 返回占用当前演示端口的监听进程。lsof 在端口空闲时以非零状态退出，
- * 因此这里将该结果归一化为空数组，避免把正常启动路径当作错误。
- */
-function findListeningProcessIds() {
+if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid PORT");
+const children = [];
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+async function workerReady() {
   try {
-    return execFileSync(command, [`-tiTCP:${port}`, "-sTCP:LISTEN"], {
-      encoding: "utf8",
-    })
-      .split(/\s+/)
-      .filter(Boolean);
+    const response = await fetch(
+      (process.env.BIOFLOW_WORKER_URL || "http://127.0.0.1:8000") + "/health",
+      {
+        headers: {
+          "X-Bioflow-Worker-Token": process.env.BIOFLOW_WORKER_TOKEN || "local-development-only",
+        },
+        signal: AbortSignal.timeout(1000),
+      },
+    );
+    return response.ok && (await response.json()).compute === "PyDESeq2";
   } catch {
-    return [];
+    return false;
   }
 }
-
-/**
- * 等待旧开发服务真正释放套接字，消除 SIGTERM 与 Next.js 重新绑定端口之间的竞态。
- */
-async function releaseOccupiedPort() {
-  if (process.platform === "win32") return;
-
-  const listeningProcessIds = findListeningProcessIds();
-  if (listeningProcessIds.length === 0) return;
-
-  for (const processId of listeningProcessIds) {
-    try {
-      process.kill(Number(processId), "SIGTERM");
-    } catch {
-      // 进程可能已在查询和发送信号之间自行退出。
+if (!(await workerReady())) {
+  const python = process.platform === "win32" ? ".venv/Scripts/python.exe" : ".venv/bin/python";
+  if (fs.existsSync(process.env.BIOFLOW_PYTHON || python)) {
+    const service = spawn(process.execPath, ["scripts/start-services.mjs"], {
+      stdio: "inherit",
+      env: process.env,
+    });
+    children.push(service);
+    for (let attempt = 0; attempt < 30; attempt++) {
+      if (await workerReady()) break;
+      if (service.exitCode !== null) break;
+      await pause(500);
     }
-  }
-
-  for (let releaseAttempt = 0; releaseAttempt < 15; releaseAttempt += 1) {
-    if (findListeningProcessIds().length === 0) {
-      console.log(`已释放端口 ${port}：${listeningProcessIds.join(", ")}`);
-      return;
-    }
-    await wait(100);
-  }
-
-  const unresponsiveProcessIds = findListeningProcessIds();
-  for (const processId of unresponsiveProcessIds) {
-    try {
-      process.kill(Number(processId), "SIGKILL");
-    } catch {
-      // 进程可能已在升级信号前退出。
-    }
-  }
-
-  for (let releaseAttempt = 0; releaseAttempt < 15; releaseAttempt += 1) {
-    if (findListeningProcessIds().length === 0) {
-      console.log(`已强制释放端口 ${port}：${unresponsiveProcessIds.join(", ")}`);
-      return;
-    }
-    await wait(100);
-  }
-
-  const remainingProcessIds = findListeningProcessIds();
-  throw new Error(
-    `端口 ${port} 未能在 3 秒内释放，仍被进程 ${remainingProcessIds.join(", ")} 占用。`,
+  } else
+    console.warn(
+      "Research service unavailable. Install services/requirements.txt into .venv first.",
+    );
+}
+const occupied = await new Promise((resolve) => {
+  const socket = net.connect({ host: "127.0.0.1", port });
+  socket.once("connect", () => {
+    socket.destroy();
+    resolve(true);
+  });
+  socket.once("error", () => resolve(false));
+});
+if (occupied) {
+  console.log(
+    `Port ${port} is already in use. Existing service left untouched: http://127.0.0.1:${port}`,
   );
-}
-
-await releaseOccupiedPort();
-
-const developmentServer = spawn(
-  "next",
-  ["dev", "--hostname", "127.0.0.1", "--port", String(port)],
-  {
+  if (!children.length) process.exit(0);
+} else {
+  const child = spawn("next", ["dev", "--hostname", "127.0.0.1", "--port", String(port)], {
     stdio: "inherit",
     shell: process.platform === "win32",
-    env: process.env,
-  },
-);
-
-developmentServer.on("exit", (exitCode, terminationSignal) =>
-  process.exit(terminationSignal ? 1 : (exitCode ?? 0)),
-);
+    env: { ...process.env, NEXT_DIST_DIR: process.env.NEXT_DIST_DIR || ".next-dev" },
+  });
+  children.push(child);
+  child.on("exit", (code) => {
+    for (const ownedChild of children) ownedChild.kill("SIGTERM");
+    process.exit(code ?? 1);
+  });
+}
+for (const signal of ["SIGINT", "SIGTERM"])
+  process.on(signal, () => {
+    for (const child of children) child.kill(signal);
+  });

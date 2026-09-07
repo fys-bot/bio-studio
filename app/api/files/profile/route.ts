@@ -1,46 +1,66 @@
 import { NextResponse } from "next/server";
 import { isAuthorized, isSameOrigin } from "@/lib/auth";
-import { saveDataFileProfile } from "@/lib/store";
+import { attachTaskFiles, saveDataFileProfile, taskSnapshot } from "@/lib/store";
 import { profileTabularFile } from "@/lib/tabular-profile";
+import { researchJson, type ResearchDocument } from "@/lib/research-service";
+import type { DataFileProfile } from "@/lib/domain";
 
 export const runtime = "nodejs";
-
-const maximumUploadSizeBytes = 5 * 1024 * 1024;
-const supportedFilePattern = /\.(csv|tsv)$/i;
-
 export async function POST(request: Request) {
-  if (!isAuthorized()) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (!isSameOrigin(request)) {
+  if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isSameOrigin(request))
     return NextResponse.json({ error: "Forbidden origin" }, { status: 403 });
-  }
-
-  const formData = await request.formData().catch(() => null);
-  const uploadedFile = formData?.get("file");
-
-  if (!(uploadedFile instanceof File)) {
-    return NextResponse.json({ error: "请选择需要分析的 CSV 或 TSV 文件" }, { status: 400 });
-  }
-  if (!supportedFilePattern.test(uploadedFile.name)) {
-    return NextResponse.json({ error: "当前仅支持 CSV 和 TSV 结构解析" }, { status: 400 });
-  }
-  if (uploadedFile.size === 0 || uploadedFile.size > maximumUploadSizeBytes) {
-    return NextResponse.json({ error: "文件大小必须在 1 B 到 5 MB 之间" }, { status: 400 });
-  }
-
-  const safeFileName = uploadedFile.name.replace(/[\\/\0]/g, "_").slice(0, 160);
-
+  const taskId = new URL(request.url).searchParams.get("taskId") || "task_demo_rnaseq";
+  if (!taskSnapshot(taskId)) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  const form = await request.formData().catch(() => null);
+  const file = form?.get("file");
+  if (
+    !(file instanceof File) ||
+    !/\.(csv|tsv|txt|md|xlsx|pdf|docx|png|jpe?g)$/i.test(file.name) ||
+    !file.size ||
+    file.size > 10 * 1024 * 1024
+  )
+    return NextResponse.json({ error: "请选择 10MB 以内的受支持文档" }, { status: 400 });
   try {
-    const profile = profileTabularFile({
-      fileName: safeFileName,
-      sizeBytes: uploadedFile.size,
-      text: await uploadedFile.text(),
-    });
-    const task = saveDataFileProfile(profile);
-    return NextResponse.json({ profile, task });
+    const forwarded = new FormData();
+    forwarded.append("file", file);
+    const doc = await researchJson<ResearchDocument>(
+      "/documents",
+      { method: "POST", body: forwarded },
+      120_000,
+    );
+    const base = /\.(csv|tsv)$/i.test(file.name)
+      ? profileTabularFile({
+          fileName: doc.name,
+          sizeBytes: doc.sizeBytes,
+          text: await file.text(),
+        })
+      : null;
+    const profile: DataFileProfile = {
+      id: doc.id,
+      fileName: doc.name,
+      format: doc.format as DataFileProfile["format"],
+      sizeBytes: doc.sizeBytes,
+      dataRole: base?.dataRole || "document",
+      recordCount: base?.recordCount ?? doc.sections.length,
+      sampleCount: base?.sampleCount ?? 0,
+      columnCount: base?.columnCount ?? 0,
+      missingCellCount: base?.missingCellCount ?? 0,
+      columns: base?.columns ?? [],
+      groupCandidates: base?.groupCandidates ?? [],
+      recognizedFields: base?.recognizedFields ?? {},
+      status: doc.needsOcr ? "needs_mapping" : base?.status || "ready",
+      recommendations: base?.recommendations ?? [doc.parser],
+      warnings: [...(base?.warnings ?? []), ...doc.warnings],
+      analyzedAt: new Date().toISOString(),
+    };
+    saveDataFileProfile(profile, taskId);
+    const task = attachTaskFiles(taskId, [doc.id]);
+    return NextResponse.json({ profile, document: doc, task });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "文件结构解析失败";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "解析失败" },
+      { status: 422 },
+    );
   }
 }

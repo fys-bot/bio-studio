@@ -1,204 +1,358 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
+import type { SkillRecord } from "@/lib/domain";
 
-type Skill = {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
+const sources = ["全部来源", "BioFlow Lab", "Team", "Community", "Mine"];
+
+function SkillFilters({
+  query,
+  source,
+  category,
+  categories,
+  onQueryChange,
+  onSourceChange,
+  onCategoryChange,
+}: {
+  query: string;
   source: string;
-  enabled: boolean;
-  updatedAt: string;
-  inputs: string[];
-  outputs: string[];
-};
+  category: string;
+  categories: string[];
+  onQueryChange: (value: string) => void;
+  onSourceChange: (value: string) => void;
+  onCategoryChange: (value: string) => void;
+}) {
+  return (
+    <section className="catalog-toolbar">
+      <input
+        value={query}
+        onChange={(event) => onQueryChange(event.target.value)}
+        placeholder="搜索技能名称、用途或输入…"
+        aria-label="搜索技能"
+      />
+      <div className="filter-row">
+        {sources.map((item) => (
+          <button
+            key={item}
+            className={source === item ? "active" : ""}
+            onClick={() => onSourceChange(item)}
+          >
+            {item}
+          </button>
+        ))}
+        <select
+          value={category}
+          onChange={(event) => onCategoryChange(event.target.value)}
+          aria-label="技能分类"
+        >
+          {categories.map((item) => (
+            <option key={item}>{item}</option>
+          ))}
+        </select>
+      </div>
+    </section>
+  );
+}
 
-const skills: Skill[] = [
-  {
-    id: "rnaseq-deseq2",
-    name: "DESeq2 差异表达",
-    category: "转录组",
-    description: "从 Count 矩阵和样本元数据构建设计矩阵，完成差异表达与 FDR 校正。",
-    source: "BioFlow Lab",
-    enabled: true,
-    updatedAt: "2026-09-01",
-    inputs: ["Count 矩阵", "样本元数据", "比较方向"],
-    outputs: ["差异基因表", "火山图", "可复现代码"],
-  },
-  {
-    id: "rag-evidence",
-    name: "RAG 证据检索",
-    category: "智能体基础",
-    description: "解析项目文档、混合召回 Top 20、交叉编码器精排并绑定工具参数。",
-    source: "BioFlow Lab",
-    enabled: true,
-    updatedAt: "2026-08-28",
-    inputs: ["研究问题", "项目文件", "知识图谱"],
-    outputs: ["证据 Trace", "参数 grounding", "引用列表"],
-  },
-  {
-    id: "single-cell",
-    name: "单细胞聚类与注释",
-    category: "单细胞",
-    description: "执行 QC、降维、聚类和细胞类型注释，保留 marker 基因证据链。",
-    source: "Community",
-    enabled: false,
-    updatedAt: "2026-08-20",
-    inputs: ["表达矩阵", "marker 词典"],
-    outputs: ["UMAP", "细胞簇", "注释报告"],
-  },
-  {
-    id: "protein-structure",
-    name: "蛋白质结构分析",
-    category: "结构生物学",
-    description: "加载 PDB/CIF 结构，联动 accession、残基、pLDDT 与文献证据。",
-    source: "Team",
-    enabled: false,
-    updatedAt: "2026-08-15",
-    inputs: ["UniProt accession", "PDB/CIF"],
-    outputs: ["3D 结构", "残基证据", "结构摘要"],
-  },
-  {
-    id: "pathway-enrichment",
-    name: "通路富集",
-    category: "转录组",
-    description: "对候选基因执行 GO、KEGG、Reactome 富集并关联知识图谱关系。",
-    source: "Community",
-    enabled: false,
-    updatedAt: "2026-08-04",
-    inputs: ["候选基因", "物种"],
-    outputs: ["富集结果", "通路网络"],
-  },
-  {
-    id: "variant-annotation",
-    name: "变异注释",
-    category: "基因组",
-    description: "将 VCF 变异映射到基因、转录本与临床证据，为后续报告提供来源。",
-    source: "Mine",
-    enabled: false,
-    updatedAt: "2026-07-30",
-    inputs: ["VCF", "参考基因组"],
-    outputs: ["注释表", "临床证据"],
-  },
-];
+function SkillCard({
+  skill,
+  busy,
+  onToggle,
+}: {
+  skill: SkillRecord;
+  busy: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <article className="skill-card">
+      <div className="skill-card-top">
+        <span className="skill-glyph">◇</span>
+        <span className={`skill-state ${skill.enabled ? "enabled" : ""}`}>
+          {skill.enabled ? "已启用" : "可用"}
+        </span>
+      </div>
+      <div className="skill-card-body">
+        <span className="skill-category">{skill.category}</span>
+        <h2>
+          <Link className="skill-card-link" href={`/skills/${skill.id}`}>
+            {skill.name}
+          </Link>
+        </h2>
+        <p>{skill.description}</p>
+        <div className="skill-io">
+          <span>输入：{skill.inputs.join(" · ")}</span>
+          <span>输出：{skill.outputs.join(" · ")}</span>
+        </div>
+      </div>
+      <footer>
+        <small>
+          {skill.source} · v{skill.version} ·{" "}
+          {new Date(skill.updatedAt).toLocaleDateString("zh-CN")}
+        </small>
+        <div>
+          <button className="text-button" disabled={busy} onClick={onToggle}>
+            {busy ? "保存中…" : skill.enabled ? "停用" : "启用"}
+          </button>
+          <Link className="text-button" href={`/skills/${skill.id}`}>
+            查看详情 →
+          </Link>
+        </div>
+      </footer>
+    </article>
+  );
+}
 
 export function SkillCatalog() {
+  const router = useRouter();
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [draft, setDraft] = useState({
+    name: "",
+    category: "转录组",
+    description: "",
+    inputs: "",
+    outputs: "",
+    instructions: "",
+  });
   const [query, setQuery] = useState("");
   const [source, setSource] = useState("全部来源");
   const [category, setCategory] = useState("全部分类");
-  const [enabled, setEnabled] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(skills.map((skill) => [skill.id, skill.enabled])),
+  const [skills, setSkills] = useState<SkillRecord[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busySkillId, setBusySkillId] = useState("");
+
+  const loadSkills = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      await bioflowApi.login();
+      const response = await bioflowApi.listSkills({
+        search: query,
+        source,
+        category,
+        page: String(page),
+      });
+      setSkills(response.items);
+      setTotal(response.total);
+    } catch (loadError) {
+      setError(getApiErrorMessage(loadError, "能力目录加载失败"));
+    } finally {
+      setLoading(false);
+    }
+  }, [category, query, source, page]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadSkills(), 180);
+    return () => window.clearTimeout(timer);
+  }, [loadSkills]);
+
+  const categories = useMemo(
+    () => ["全部分类", "转录组", "智能体基础", "单细胞", "结构生物学", "基因组"],
+    [],
   );
-  const categories = ["全部分类", ...Array.from(new Set(skills.map((skill) => skill.category)))];
-  const sources = ["全部来源", "BioFlow Lab", "Team", "Community", "Mine"];
-  const visibleSkills = useMemo(
-    () =>
-      skills.filter((skill) => {
-        const matchedQuery = `${skill.name} ${skill.description}`
-          .toLowerCase()
-          .includes(query.toLowerCase());
-        return (
-          matchedQuery &&
-          (source === "全部来源" || source === skill.source) &&
-          (category === "全部分类" || category === skill.category)
-        );
-      }),
-    [category, query, source],
-  );
+
+  const toggleSkill = async (skill: SkillRecord) => {
+    setBusySkillId(skill.id);
+    try {
+      const response = await bioflowApi.setSkillEnabled(skill.id, !skill.enabled);
+      setSkills((items) => items.map((item) => (item.id === skill.id ? response.skill : item)));
+    } catch (toggleError) {
+      setError(getApiErrorMessage(toggleError, "技能状态保存失败"));
+    } finally {
+      setBusySkillId("");
+    }
+  };
+
   return (
     <main className="catalog-page">
       <header className="catalog-header">
         <div>
-          <Link href="/" className="back-link">
+          <Link href="/projects/proj_a5211690a4/tasks/task_demo_rnaseq" className="back-link">
             ← 返回工作台
           </Link>
           <span className="catalog-kicker">SKILL HUB / 能力中心</span>
-          <h1>让智能体拥有可组合的科研能力</h1>
-          <p>每个技能都是可配置、可审计的工具包，输入、输出和证据边界在运行前清晰可见。</p>
+          <h1>能力中心</h1>
         </div>
-        <button className="primary" onClick={() => alert("新建技能向导将在下一版本开放")}>
+        <button
+          className="primary"
+          onClick={() => {
+            setCreateError("");
+            setCreating(true);
+          }}
+        >
           ＋ 新建技能
         </button>
       </header>
-      <section className="catalog-toolbar">
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="搜索技能名称、用途或输入…"
-          aria-label="搜索技能"
-        />
-        <div className="filter-row">
-          {sources.map((item) => (
-            <button
-              key={item}
-              className={source === item ? "active" : ""}
-              onClick={() => setSource(item)}
-            >
-              {item}
-            </button>
-          ))}
-          <select
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-            aria-label="技能分类"
-          >
-            {categories.map((item) => (
-              <option key={item}>{item}</option>
-            ))}
-          </select>
-        </div>
-      </section>
+      <SkillFilters
+        query={query}
+        source={source}
+        category={category}
+        categories={categories}
+        onQueryChange={(value) => {
+          setQuery(value);
+          setPage(1);
+        }}
+        onSourceChange={(value) => {
+          setSource(value);
+          setPage(1);
+        }}
+        onCategoryChange={(value) => {
+          setCategory(value);
+          setPage(1);
+        }}
+      />
       <section className="catalog-meta">
-        <span>{visibleSkills.length} 个技能</span>
-        <small>启用状态会保存到当前浏览器会话 · 运行前可在 Trace 中审计工具版本</small>
+        <span>{total} 个技能</span>
+        <small>服务端目录快照 · 状态跨刷新持久化 · 运行前可审计版本</small>
       </section>
-      <section className="skill-grid">
-        {visibleSkills.map((skill) => (
-          <article className="skill-card" key={skill.id}>
-            <div className="skill-card-top">
-              <span className="skill-glyph">◇</span>
-              <span className={`skill-state ${enabled[skill.id] ? "enabled" : ""}`}>
-                {enabled[skill.id] ? "已启用" : "可用"}
-              </span>
-            </div>
-            <div className="skill-card-body">
-              <span className="skill-category">{skill.category}</span>
-              <h2>{skill.name}</h2>
-              <p>{skill.description}</p>
-              <div className="skill-io">
-                <span>输入：{skill.inputs.join(" · ")}</span>
-                <span>输出：{skill.outputs.join(" · ")}</span>
-              </div>
-            </div>
-            <footer>
-              <small>
-                {skill.source} · 更新于 {skill.updatedAt}
-              </small>
-              <div>
-                <button
-                  className="text-button"
-                  onClick={() =>
-                    setEnabled((current) => ({ ...current, [skill.id]: !current[skill.id] }))
-                  }
-                >
-                  {enabled[skill.id] ? "停用" : "启用"}
-                </button>
-                <Link className="text-button" href={`/skills/${skill.id}`}>
-                  查看详情 →
-                </Link>
-              </div>
-            </footer>
-          </article>
-        ))}
-      </section>
+      {loading && <section className="catalog-state">正在读取能力目录…</section>}
+      {error && (
+        <section className="catalog-state error">
+          <span>{error}</span>
+          <button onClick={() => void loadSkills()}>重新加载</button>
+        </section>
+      )}
+      {!loading && !error && skills.length === 0 && (
+        <section className="catalog-state">没有匹配的技能，请调整筛选条件。</section>
+      )}
+      {!loading && !error && (
+        <section className="skill-grid">
+          {skills.map((skill) => (
+            <SkillCard
+              key={skill.id}
+              skill={skill}
+              busy={busySkillId === skill.id}
+              onToggle={() => void toggleSkill(skill)}
+            />
+          ))}
+        </section>
+      )}
+      {total > 12 && (
+        <nav className="catalog-pagination">
+          <button disabled={page === 1} onClick={() => setPage(page - 1)}>
+            上一页
+          </button>
+          <span>
+            {page} / {Math.ceil(total / 12)}
+          </span>
+          <button disabled={page * 12 >= total} onClick={() => setPage(page + 1)}>
+            下一页
+          </button>
+        </nav>
+      )}
+      {creating && (
+        <div className="ui-modal-backdrop" onMouseDown={() => !saving && setCreating(false)}>
+          <section
+            className="ui-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="新建技能"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <h2>新建技能</h2>
+              <button
+                aria-label="关闭新建技能"
+                disabled={saving}
+                onClick={() => setCreating(false)}
+              >
+                ×
+              </button>
+            </header>
+            <form
+              className="skill-create-form"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                setSaving(true);
+                setCreateError("");
+                try {
+                  const response = await bioflowApi.createSkill(draft);
+                  router.push(`/skills/${response.skill.id}`);
+                } catch (error) {
+                  setCreateError(getApiErrorMessage(error, "创建失败"));
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              {(
+                [
+                  ["name", "技能名称"],
+                  ["category", "分类"],
+                  ["description", "用途"],
+                  ["inputs", "输入（逗号分隔）"],
+                  ["outputs", "输出（逗号分隔）"],
+                  ["instructions", "执行说明"],
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key}>
+                  {label}
+                  {key === "instructions" ? (
+                    <textarea
+                      required
+                      maxLength={8000}
+                      value={draft[key]}
+                      onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+                    />
+                  ) : (
+                    <input
+                      required
+                      maxLength={key === "name" ? 80 : key === "category" ? 40 : 1000}
+                      value={draft[key]}
+                      onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+                    />
+                  )}
+                </label>
+              ))}
+              {createError && <p role="alert">{createError}</p>}
+              <button className="primary" disabled={saving}>
+                {saving ? "创建中…" : "保存技能"}
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
 
 export function SkillDetail({ skillId }: { skillId: string }) {
-  const skill = skills.find((item) => item.id === skillId) ?? skills[0];
+  const router = useRouter();
+  const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState("");
+  const [skill, setSkill] = useState<SkillRecord | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        await bioflowApi.login();
+        setSkill((await bioflowApi.getSkill(skillId)).skill);
+      } catch (loadError) {
+        setError(getApiErrorMessage(loadError, "技能详情加载失败"));
+      }
+    })();
+  }, [skillId]);
+
+  if (error)
+    return (
+      <main className="detail-page">
+        <section className="catalog-state error">{error}</section>
+      </main>
+    );
+  if (!skill)
+    return (
+      <main className="detail-page">
+        <section className="catalog-state">正在加载技能契约…</section>
+      </main>
+    );
   return (
     <main className="detail-page">
       <Link href="/skills" className="back-link">
@@ -207,7 +361,7 @@ export function SkillDetail({ skillId }: { skillId: string }) {
       <div className="detail-hero">
         <span className="skill-glyph">◇</span>
         <span className="skill-category">
-          {skill.category} · {skill.source}
+          {skill.category} · {skill.source} · v{skill.version}
         </span>
         <h1>{skill.name}</h1>
         <p>{skill.description}</p>
@@ -232,13 +386,41 @@ export function SkillDetail({ skillId }: { skillId: string }) {
           ))}
         </section>
         <section>
-          <h2>可审计阶段</h2>
-          <p>解析 → 切分 → 召回 Top 20 → 精排 → grounding → 工具调用 → Artifact 血缘</p>
+          <h2>运行绑定</h2>
+          <p>
+            {skill.id === "rnaseq-deseq2"
+              ? "PyDESeq2 0.5.4 · 异步统计计算"
+              : skill.id === "rag-evidence"
+                ? "真实文档解析 · Qdrant · BM25 / RRF"
+                : "配置已保存 · 尚未绑定专用计算器"}
+          </p>
         </section>
       </div>
-      <Link href="/projects/proj_a5211690a4/tasks/task_demo_rnaseq" className="primary detail-cta">
-        在演示任务中使用
-      </Link>
+      {skill.instructions && (
+        <section className="skill-instructions">
+          <h2>执行说明</h2>
+          <p>{skill.instructions}</p>
+        </section>
+      )}
+      <button
+        className="primary detail-cta"
+        disabled={applying}
+        onClick={async () => {
+          setApplying(true);
+          setApplyError("");
+          try {
+            if (!skill.enabled) await bioflowApi.setSkillEnabled(skill.id, true);
+            const response = await bioflowApi.createTask(skill.name, { skillId: skill.id });
+            router.push(`/projects/proj_a5211690a4/tasks/${response.task.id}`);
+          } catch (error) {
+            setApplyError(getApiErrorMessage(error, "应用技能失败"));
+            setApplying(false);
+          }
+        }}
+      >
+        {applying ? "创建任务中…" : "使用此技能创建任务"}
+      </button>
+      {applyError && <p role="alert">{applyError}</p>}
     </main>
   );
 }

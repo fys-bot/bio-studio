@@ -1,178 +1,156 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
+import type { ProjectFileRecord } from "@/lib/domain";
+import { FilePreview } from "./FilePreview";
 
-type FileItem = {
-  name: string;
-  type: string;
-  role: string;
-  size: string;
-  status: string;
-  updatedAt: string;
-  detail: string;
-};
-const seedFiles: FileItem[] = [
-  {
-    name: "counts.csv",
-    type: "CSV",
-    role: "RNA-seq Count 矩阵",
-    size: "2.4 MB",
-    status: "结构已就绪",
-    updatedAt: "刚刚",
-    detail: "24 个样本 · 18,432 个基因 · gene_id + sample columns",
-  },
-  {
-    name: "sample_metadata.tsv",
-    type: "TSV",
-    role: "样本元数据",
-    size: "12 KB",
-    status: "结构已就绪",
-    updatedAt: "刚刚",
-    detail: "24 个样本 · condition / batch 字段已识别",
-  },
-  {
-    name: "研究方案.pdf",
-    type: "PDF",
-    role: "实验方案与方法",
-    size: "860 KB",
-    status: "待解析",
-    updatedAt: "昨天",
-    detail: "将进入文档解析与语义切分队列",
-  },
-  {
-    name: "候选基因列表.txt",
-    type: "TXT",
-    role: "候选基因输入",
-    size: "4 KB",
-    status: "已索引",
-    updatedAt: "2026-09-05",
-    detail: "128 个基因符号 · 已关联 Reactome 图谱",
-  },
+const filterOptions: Array<{ label: string; value?: ProjectFileRecord["status"] }> = [
+  { label: "全部" },
+  { label: "结构已就绪", value: "ready" },
+  { label: "待解析", value: "pending" },
+  { label: "已索引", value: "indexed" },
 ];
 
+const statusLabels: Record<ProjectFileRecord["status"], string> = {
+  ready: "结构已就绪",
+  pending: "待解析",
+  indexed: "已索引",
+  failed: "解析失败",
+};
+
+const formatBytes = (bytes: number) =>
+  bytes >= 1024 * 1024
+    ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+
 export function FileCatalog() {
-  const [files, setFiles] = useState(seedFiles);
-  const [selected, setSelected] = useState<FileItem | null>(null);
-  const [filter, setFilter] = useState("全部");
-  const visible = files.filter((file) => filter === "全部" || file.status === filter);
-  const reparse = (file: FileItem) => {
-    setFiles((items) =>
-      items.map((item) => (item.name === file.name ? { ...item, status: "解析完成" } : item)),
-    );
-    setSelected({ ...file, status: "解析完成" });
+  const [files, setFiles] = useState<ProjectFileRecord[]>([]);
+  const [selected, setSelected] = useState<ProjectFileRecord | null>(null);
+  const [filter, setFilter] = useState<ProjectFileRecord["status"] | undefined>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [reparsing, setReparsing] = useState(false);
+
+  const loadFiles = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      await bioflowApi.login();
+      setFiles((await bioflowApi.listProjectFiles()).items);
+    } catch (loadError) {
+      setError(getApiErrorMessage(loadError, "文件目录加载失败"));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadFiles();
+  }, [loadFiles]);
+
+  const visibleFiles = useMemo(
+    () => files.filter((file) => !filter || file.status === filter),
+    [files, filter],
+  );
+
+  const reparse = async (file: ProjectFileRecord) => {
+    setReparsing(true);
+    try {
+      const response = await bioflowApi.reparseProjectFile(file.id);
+      setFiles((items) => items.map((item) => (item.id === file.id ? response.file : item)));
+      setSelected(response.file);
+    } catch (reparseError) {
+      setError(getApiErrorMessage(reparseError, "文件重新解析失败"));
+    } finally {
+      setReparsing(false);
+    }
   };
+
+  const handleUpload = async (file: File) => {
+    try {
+      await bioflowApi.profileTabularFile(file);
+      await loadFiles();
+    } catch (uploadError) {
+      setError(getApiErrorMessage(uploadError, "文件解析失败"));
+    }
+  };
+
   return (
     <main className="catalog-page">
       <header className="catalog-header">
         <div>
-          <Link href="/" className="back-link">
+          <Link href="/projects/proj_a5211690a4/tasks/task_demo_rnaseq" className="back-link">
             ← 返回工作台
           </Link>
           <span className="catalog-kicker">PROJECT FILES / 文件中心</span>
-          <h1>让每份数据都可被智能体理解</h1>
-          <p>
-            文件先经过结构解析、权限校验和索引，再参与 RAG 召回；原始单元格不会直接展示在浏览器。
-          </p>
+          <h1>文件中心</h1>
         </div>
         <label className="primary upload-button">
           ＋ 上传文件
           <input
             type="file"
-            accept=".csv,.tsv,.pdf,.txt"
+            accept=".csv,.tsv,.txt,.md,.xlsx,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             onChange={(event) => {
-              const name = event.target.files?.[0]?.name;
-              if (name)
-                setFiles((items) => [
-                  ...items,
-                  {
-                    name,
-                    type: name.split(".").pop()?.toUpperCase() || "FILE",
-                    role: "新上传文件",
-                    size: "待计算",
-                    status: "待解析",
-                    updatedAt: "刚刚",
-                    detail: "等待服务端解析",
-                  },
-                ]);
+              const file = event.target.files?.[0];
+              if (file) void handleUpload(file);
+              event.currentTarget.value = "";
             }}
           />
         </label>
       </header>
       <section className="catalog-toolbar file-toolbar">
         <div className="filter-row">
-          {["全部", "结构已就绪", "待解析", "已索引"].map((item) => (
+          {filterOptions.map((option) => (
             <button
-              key={item}
-              className={filter === item ? "active" : ""}
-              onClick={() => setFilter(item)}
+              key={option.label}
+              className={filter === option.value ? "active" : ""}
+              onClick={() => setFilter(option.value)}
             >
-              {item}
+              {option.label}
             </button>
           ))}
         </div>
-        <span className="catalog-meta-inline">{visible.length} 个文件 · 项目 proj_a5211690a4</span>
+        <span className="catalog-meta-inline">{visibleFiles.length} 个文件 · 服务端目录快照</span>
       </section>
-      <section className="file-list">
-        {visible.map((file) => (
-          <button className="file-row" key={file.name} onClick={() => setSelected(file)}>
-            <span className="file-type">{file.type}</span>
-            <span className="file-main">
-              <b>{file.name}</b>
-              <small>
-                {file.role} · {file.detail}
-              </small>
-            </span>
-            <span className={`file-status ${file.status === "待解析" ? "pending" : "ready"}`}>
-              {file.status}
-            </span>
-            <span className="file-size">
-              {file.size}
-              <br />
-              <small>{file.updatedAt}</small>
-            </span>
-            <span>→</span>
-          </button>
-        ))}
-      </section>
-      {selected && (
-        <div className="ui-modal-backdrop" onMouseDown={() => setSelected(null)}>
-          <section
-            className="ui-modal file-detail-modal"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <header>
-              <div>
-                <small>文件画像</small>
-                <h2>{selected.name}</h2>
-              </div>
-              <button onClick={() => setSelected(null)} aria-label="关闭文件详情">
-                ×
-              </button>
-            </header>
-            <div className="modal-detail">
-              <p>{selected.detail}</p>
-              <dl>
-                <div>
-                  <dt>文件角色</dt>
-                  <dd>{selected.role}</dd>
-                </div>
-                <div>
-                  <dt>解析状态</dt>
-                  <dd>{selected.status}</dd>
-                </div>
-                <div>
-                  <dt>RAG 用途</dt>
-                  <dd>可作为项目文件来源参与召回与参数 grounding</dd>
-                </div>
-              </dl>
-              <button className="primary full" onClick={() => reparse(selected)}>
-                重新解析并更新索引
-              </button>
-            </div>
-          </section>
-        </div>
+      {loading && <section className="catalog-state">正在读取文件目录…</section>}
+      {error && (
+        <section className="catalog-state error">
+          <span>{error}</span>
+          <button onClick={() => void loadFiles()}>重新加载</button>
+        </section>
       )}
+      {!loading && !error && (
+        <section className="file-list">
+          {visibleFiles.map((file) => (
+            <button className="file-row" key={file.id} onClick={() => setSelected(file)}>
+              <span className="file-type">{file.format}</span>
+              <span className="file-main">
+                <b>{file.name}</b>
+                <small>
+                  {file.role} · {file.detail}
+                </small>
+              </span>
+              <span
+                className={`file-status ${
+                  file.status === "pending" || file.status === "failed" ? "pending" : "ready"
+                }`}
+              >
+                {statusLabels[file.status]}
+              </span>
+              <span className="file-size">
+                {formatBytes(file.sizeBytes)}
+                <br />
+                <small>{new Date(file.updatedAt).toLocaleDateString("zh-CN")}</small>
+              </span>
+              <span>→</span>
+            </button>
+          ))}
+          {visibleFiles.length === 0 && <div className="catalog-state">当前筛选没有文件。</div>}
+        </section>
+      )}
+      {selected && <FilePreview fileId={selected.id} onClose={() => setSelected(null)} />}
     </main>
   );
 }

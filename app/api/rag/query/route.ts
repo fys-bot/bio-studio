@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAuthorized, isSameOrigin } from "@/lib/auth";
-import { createAndStoreRagTrace, listRagTraces } from "@/lib/store";
+import { createAndStoreRagTrace, listRagTraces, saveRagTrace, taskSnapshot } from "@/lib/store";
+import { queryRealDocuments } from "@/lib/real-rag";
 
 export async function GET() {
   if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -16,6 +17,21 @@ export async function POST(request: Request) {
   if (!query || query.length > 2000) {
     return NextResponse.json({ error: "问题不能为空且不能超过 2000 个字符" }, { status: 400 });
   }
-  const trace = createAndStoreRagTrace(query);
-  return NextResponse.json({ trace });
+  const taskId = new URL(request.url).searchParams.get("taskId") || undefined;
+  const task = taskSnapshot(taskId || "task_demo_rnaseq");
+  if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  try {
+    if (task.fileIds?.length)
+      return NextResponse.json({
+        trace: saveRagTrace(await queryRealDocuments(query, task.fileIds)),
+      });
+    if (task.executionMode === "real")
+      return NextResponse.json({ error: "请先上传或绑定项目文件" }, { status: 409 });
+    return NextResponse.json({ trace: createAndStoreRagTrace(query, taskId) });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "检索失败" },
+      { status: 422 },
+    );
+  }
 }

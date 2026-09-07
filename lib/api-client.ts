@@ -6,6 +6,10 @@ import type {
   WorkflowLayoutState,
   WorkflowLayoutVersion,
   RagTrace,
+  CatalogPage,
+  ConversationMessage,
+  ProjectFileRecord,
+  SkillRecord,
 } from "@/lib/domain";
 import type { WorkflowLayoutInput } from "@/lib/workflow-layout";
 
@@ -65,7 +69,11 @@ export type FileProfileResponse = {
 export type WorkflowLayoutResponse = {
   layout: WorkflowLayoutState;
 };
+export type ConversationResponse = { messages: ConversationMessage[] };
+export type NotesResponse = { notes: string };
 export type RagTraceResponse = { trace: RagTrace };
+export type SkillResponse = { skill: SkillRecord };
+export type ProjectFileResponse = { file: ProjectFileRecord };
 
 /**
  * 前端 API 适配层：统一错误转换、JSON 解析和请求方法，页面不再直接拼接接口细节。
@@ -100,7 +108,14 @@ async function requestJson<ResponsePayload extends object>(
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      const response = await fetch(path, init);
+      const response = await fetch(path, {
+        ...init,
+        signal:
+          init?.signal ||
+          AbortSignal.timeout(
+            path.includes("/files/profile") || path.includes("/rag/query") ? 120_000 : 15_000,
+          ),
+      });
       const payload = (await response.json().catch(() => ({}))) as
         | ResponsePayload
         | ApiErrorPayload;
@@ -140,27 +155,50 @@ const jsonHeaders = {
 export const bioflowApi = {
   login: () => requestJson<LoginResponse>("/api/auth/login", { method: "POST" }),
 
-  getTask: () => requestJson<TaskResponse>("/api/tasks"),
+  getTask: (taskId = "task_demo_rnaseq") =>
+    requestJson<TaskResponse>(`/api/tasks/${encodeURIComponent(taskId)}`),
+
+  createTask: (
+    title: string,
+    options: { skillId?: string; fileIds?: string[]; executionMode?: "real" | "demo" } = {},
+  ) =>
+    requestJson<TaskResponse>("/api/tasks", {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify({ title, ...options }),
+    }),
 
   resetTask: () =>
     requestJson<TaskResponse>("/api/tasks", {
       method: "POST",
     }),
 
-  submitClarifications: (payload: ClarificationPayload) =>
-    requestJson<TaskResponse>("/api/tasks/task_demo_rnaseq/clarifications", {
+  submitClarifications: (taskId: string, payload: ClarificationPayload) =>
+    requestJson<TaskResponse>(`/api/tasks/${encodeURIComponent(taskId)}/clarifications`, {
       method: "POST",
       headers: jsonHeaders,
       body: JSON.stringify(payload),
     }),
 
-  approvePlan: () =>
-    requestJson<TaskResponse>("/api/workflows/workflow_demo/approve", {
+  approvePlan: (taskId = "task_demo_rnaseq") =>
+    requestJson<TaskResponse>(`/api/tasks/${encodeURIComponent(taskId)}/approve`, {
       method: "POST",
     }),
 
-  startRun: () =>
-    requestJson<RunResponse>("/api/runs", {
+  generatePlan: (
+    taskId: string,
+    query: string,
+    clarification: Record<string, string>,
+    evidence: unknown[] = [],
+  ) =>
+    requestJson<TaskResponse>("/api/agent/plan", {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify({ taskId, query, clarification, evidence }),
+    }),
+
+  startRun: (taskId = "task_demo_rnaseq") =>
+    requestJson<RunResponse>(`/api/runs?taskId=${encodeURIComponent(taskId)}`, {
       method: "POST",
     }),
 
@@ -183,28 +221,38 @@ export const bioflowApi = {
       body: JSON.stringify(config),
     }),
 
-  profileTabularFile: (file: File) => {
+  profileTabularFile: (file: File, taskId?: string) => {
     const formData = new FormData();
     formData.append("file", file);
-    return requestJson<FileProfileResponse>("/api/files/profile", {
+    const query = taskId ? `?taskId=${encodeURIComponent(taskId)}` : "";
+    return requestJson<FileProfileResponse>(`/api/files/profile${query}`, {
       method: "POST",
       body: formData,
     });
   },
 
-  getWorkflowLayout: () =>
-    requestJson<WorkflowLayoutResponse>("/api/workflows/workflow_demo/layout"),
+  getWorkflowLayout: (taskId = "task_demo_rnaseq") =>
+    requestJson<WorkflowLayoutResponse>(
+      `/api/workflows/workflow_demo/layout?taskId=${encodeURIComponent(taskId)}`,
+    ),
 
-  saveWorkflowLayout: (layout: WorkflowLayoutInput) =>
-    requestJson<WorkflowLayoutResponse>("/api/workflows/workflow_demo/layout", {
-      method: "PUT",
-      headers: jsonHeaders,
-      body: JSON.stringify(layout),
-    }),
+  saveWorkflowLayout: (layout: WorkflowLayoutInput, taskId = "task_demo_rnaseq") =>
+    requestJson<WorkflowLayoutResponse>(
+      `/api/workflows/workflow_demo/layout?taskId=${encodeURIComponent(taskId)}`,
+      {
+        method: "PUT",
+        headers: jsonHeaders,
+        body: JSON.stringify(layout),
+      },
+    ),
 
-  createWorkflowLayoutVersion: (name: string, layout: WorkflowLayoutInput) =>
+  createWorkflowLayoutVersion: (
+    name: string,
+    layout: WorkflowLayoutInput,
+    taskId = "task_demo_rnaseq",
+  ) =>
     requestJson<WorkflowLayoutResponse & { version: WorkflowLayoutVersion }>(
-      "/api/workflows/workflow_demo/layout",
+      `/api/workflows/workflow_demo/layout?taskId=${encodeURIComponent(taskId)}`,
       {
         method: "POST",
         headers: jsonHeaders,
@@ -212,12 +260,68 @@ export const bioflowApi = {
       },
     ),
 
-  runRagQuery: (query: string) =>
-    requestJson<RagTraceResponse>("/api/rag/query", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify({ query }),
-    }),
+  runRagQuery: (query: string, taskId?: string) =>
+    requestJson<RagTraceResponse>(
+      `/api/rag/query${taskId ? `?taskId=${encodeURIComponent(taskId)}` : ""}`,
+      {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({ query }),
+      },
+    ),
 
   getRagTrace: (traceId: string) => requestJson<RagTraceResponse>(`/api/rag/traces/${traceId}`),
+
+  getConversation: (taskId: string) =>
+    requestJson<ConversationResponse>(`/api/tasks/${encodeURIComponent(taskId)}/conversation`),
+
+  saveConversation: (taskId: string, messages: ConversationMessage[]) =>
+    requestJson<ConversationResponse>(`/api/tasks/${encodeURIComponent(taskId)}/conversation`, {
+      method: "PUT",
+      headers: jsonHeaders,
+      body: JSON.stringify({ messages }),
+    }),
+
+  getNotes: (taskId: string) =>
+    requestJson<NotesResponse>(`/api/tasks/${encodeURIComponent(taskId)}/notes`),
+
+  saveNotes: (taskId: string, notes: string) =>
+    requestJson<NotesResponse>(`/api/tasks/${encodeURIComponent(taskId)}/notes`, {
+      method: "PUT",
+      headers: jsonHeaders,
+      body: JSON.stringify({ notes }),
+    }),
+
+  listSkills: (
+    query: { search?: string; source?: string; category?: string; page?: string } = {},
+  ) => {
+    const searchParams = new URLSearchParams();
+    searchParams.set("pageSize", "12");
+    Object.entries(query).forEach(([key, value]) => value && searchParams.set(key, value));
+    const queryString = searchParams.toString();
+    return requestJson<CatalogPage<SkillRecord>>(
+      `/api/skills${queryString ? `?${queryString}` : ""}`,
+    );
+  },
+
+  getSkill: (skillId: string) => requestJson<SkillResponse>(`/api/skills/${skillId}`),
+
+  createSkill: (input: Record<string, string>) =>
+    requestJson<SkillResponse>("/api/skills", {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(input),
+    }),
+
+  setSkillEnabled: (skillId: string, enabled: boolean) =>
+    requestJson<SkillResponse>(`/api/skills/${skillId}`, {
+      method: "PATCH",
+      headers: jsonHeaders,
+      body: JSON.stringify({ enabled }),
+    }),
+
+  listProjectFiles: () => requestJson<CatalogPage<ProjectFileRecord>>("/api/files"),
+
+  reparseProjectFile: (fileId: string) =>
+    requestJson<ProjectFileResponse>(`/api/files/${fileId}/reparse`, { method: "POST" }),
 };

@@ -21,8 +21,11 @@ export type InspectorTab =
   | "structure";
 
 type InspectorNode = {
+  id: string;
+  kind: string;
   label: string;
   status: string;
+  detail: string;
   error?: string;
 };
 
@@ -30,17 +33,24 @@ type InspectorDrawerProps = {
   isOpen: boolean;
   activeTab: InspectorTab;
   selectedNode?: InspectorNode;
+  workflowNodes: InspectorNode[];
+  workflowEdges: string[][];
   statusLabels: Record<string, string>;
   answers: ClarificationAnswers;
   liveLogs: string[];
+  streamStatus: "connected" | "reconnecting" | "disconnected";
+  sampleCount: number;
   running: boolean;
   codeStreaming: boolean;
   retrying: boolean;
   codeText: string;
+  notes: string;
   selectedResidue: number | null;
   artifacts: ArtifactRecord[];
   ragTrace: RagTrace | null;
+  selectedChunkId?: string | null;
   onTabChange: (tab: InspectorTab) => void;
+  onNotesChange: (notes: string) => void;
   onClose: () => void;
   onSelectQuestion: (questionIndex: number) => void;
   onOpenSource: (title: string, detail: string) => void;
@@ -64,17 +74,24 @@ export function InspectorDrawer({
   isOpen,
   activeTab,
   selectedNode,
+  workflowNodes,
+  workflowEdges,
   statusLabels,
   answers,
   liveLogs,
+  streamStatus,
+  sampleCount,
   running,
   codeStreaming,
   retrying,
   codeText,
+  notes,
   selectedResidue,
   artifacts,
   ragTrace,
+  selectedChunkId,
   onTabChange,
+  onNotesChange,
   onClose,
   onSelectQuestion,
   onOpenSource,
@@ -100,6 +117,18 @@ export function InspectorDrawer({
     "Bioconductor 设计指南",
     "质控策略 · 2026-08",
   ];
+  const downstreamNodes = selectedNode
+    ? workflowEdges
+        .filter(([from]) => from === selectedNode.id)
+        .map(([, to]) => workflowNodes.find((node) => node.id === to))
+        .filter(Boolean)
+    : [];
+  const upstreamNodes = selectedNode
+    ? workflowEdges
+        .filter(([, to]) => to === selectedNode.id)
+        .map(([from]) => workflowNodes.find((node) => node.id === from))
+        .filter(Boolean)
+    : [];
 
   return (
     <aside className={`inspector ${isOpen ? "mobile-open" : ""}`}>
@@ -167,6 +196,7 @@ export function InspectorDrawer({
           </div>
           <h3>标准分析环境</h3>
           <p>4 vCPU · 16 GB 内存 · Python / R</p>
+          <p className="compute-sample-count">当前任务 · {sampleCount} 个样本</p>
           <dl>
             <div>
               <dt>运行时</dt>
@@ -186,18 +216,25 @@ export function InspectorDrawer({
       {activeTab === "notes" && (
         <div className="tool-view notes-view">
           <textarea
-            defaultValue={`研究备注
+            value={notes}
+            onChange={(event) => onNotesChange(event.target.value)}
+            placeholder={`研究备注
 
 • 比较处理组与对照组
 • 优先关注 FDR < 0.05 的基因
 • 输出可发表火山图与方法说明`}
           />
-          <small>笔记保存在当前任务上下文中</small>
+          <small>笔记自动保存到当前任务上下文</small>
         </div>
       )}
       {activeTab === "evidence" && (
         <>
-          <RagTracePanel trace={ragTrace} onCopy={onCopy} />
+          <RagTracePanel
+            trace={ragTrace}
+            selectedChunkId={selectedChunkId}
+            onCopy={onCopy}
+            onChunkSelect={(chunkId) => onOpenSource("RAG 证据片段", chunkId)}
+          />
           <div className="inspector-title">
             <small>当前选中节点</small>
             <h2>{selectedNode?.label}</h2>
@@ -207,7 +244,23 @@ export function InspectorDrawer({
           </div>
           <div className="explain-card">
             <span>✦ 为什么需要这一步？</span>
-            <p>这一步会在统计分析前校验样本结构，避免分组误配，并保证最终报告可复现。</p>
+            <p>{selectedNode?.detail || "选择一个工作流节点查看它的输入、输出和影响范围。"}</p>
+            <div className="node-impact-grid">
+              <div>
+                <small>上游输入</small>
+                <b>
+                  {upstreamNodes.length
+                    ? upstreamNodes.map((node) => node?.label).join("、")
+                    : "项目文件"}
+                </b>
+              </div>
+              <div>
+                <small>下游影响</small>
+                <b>
+                  {downstreamNodes.length ? `${downstreamNodes.length} 个节点` : "当前节点为入口"}
+                </b>
+              </div>
+            </div>
           </div>
           <div className="source-list">
             <h3>
@@ -253,6 +306,13 @@ export function InspectorDrawer({
         <div className="log-view">
           <div className="log-live">
             <i /> 实时事件流
+            <span className={`stream-status ${streamStatus}`}>
+              {streamStatus === "connected"
+                ? "已连接"
+                : streamStatus === "reconnecting"
+                  ? "重连中"
+                  : "已断开"}
+            </span>
           </div>
           {(liveLogs.length ? liveLogs : ["等待运行事件…"]).map((logLine, logIndex) => (
             <p
@@ -294,6 +354,7 @@ export function InspectorDrawer({
           gene={selectedGene}
           selectedResidue={selectedResidue}
           onSelectResidue={onResidueSelect}
+          onOpenEvidence={onOpenSource}
           onOpenMolstar={onOpenMolstar}
         />
       )}

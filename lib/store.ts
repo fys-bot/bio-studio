@@ -2,13 +2,26 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 import { defaultDemoConfig, DemoConfig, normalizeDemoConfig } from "./demo-config";
-import type { DataFileProfile, RagTrace, ResearchTask, WorkflowLayoutState } from "./domain";
+import type {
+  DataFileProfile,
+  ConversationMessage,
+  RagTrace,
+  ResearchTask,
+  TaskListItem,
+  WorkflowLayoutState,
+} from "./domain";
 import {
   createDefaultWorkflowLayout,
   normalizeWorkflowLayout,
   type WorkflowLayoutInput,
 } from "./workflow-layout";
 import { createRagTrace } from "./rag";
+import {
+  indexCount,
+  searchDocumentIndex,
+  upsertDocumentIndex,
+  vectorIndexDimensions,
+} from "./vector-index";
 
 export type NodeStatus = "succeeded" | "running" | "blocked" | "failed" | "queued" | "cancelled";
 export type RunEvent = {
@@ -84,12 +97,20 @@ type StoredResearchTask = ResearchTask & {
 
 type BioFlowRuntimeState = {
   task: StoredResearchTask;
+  taskList: TaskListItem[];
+  taskRecords?: Record<string, StoredResearchTask>;
+  conversations?: Record<string, ConversationMessage[]>;
+  notesByTaskId?: Record<string, string>;
+  runTaskIds?: Record<string, string>;
+  runningRunIds?: Record<string, boolean>;
+  cancelledRuns?: Record<string, boolean>;
   events: RunEvent[];
   running: boolean;
   cancelled: boolean;
   nextEvent: number;
   config: DemoConfig;
   workflowLayout?: WorkflowLayoutState;
+  workflowLayouts?: Record<string, WorkflowLayoutState>;
   ragTraces: RagTrace[];
 };
 const globalStateRegistry = globalThis as typeof globalThis & {
@@ -123,6 +144,38 @@ const defaultState = (): BioFlowRuntimeState => ({
     dataProfiles: [],
     clarification: { status: "pending", answers: {} },
   },
+  taskList: [
+    {
+      id: "task_demo_rnaseq",
+      title: defaultDemoConfig.title,
+      status: "clarifying",
+      progress: 0,
+      updatedAt: new Date().toISOString(),
+      hasUnreadResult: false,
+    },
+    {
+      id: "task_literature",
+      title: "文献证据图谱",
+      status: "succeeded",
+      progress: 100,
+      updatedAt: "2026-09-05T08:00:00.000Z",
+      hasUnreadResult: true,
+    },
+    {
+      id: "task_structure",
+      title: "蛋白质结构预览",
+      status: "draft",
+      progress: 0,
+      updatedAt: "2026-09-06T08:00:00.000Z",
+      hasUnreadResult: false,
+    },
+  ],
+  taskRecords: {},
+  conversations: {},
+  notesByTaskId: {},
+  runTaskIds: {},
+  runningRunIds: {},
+  cancelledRuns: {},
   events: [],
   running: false,
   cancelled: false,
@@ -132,6 +185,7 @@ const defaultState = (): BioFlowRuntimeState => ({
     current: createDefaultWorkflowLayout(),
     versions: [],
   },
+  workflowLayouts: {},
   ragTraces: [],
 });
 function persist(runtimeState: BioFlowRuntimeState) {
@@ -148,6 +202,16 @@ function state(): BioFlowRuntimeState {
       globalStateRegistry.__bioflow = JSON.parse(
         fs.readFileSync(statePath, "utf8"),
       ) as BioFlowRuntimeState;
+      if (!globalStateRegistry.__bioflow.taskList?.length) {
+        globalStateRegistry.__bioflow.taskList = defaultState().taskList;
+      }
+      globalStateRegistry.__bioflow.taskRecords ??= {};
+      globalStateRegistry.__bioflow.conversations ??= {};
+      globalStateRegistry.__bioflow.notesByTaskId ??= {};
+      globalStateRegistry.__bioflow.runTaskIds ??= {};
+      globalStateRegistry.__bioflow.runningRunIds ??= {};
+      globalStateRegistry.__bioflow.cancelledRuns ??= {};
+      globalStateRegistry.__bioflow.workflowLayouts ??= {};
       globalStateRegistry.__bioflow.ragTraces ??= [];
     } catch {
       globalStateRegistry.__bioflow = defaultState();
@@ -157,9 +221,20 @@ function state(): BioFlowRuntimeState {
 }
 
 /** 保存一次完整的 RAG Trace，支持按阶段接口读取与前端审计。 */
-export function createAndStoreRagTrace(query: string) {
+export function createAndStoreRagTrace(query: string, taskId = state().task.id) {
   const runtimeState = state();
-  const trace = createRagTrace(query);
+  const task = taskReference(taskId, runtimeState);
+  const indexedChunks = searchDocumentIndex(taskId, query).map((entry) => ({
+    fileName: entry.fileName,
+    text: entry.text,
+    score: entry.score,
+  }));
+  const trace = createRagTrace(query, {
+    dataProfiles: task?.dataProfiles ?? [],
+    indexedChunks,
+  });
+  trace.indexSummary.dimensions = vectorIndexDimensions;
+  trace.indexSummary.indexedChunks = indexCount(taskId);
   runtimeState.ragTraces = [...runtimeState.ragTraces.slice(-49), trace];
   persist(runtimeState);
   return trace;
@@ -167,6 +242,13 @@ export function createAndStoreRagTrace(query: string) {
 
 export function listRagTraces() {
   return structuredClone(state().ragTraces ?? []);
+}
+
+export function saveRagTrace(trace: RagTrace) {
+  const runtime = state();
+  runtime.ragTraces = [...runtime.ragTraces.slice(-49), trace];
+  persist(runtime);
+  return trace;
 }
 
 export function getRagTrace(traceId: string) {
@@ -202,41 +284,222 @@ export function snapshot() {
   return state().task;
 }
 
-/** 按文件名替换最新结构摘要，持久化时不保存任何原始单元格。 */
-export function saveDataFileProfile(profile: DataFileProfile) {
+function taskTemplateFromCard(taskCard: TaskListItem): StoredResearchTask {
+  const draftTask = defaultState().task;
+  return {
+    ...draftTask,
+    id: taskCard.id,
+    title: taskCard.title,
+    status: taskCard.status,
+    progress: taskCard.progress,
+    artifacts: [],
+    dataProfiles: [],
+    notes: "",
+    clarification: { status: "pending", answers: {} },
+  };
+}
+
+function taskReference(taskId: string, runtimeState = state()) {
+  if (taskId === runtimeState.task.id) return runtimeState.task;
+  runtimeState.taskRecords ??= {};
+  const existingTask = runtimeState.taskRecords[taskId];
+  if (existingTask) return existingTask;
+  const taskCard = runtimeState.taskList.find((item) => item.id === taskId);
+  if (!taskCard) return undefined;
+  const createdTask = taskTemplateFromCard(taskCard);
+  runtimeState.taskRecords[taskId] = createdTask;
+  persist(runtimeState);
+  return createdTask;
+}
+
+function syncTaskCard(runtimeState: BioFlowRuntimeState, task: ResearchTask) {
+  runtimeState.taskList = runtimeState.taskList.map((item) =>
+    item.id === task.id
+      ? {
+          ...item,
+          title: task.title,
+          status: task.status,
+          progress: task.progress,
+          updatedAt: new Date().toISOString(),
+          hasUnreadResult: task.status === "succeeded" && item.hasUnreadResult,
+        }
+      : item,
+  );
+}
+
+/** 返回路由对应的独立任务快照，避免不同任务共享主演示任务状态。 */
+export function taskSnapshot(taskId: string) {
+  const task = taskReference(taskId);
+  return task ? structuredClone(task) : undefined;
+}
+
+export function listTaskCards() {
   const runtimeState = state();
-  const existingProfiles = runtimeState.task.dataProfiles ?? [];
-  runtimeState.task.dataProfiles = [
+  return runtimeState.taskList.map((item) => {
+    const task = taskReference(item.id, runtimeState);
+    if (!task) return item;
+    return {
+      ...item,
+      title: task.title,
+      status: task.status,
+      progress: task.progress,
+      updatedAt: task.id === runtimeState.task.id ? new Date().toISOString() : item.updatedAt,
+      hasUnreadResult: task.status === "succeeded" ? item.hasUnreadResult : false,
+    };
+  });
+}
+
+export function createTaskRecord(
+  title: string,
+  options: Pick<ResearchTask, "skill" | "fileIds" | "executionMode"> = {},
+) {
+  const runtimeState = state();
+  const task: TaskListItem = {
+    id: `task_${randomUUID()}`,
+    title: title.trim().slice(0, 80),
+    status: "draft",
+    progress: 0,
+    updatedAt: new Date().toISOString(),
+    hasUnreadResult: false,
+  };
+  runtimeState.taskList = [...runtimeState.taskList, task];
+  runtimeState.taskRecords ??= {};
+  runtimeState.taskRecords[task.id] = taskTemplateFromCard(task);
+  Object.assign(runtimeState.taskRecords[task.id], options, { goal: title.trim().slice(0, 300) });
+  persist(runtimeState);
+  return task;
+}
+
+export function attachTaskFiles(taskId: string, fileIds: string[]) {
+  const task = taskReference(taskId);
+  if (!task) return undefined;
+  task.fileIds = [...new Set([...(task.fileIds ?? []), ...fileIds])];
+  persist(state());
+  return structuredClone(task);
+}
+
+export function bindAnalysisJob(taskId: string, jobId: string) {
+  const task = taskReference(taskId);
+  if (!task) return undefined;
+  task.analysisJobId = jobId;
+  task.status = "running";
+  task.progress = 0;
+  task.artifacts = [];
+  persist(state());
+  return structuredClone(task);
+}
+
+export function saveTaskPlan(taskId: string, plan: ResearchTask["plan"]) {
+  const task = taskReference(taskId);
+  if (!task || !plan) return undefined;
+  task.plan = structuredClone(plan);
+  persist(state());
+  return structuredClone(task);
+}
+
+export function syncAnalysisJob(taskId: string, status: string) {
+  const task = taskReference(taskId);
+  if (!task) return undefined;
+  task.status = status;
+  task.progress = status === "succeeded" ? 100 : status === "running" ? 40 : 0;
+  if (status === "succeeded")
+    task.nodes = task.nodes.map((node) => ({
+      ...node,
+      status: "succeeded",
+      detail: "PyDESeq2 作业已完成",
+      error: undefined,
+    }));
+  if (status === "failed")
+    task.nodes = task.nodes.map((node) =>
+      node.id === "de" ? { ...node, status: "failed", detail: "请查看真实作业错误" } : node,
+    );
+  syncTaskCard(state(), task);
+  persist(state());
+  return structuredClone(task);
+}
+
+export function conversationSnapshot(taskId: string) {
+  taskReference(taskId);
+  return structuredClone(state().conversations?.[taskId] ?? []);
+}
+
+export function saveConversation(taskId: string, messages: ConversationMessage[]) {
+  if (!taskReference(taskId)) return undefined;
+  const runtimeState = state();
+  runtimeState.conversations ??= {};
+  runtimeState.conversations[taskId] = structuredClone(messages.slice(-100));
+  persist(runtimeState);
+  return runtimeState.conversations[taskId];
+}
+
+export function notesSnapshot(taskId: string) {
+  taskReference(taskId);
+  return state().notesByTaskId?.[taskId] ?? "";
+}
+
+export function saveNotes(taskId: string, notes: string) {
+  const task = taskReference(taskId);
+  if (!task) return undefined;
+  const runtimeState = state();
+  runtimeState.notesByTaskId ??= {};
+  runtimeState.notesByTaskId[taskId] = notes.slice(0, 10_000);
+  task.notes = runtimeState.notesByTaskId[taskId];
+  persist(runtimeState);
+  return task.notes;
+}
+
+/** 按文件名替换最新结构摘要，持久化时不保存任何原始单元格。 */
+export function saveDataFileProfile(
+  profile: DataFileProfile,
+  taskId = state().task.id,
+  sourceText = "",
+) {
+  const runtimeState = state();
+  const task = taskReference(taskId, runtimeState);
+  if (!task) return undefined;
+  const existingProfiles = task.dataProfiles ?? [];
+  task.dataProfiles = [
     ...existingProfiles.filter((existingProfile) => existingProfile.fileName !== profile.fileName),
     profile,
   ];
+  upsertDocumentIndex(taskId, profile, sourceText);
   persist(runtimeState);
-  return runtimeState.task;
+  return task;
 }
 
-function ensureWorkflowLayout(runtimeState: BioFlowRuntimeState) {
-  runtimeState.workflowLayout ??= {
-    current: createDefaultWorkflowLayout(),
-    versions: [],
-  };
-  return runtimeState.workflowLayout;
+function ensureWorkflowLayout(runtimeState: BioFlowRuntimeState, taskId = runtimeState.task.id) {
+  runtimeState.workflowLayouts ??= {};
+  if (!runtimeState.workflowLayouts[taskId]) {
+    runtimeState.workflowLayouts[taskId] =
+      taskId === runtimeState.task.id && runtimeState.workflowLayout
+        ? runtimeState.workflowLayout
+        : { current: createDefaultWorkflowLayout(), versions: [] };
+  }
+  if (taskId === runtimeState.task.id)
+    runtimeState.workflowLayout = runtimeState.workflowLayouts[taskId];
+  return runtimeState.workflowLayouts[taskId];
 }
 
-export function workflowLayoutSnapshot() {
-  return structuredClone(ensureWorkflowLayout(state()));
-}
-
-export function saveWorkflowLayout(input: WorkflowLayoutInput) {
+export function workflowLayoutSnapshot(taskId?: string) {
   const runtimeState = state();
-  const workflowLayout = ensureWorkflowLayout(runtimeState);
+  return structuredClone(ensureWorkflowLayout(runtimeState, taskId));
+}
+
+export function saveWorkflowLayout(input: WorkflowLayoutInput, taskId?: string) {
+  const runtimeState = state();
+  const workflowLayout = ensureWorkflowLayout(runtimeState, taskId);
   workflowLayout.current = normalizeWorkflowLayout(input, workflowLayout.current);
   persist(runtimeState);
   return structuredClone(workflowLayout);
 }
 
-export function createWorkflowLayoutVersion(name: string, input: WorkflowLayoutInput) {
+export function createWorkflowLayoutVersion(
+  name: string,
+  input: WorkflowLayoutInput,
+  taskId?: string,
+) {
   const runtimeState = state();
-  const workflowLayout = ensureWorkflowLayout(runtimeState);
+  const workflowLayout = ensureWorkflowLayout(runtimeState, taskId);
   workflowLayout.current = normalizeWorkflowLayout(input, workflowLayout.current);
   const versionNumber = workflowLayout.versions.length + 1;
   const version = {
@@ -250,8 +513,10 @@ export function createWorkflowLayoutVersion(name: string, input: WorkflowLayoutI
   return { layout: structuredClone(workflowLayout), version };
 }
 
-export function eventsAfter(eventId: number) {
-  return state().events.filter((eventRecord) => eventRecord.id > eventId);
+export function eventsAfter(eventId: number, runId?: string) {
+  return state().events.filter(
+    (eventRecord) => eventRecord.id > eventId && (!runId || eventRecord.runId === runId),
+  );
 }
 export function pushEvent(
   runId: string,
@@ -277,7 +542,7 @@ function emitCode(runId: string) {
   const codeText = `import pandas as pd\nfrom deseq2 import DESeqDataSet\n\ncounts = pd.read_csv("counts.csv")\nmetadata = pd.read_csv("sample_metadata.tsv")\n\n# Validate before execution\nassert "condition" in metadata.columns\n\nresults = run_differential_expression(counts, metadata)\n`;
   [...codeText].forEach((character, characterIndex) =>
     setTimeout(() => {
-      if (!runtimeState.cancelled) {
+      if (!runtimeState.cancelledRuns?.[runId]) {
         pushEvent(
           runId,
           "code.delta",
@@ -292,7 +557,7 @@ function emitCode(runId: string) {
   );
   setTimeout(
     () => {
-      if (!runtimeState.cancelled) {
+      if (!runtimeState.cancelledRuns?.[runId]) {
         pushEvent(
           runId,
           "code.completed",
@@ -309,9 +574,14 @@ function emitCode(runId: string) {
 }
 
 /** 两条成功路径共享同一份 Artifact 快照，保证结果版本与血缘一致。 */
-function completeArtifacts(runtimeState: BioFlowRuntimeState, runId: string) {
+function completeArtifacts(
+  runtimeState: BioFlowRuntimeState,
+  task: StoredResearchTask,
+  runId: string,
+) {
   const artifactCreatedAt = new Date().toISOString();
-  runtimeState.task.artifacts = [
+  const analysis = analysisInputSummary(runtimeState, task);
+  task.artifacts = [
     {
       id: "artifact_volcano",
       kind: "chart",
@@ -320,11 +590,11 @@ function completeArtifacts(runtimeState: BioFlowRuntimeState, runId: string) {
       version: "v1.0.0",
       createdAt: artifactCreatedAt,
       sourceNode: "DESeq2 差异表达",
-      parameters: { "FDR 阈值": 0.05, 检测基因数: runtimeState.config.geneCount },
+      parameters: { "FDR 阈值": 0.05, 检测基因数: analysis.geneCount },
       summary: {
-        testedGeneCount: runtimeState.config.geneCount,
-        significantGeneCount: 126,
-        candidateGeneCount: 18,
+        testedGeneCount: analysis.geneCount,
+        significantGeneCount: Math.max(1, Math.round(analysis.geneCount * 0.0068)),
+        candidateGeneCount: Math.max(5, Math.min(18, Math.round(analysis.geneCount * 0.001))),
       },
       candidateGenes: [
         {
@@ -372,7 +642,7 @@ function completeArtifacts(runtimeState: BioFlowRuntimeState, runId: string) {
         {
           id: "counts",
           label: "counts.csv",
-          detail: `${runtimeState.config.sampleCount} 个样本的原始计数矩阵`,
+          detail: `${analysis.sampleCount} 个样本的原始计数矩阵`,
           kind: "input",
           nodeId: "input",
         },
@@ -438,159 +708,210 @@ function completeArtifacts(runtimeState: BioFlowRuntimeState, runId: string) {
   );
 }
 
-export function createRun() {
+function taskIdForRun(runtimeState: BioFlowRuntimeState, runId: string) {
+  return runtimeState.runTaskIds?.[runId];
+}
+
+function analysisInputSummary(runtimeState: BioFlowRuntimeState, task: StoredResearchTask) {
+  const countProfile = task.dataProfiles?.find((profile) => profile.dataRole === "count_matrix");
+  const metadataProfile = task.dataProfiles?.find(
+    (profile) => profile.dataRole === "sample_metadata",
+  );
+  return {
+    geneCount: countProfile?.recordCount || runtimeState.config.geneCount,
+    sampleCount: countProfile?.sampleCount || runtimeState.config.sampleCount,
+    hasCondition: Boolean(metadataProfile?.recognizedFields.condition),
+    hasUploadedProfiles: Boolean(task.dataProfiles?.length),
+  };
+}
+
+function updateRunningFlag(runtimeState: BioFlowRuntimeState) {
+  runtimeState.running = Object.values(runtimeState.runningRunIds ?? {}).some(Boolean);
+}
+
+export function createRun(taskId = state().task.id) {
   const runtimeState = state();
+  const task = taskReference(taskId, runtimeState);
+  if (!task) return { runId: "", status: "not_found" as const };
+  const analysis = analysisInputSummary(runtimeState, task);
+  runtimeState.runTaskIds ??= {};
+  runtimeState.runningRunIds ??= {};
+  runtimeState.cancelledRuns ??= {};
+  const activeRun = Object.entries(runtimeState.runTaskIds).find(
+    ([runId, activeTaskId]) =>
+      activeTaskId === taskId && runtimeState.runningRunIds?.[runId] === true,
+  );
+  if (activeRun) return { runId: activeRun[0], status: "running" as const };
   const runId = randomUUID();
-  if (runtimeState.running) return { runId: "run_demo_001", status: "running" };
-  runtimeState.running = true;
-  runtimeState.cancelled = false;
-  runtimeState.task.status = "running";
+  runtimeState.runTaskIds[runId] = taskId;
+  runtimeState.runningRunIds[runId] = true;
+  runtimeState.cancelledRuns[runId] = false;
+  updateRunningFlag(runtimeState);
+  task.runId = runId;
+  task.status = "running";
+  task.nodes = task.nodes.map((node) =>
+    node.id === "input" ? { ...node, detail: `counts.csv · ${analysis.sampleCount} 个样本` } : node,
+  );
+  syncTaskCard(runtimeState, task);
   persist(runtimeState);
-  pushEvent(runId, "run.started", { message: "工作流已开始运行" });
-  const trace = createAndStoreRagTrace(runtimeState.task.goal);
+  pushEvent(runId, "run.started", { message: "工作流已开始运行", taskId });
+  const trace = createAndStoreRagTrace(task.goal, task.id);
   pushEvent(runId, "rag.trace.created", { traceId: trace.id, topK: trace.retrievalTop20.length });
   emitCode(runId);
   setTimeout(() => {
-    if (runtimeState.cancelled) return;
+    if (runtimeState.cancelledRuns?.[runId]) return;
     pushEvent(runId, "intent.detected", {
       domain: runtimeState.config.domain,
       comparison: "处理组 vs 对照组",
     });
-    pushEvent(runId, "retrieval.started", {
-      sources: ["项目文件", "技能包", "文献知识库"],
-    });
+    pushEvent(runId, "retrieval.started", { sources: ["项目文件", "技能包", "文献知识库"] });
     setTimeout(() => {
-      if (runtimeState.cancelled) return;
-      pushEvent(runId, "retrieval.hit", {
-        projectFiles: 2,
-        skills: 3,
-        literature: 12,
-      });
+      if (runtimeState.cancelledRuns?.[runId]) return;
+      pushEvent(runId, "retrieval.hit", { projectFiles: 2, skills: 3, literature: 12 });
       pushEvent(runId, "evidence.reranked", { kept: 4, confidence: 0.91 });
-      pushEvent(runId, "grounding.bound", {
-        parameters: ["物种", "实验设计", "FDR"],
-      });
+      pushEvent(runId, "grounding.bound", { parameters: ["物种", "实验设计", "FDR"] });
     }, 280);
   }, 100);
   setTimeout(() => {
-    if (runtimeState.cancelled) return;
-    runtimeState.task.nodes = runtimeState.task.nodes.map((node) =>
+    if (runtimeState.cancelledRuns?.[runId]) return;
+    task.nodes = task.nodes.map((node) =>
       node.id === "design" ? { ...node, status: "running", detail: "正在校验元数据结构" } : node,
     );
     persist(runtimeState);
-    pushEvent(
-      runId,
-      "node.updated",
-      {
-        status: "running",
-        detail: "正在校验元数据结构",
-      },
-      "design",
-    );
+    pushEvent(runId, "node.updated", { status: "running", detail: "正在校验元数据结构" }, "design");
     setTimeout(() => {
-      if (runtimeState.cancelled) return;
-      if (runtimeState.config.failAt === "none") {
-        runtimeState.task.nodes = runtimeState.task.nodes.map((node) =>
+      if (runtimeState.cancelledRuns?.[runId]) return;
+      const shouldFailDesign = analysis.hasUploadedProfiles
+        ? !analysis.hasCondition
+        : runtimeState.config.failAt === "design";
+      if (!shouldFailDesign) {
+        task.nodes = task.nodes.map((node) =>
           ["design", "de", "volcano", "report"].includes(node.id)
             ? {
                 ...node,
                 status: "succeeded",
                 detail:
                   node.id === "de"
-                    ? `已检验 ${runtimeState.config.geneCount.toLocaleString()} 个基因 · FDR < 0.05`
+                    ? `已检验 ${analysis.geneCount.toLocaleString()} 个基因 · FDR < 0.05`
                     : "结果已就绪",
               }
             : node,
         );
-        runtimeState.task.progress = 100;
-        runtimeState.task.status = "succeeded";
-        completeArtifacts(runtimeState, runId);
-        runtimeState.running = false;
+        task.progress = 100;
+        task.status = "succeeded";
+        completeArtifacts(runtimeState, task, runId);
+        syncTaskCard(runtimeState, task);
+        runtimeState.runningRunIds![runId] = false;
+        updateRunningFlag(runtimeState);
         pushEvent(runId, "run.completed", { message: "全部结果产物已就绪" });
         persist(runtimeState);
         return;
       }
-      runtimeState.task.nodes = runtimeState.task.nodes.map((node) =>
+      task.nodes = task.nodes.map((node) =>
         node.id === "design" ? { ...node, status: "failed", detail: "缺少 condition 字段" } : node,
       );
-      runtimeState.task.status = "failed";
+      task.status = "failed";
+      syncTaskCard(runtimeState, task);
       persist(runtimeState);
       pushEvent(
         runId,
         "node.updated",
-        {
-          status: "failed",
-          error: "缺少 condition 字段",
-        },
+        { status: "failed", error: "缺少 condition 字段" },
         "design",
       );
-      runtimeState.running = false;
+      runtimeState.runningRunIds![runId] = false;
+      updateRunningFlag(runtimeState);
     }, runtimeState.config.runnerDelayMs);
   }, 500);
-  return { runId, status: "running" };
+  return { runId, status: "running" as const, task: structuredClone(task) };
 }
+
 export function retryNode(runId: string, nodeId: string) {
   const runtimeState = state();
-  runtimeState.running = true;
-  runtimeState.task.status = "running";
-  runtimeState.task.nodes = runtimeState.task.nodes.map((node) =>
+  const taskId = taskIdForRun(runtimeState, runId);
+  const task = taskId ? taskReference(taskId, runtimeState) : undefined;
+  if (!task) return { runId, status: "not_found" as const };
+  runtimeState.runningRunIds ??= {};
+  runtimeState.cancelledRuns ??= {};
+  runtimeState.runningRunIds[runId] = true;
+  runtimeState.cancelledRuns[runId] = false;
+  updateRunningFlag(runtimeState);
+  task.runId = runId;
+  task.status = "running";
+  task.nodes = task.nodes.map((node) =>
     node.id === nodeId
       ? { ...node, status: "succeeded", detail: "condition → 已完成映射" }
       : node.id === "de"
         ? { ...node, status: "running", detail: "正在运行 DESeq2" }
         : node,
   );
+  syncTaskCard(runtimeState, task);
   persist(runtimeState);
   pushEvent(runId, "node.retry", { attempt: 2 }, nodeId);
   emitCode(runId);
   setTimeout(() => {
-    if (runtimeState.cancelled) return;
-    runtimeState.task.nodes = runtimeState.task.nodes.map((node) =>
+    if (runtimeState.cancelledRuns?.[runId]) return;
+    task.nodes = task.nodes.map((node) =>
       node.id === "de"
-        ? {
-            ...node,
-            status: "succeeded",
-            detail: "已检验 1,842 个基因 · FDR < 0.05",
-          }
+        ? { ...node, status: "succeeded", detail: "已检验 1,842 个基因 · FDR < 0.05" }
         : node.id === "volcano"
           ? { ...node, status: "succeeded", detail: "SVG + 交互式图表" }
           : node.id === "report"
             ? { ...node, status: "succeeded", detail: "Markdown 报告已就绪" }
             : node,
     );
-    runtimeState.task.progress = 100;
-    runtimeState.task.status = "succeeded";
-    completeArtifacts(runtimeState, runId);
+    task.progress = 100;
+    task.status = "succeeded";
+    completeArtifacts(runtimeState, task, runId);
+    syncTaskCard(runtimeState, task);
     persist(runtimeState);
     pushEvent(runId, "run.completed", { message: "全部结果产物已就绪" });
-    runtimeState.running = false;
+    runtimeState.runningRunIds![runId] = false;
+    updateRunningFlag(runtimeState);
   }, 1200);
-  return { runId, status: "running" };
+  return { runId, status: "running" as const, task: structuredClone(task) };
 }
+
 export function cancelRun(runId: string) {
   const runtimeState = state();
-  runtimeState.cancelled = true;
-  runtimeState.running = false;
-  runtimeState.task.status = "cancelled";
-  runtimeState.task.nodes = runtimeState.task.nodes.map((node) =>
+  const taskId = taskIdForRun(runtimeState, runId);
+  const task = taskId ? taskReference(taskId, runtimeState) : undefined;
+  if (!task) return { runId, status: "not_found" as const };
+  runtimeState.cancelledRuns ??= {};
+  runtimeState.runningRunIds ??= {};
+  runtimeState.cancelledRuns[runId] = true;
+  runtimeState.runningRunIds[runId] = false;
+  updateRunningFlag(runtimeState);
+  task.status = "cancelled";
+  task.nodes = task.nodes.map((node) =>
     node.status === "running" || node.status === "queued" ? { ...node, status: "cancelled" } : node,
   );
+  syncTaskCard(runtimeState, task);
   persist(runtimeState);
-  pushEvent(runId, "run.cancelled", { message: "Cancellation requested" });
-  return { runId, status: "cancelled" };
+  pushEvent(runId, "run.cancelled", { message: "Cancellation requested", taskId: task.id });
+  return { runId, status: "cancelled" as const, task: structuredClone(task) };
 }
-export function submitClarifications(answers: Record<string, string>) {
+
+export function submitClarifications(taskId: string, answers: Record<string, string>) {
   const runtimeState = state();
-  runtimeState.task.clarification = { status: "answered", answers };
-  runtimeState.task.status = "awaiting_approval";
+  const task = taskReference(taskId, runtimeState);
+  if (!task) return undefined;
+  task.clarification = { status: "answered", answers };
+  task.status = "awaiting_approval";
+  syncTaskCard(runtimeState, task);
   persist(runtimeState);
-  pushEvent("planning", "plan.generated", { steps: 6, estimated: "2m 30s" });
-  return runtimeState.task;
+  pushEvent(`planning:${taskId}`, "plan.generated", { steps: 6, estimated: "2m 30s", taskId });
+  return structuredClone(task);
 }
-export function approvePlan() {
+
+export function approvePlan(taskId = state().task.id) {
   const runtimeState = state();
-  runtimeState.task.status = "queued";
+  const task = taskReference(taskId, runtimeState);
+  if (!task) return undefined;
+  if (task.executionMode === "real" && !task.plan) return undefined;
+  task.status = "queued";
+  syncTaskCard(runtimeState, task);
   persist(runtimeState);
-  pushEvent("planning", "plan.approved", { approvedBy: "demo-researcher" });
-  return runtimeState.task;
+  pushEvent(`planning:${taskId}`, "plan.approved", { approvedBy: "demo-researcher", taskId });
+  return structuredClone(task);
 }

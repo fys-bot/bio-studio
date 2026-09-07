@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useProteinStructureRenderer } from "@/components/structure/useProteinStructureRenderer";
-import type { CandidateGene } from "@/lib/domain";
+import type { CandidateGene, StructureAdapterState } from "@/lib/domain";
 import { getStructureMetadata, structurePoints } from "@/lib/structure-model";
 
 type ProteinStructureViewerProps = {
   gene?: CandidateGene;
   selectedResidue: number | null;
   onSelectResidue: (residueNumber: number) => void;
+  onOpenEvidence: (title: string, detail: string) => void;
   onOpenMolstar: () => void;
 };
 
@@ -20,18 +21,62 @@ export function ProteinStructureViewer({
   gene,
   selectedResidue,
   onSelectResidue,
+  onOpenEvidence,
   onOpenMolstar,
 }: ProteinStructureViewerProps) {
   const [autoRotate, setAutoRotate] = useState(true);
   const [hoveredResidue, setHoveredResidue] = useState<number | null>(null);
+  const [loadedPoints, setLoadedPoints] = useState(structurePoints);
+  const [adapterState, setAdapterState] = useState<StructureAdapterState>({
+    source: "demo-canvas",
+    status: "loading",
+    accession: "AF-Q01094-F1",
+    message: "正在加载结构适配器…",
+  });
   const structure = getStructureMetadata(gene?.symbol);
+  useEffect(() => {
+    let cancelled = false;
+    setAdapterState({
+      source: "pdb",
+      status: "loading",
+      accession: structure.accession,
+      message: "正在加载 PDB 结构文件…",
+    });
+    fetch(`/api/structures/${structure.accession}?format=pdb`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("结构接口不可用");
+        return (await response.json()) as {
+          state: StructureAdapterState;
+          points: typeof structurePoints;
+        };
+      })
+      .then((result) => {
+        if (cancelled) return;
+        setLoadedPoints(result.points.length ? result.points : structurePoints);
+        setAdapterState(result.state);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoadedPoints(structurePoints);
+        setAdapterState({
+          source: "demo-canvas",
+          status: "fallback",
+          accession: structure.accession,
+          message: "PDB 加载失败，已回退到轻量 Canvas 结构预览",
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [structure.accession]);
   const selectedPoint = useMemo(
     () =>
-      structurePoints.find((point) => point.residueNumber === selectedResidue) ||
-      structurePoints.find((point) => point.residueNumber === hoveredResidue),
-    [hoveredResidue, selectedResidue],
+      loadedPoints.find((point) => point.residueNumber === selectedResidue) ||
+      loadedPoints.find((point) => point.residueNumber === hoveredResidue),
+    [hoveredResidue, loadedPoints, selectedResidue],
   );
   const renderer = useProteinStructureRenderer({
+    points: loadedPoints,
     autoRotate,
     hoveredResidue,
     selectedResidue,
@@ -43,7 +88,10 @@ export function ProteinStructureViewer({
     <div className="structure-view">
       <div className="structure-toolbar">
         <div>
-          <small>AlphaFold DB · {structure.accession}</small>
+          <small>
+            {adapterState.source.toUpperCase()} · {structure.accession} ·{" "}
+            {adapterState.status === "ready" ? "文件已加载" : "轻量预览"}
+          </small>
           <b>{gene?.symbol || "E2F1"} 三维结构</b>
         </div>
         <div>
@@ -65,7 +113,16 @@ export function ProteinStructureViewer({
           onPointerLeave={renderer.handlePointerLeave}
           onWheel={renderer.handleWheel}
         />
-        <span className="structure-interaction-hint">拖拽旋转 · 滚轮缩放 · 点击残基</span>
+        <span className="structure-interaction-hint">
+          Canvas 轻量降级 · 拖拽旋转 · 滚轮缩放 · 点击残基
+        </span>
+        <span className={`structure-load-state ${adapterState.status}`}>
+          {adapterState.status === "loading"
+            ? "加载中"
+            : adapterState.status === "ready"
+              ? "PDB 已加载"
+              : "Fallback"}
+        </span>
         {selectedPoint && (
           <div className="residue-tooltip">
             <b>
@@ -108,6 +165,46 @@ export function ProteinStructureViewer({
             ，可继续关联文献和变异证据。
           </p>
         )}
+        <small className="structure-adapter-message">{adapterState.message}</small>
+      </section>
+
+      <section className="structure-evidence-chain" aria-label="结构证据链">
+        <small>结构证据链</small>
+        <div className="structure-chain">
+          <b>{gene?.symbol || "E2F1"}</b>
+          <span>→</span>
+          <b>{structure.accession}</b>
+          <span>→</span>
+          <b>
+            {selectedPoint
+              ? `${selectedPoint.aminoAcid} ${selectedPoint.residueNumber}`
+              : "选择残基"}
+          </b>
+          <span>→</span>
+          <b>{selectedPoint ? `pLDDT ${selectedPoint.confidence}` : "等待定位"}</b>
+        </div>
+        <p>
+          {selectedPoint
+            ? "该残基上下文可回溯到候选基因统计结果和当前结构证据。"
+            : "点击结构点后，这里会显示残基置信度并建立结果关联。"}
+        </p>
+        <button
+          className="structure-evidence-button"
+          disabled={!selectedPoint}
+          onClick={() => {
+            if (!selectedPoint) return;
+            const geneLabel = gene?.symbol || "E2F1";
+            onOpenEvidence(
+              `${geneLabel} · ${selectedPoint.aminoAcid} ${selectedPoint.residueNumber} 结构证据`,
+              `${geneLabel} → ${structure.accession} → ${selectedPoint.aminoAcid} ${selectedPoint.residueNumber} · pLDDT ${selectedPoint.confidence}。` +
+                (gene
+                  ? `候选基因 FDR ${gene.fdr}，log₂FC ${gene.log2FoldChange > 0 ? "+" : ""}${gene.log2FoldChange}；可回到火山图和结果血缘继续审查。`
+                  : "当前展示默认候选基因 E2F1；可先在结果面板选择其他候选基因。"),
+            );
+          }}
+        >
+          查看关联证据
+        </button>
       </section>
 
       <button className="secondary full" onClick={onOpenMolstar}>

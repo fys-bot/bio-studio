@@ -45,10 +45,99 @@ export type ResearchTask = {
   goal: string;
   status: string;
   progress: number;
+  runId?: string;
+  skill?: SkillRecord;
+  fileIds?: string[];
+  executionMode?: "real" | "demo";
+  analysisJobId?: string;
+  plan?: {
+    title: string;
+    summary: string;
+    steps: Array<{ id: string; title: string; detail: string }>;
+    risks: string[];
+    requiredInputs: string[];
+    provider: "llm" | "demo";
+    model?: string;
+    generatedAt: string;
+  };
+  notes?: string;
+  clarification?: {
+    status: string;
+    answers: Record<string, string>;
+  };
   nodes: WorkflowNodeState[];
   edges: string[][];
   artifacts: ArtifactRecord[];
   dataProfiles?: DataFileProfile[];
+};
+
+export type TaskListItem = {
+  id: string;
+  title: string;
+  status: string;
+  progress: number;
+  updatedAt: string;
+  hasUnreadResult: boolean;
+};
+
+/** 智能体能力目录条目，由服务端快照驱动，页面不持有固定技能数组。 */
+export type SkillRecord = {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  source: "BioFlow Lab" | "Team" | "Community" | "Mine";
+  enabled: boolean;
+  version: string;
+  updatedAt: string;
+  status: "available" | "deprecated";
+  inputs: string[];
+  outputs: string[];
+  instructions?: string;
+};
+
+/** 文件中心统一 DTO：种子资产和真实上传共享字段，但保留来源边界。 */
+export type ProjectFileRecord = {
+  id: string;
+  name: string;
+  format: string;
+  role: string;
+  sizeBytes: number;
+  status: "ready" | "pending" | "indexed" | "failed";
+  source: "demo-seed" | "user-upload";
+  version: string;
+  updatedAt: string;
+  detail: string;
+  retryable: boolean;
+};
+
+export type CatalogPage<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  source: "server-snapshot";
+  updatedAt: string;
+};
+
+/** 对话消息携带身份、状态和 Trace 关联，避免使用位置索引表达业务状态。 */
+export type ConversationMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
+  status: "sending" | "completed" | "failed" | "cancelled";
+  traceId?: string;
+  citations?: Array<{ id: string; label: string; detail?: string }>;
+  feedback?: "up" | "down";
+};
+
+export type StructureAdapterState = {
+  source: "demo-canvas" | "pdb" | "cif";
+  status: "ready" | "loading" | "error" | "fallback";
+  accession: string;
+  fileName?: string;
+  message: string;
 };
 
 export type TabularColumnProfile = {
@@ -71,9 +160,9 @@ export type GroupFieldCandidate = {
 export type DataFileProfile = {
   id: string;
   fileName: string;
-  format: "CSV" | "TSV";
+  format: "CSV" | "TSV" | "TXT" | "MD" | "XLSX" | "PDF" | "DOCX";
   sizeBytes: number;
-  dataRole: "count_matrix" | "sample_metadata" | "tabular";
+  dataRole: "count_matrix" | "sample_metadata" | "tabular" | "document";
   recordCount: number;
   sampleCount: number;
   columnCount: number;
@@ -88,6 +177,22 @@ export type DataFileProfile = {
   recommendations: string[];
   warnings: string[];
   analyzedAt: string;
+  processing?: {
+    parser: string;
+    stages: Array<{
+      key: "received" | "detected" | "extracted" | "cleaned" | "chunked" | "indexed";
+      label: string;
+      status: "succeeded" | "pending" | "failed";
+      detail: string;
+    }>;
+    index: {
+      provider: "local-vector-adapter" | "external-vector-db";
+      collection: string;
+      dimensions: number;
+      status: "indexed" | "pending" | "failed";
+      chunkCount: number;
+    };
+  };
 };
 
 export type ArtifactRecord = {
@@ -133,6 +238,7 @@ export type ArtifactLineageStep = {
 
 export type TaskResponse = {
   task: ResearchTask;
+  tasks?: TaskListItem[];
 };
 
 /** RAG 每一层都保留可审计输入、输出和耗时，供页面 Trace 面板与外部审计使用。 */
@@ -204,6 +310,19 @@ export type RagTrace = {
   createdAt: string;
   completedAt?: string;
   durationMs: number;
+  ingestionStages: Array<{
+    key: string;
+    label: string;
+    status: "succeeded" | "pending" | "failed";
+    detail: string;
+  }>;
+  indexSummary: {
+    provider: "local-vector-adapter" | "external-vector-db" | "qdrant";
+    collection: string;
+    dimensions: number;
+    indexedChunks: number;
+    status: "indexed" | "pending" | "failed";
+  };
   parsedDocuments: RagDocument[];
   chunks: RagChunk[];
   retrievalTop20: RagRetrievalResult[];

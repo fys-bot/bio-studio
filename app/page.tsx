@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { ParticleLoader } from "@/components/ParticleLoader";
 import { ConfigPanel } from "@/components/ConfigPanel";
 import {
@@ -14,9 +14,18 @@ import { ConversationPanel } from "@/components/ConversationPanel";
 import { InspectorDrawer, type InspectorTab } from "@/components/InspectorDrawer";
 import { WorkspaceModal, type WorkspaceModalState } from "@/components/WorkspaceModal";
 import { ProductGuide } from "@/components/ProductGuide";
+import { DocumentationDrawer } from "@/components/DocumentationDrawer";
+import { RealAnalysisPanel } from "@/components/RealAnalysisPanel";
 import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
 import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
-import type { DataFileProfile, RagTrace, ResearchTask, WorkflowNodeState } from "@/lib/domain";
+import type {
+  ConversationMessage,
+  DataFileProfile,
+  RagTrace,
+  ResearchTask,
+  TaskListItem,
+  WorkflowNodeState,
+} from "@/lib/domain";
 type TimelineEvent = {
   id: number;
   phase: string;
@@ -69,6 +78,7 @@ const seedEvents: TimelineEvent[] = [
 ];
 
 const statusLabel: Record<string, string> = {
+  draft: "草稿",
   succeeded: "已完成",
   running: "运行中",
   blocked: "等待中",
@@ -82,7 +92,9 @@ const statusLabel: Record<string, string> = {
 /** BioFlow Studio 主工作台，负责领域状态编排，不承载具体工具视图实现。 */
 export default function Home() {
   const router = useRouter();
+  const params = useParams<{ taskId?: string }>();
   const pathname = usePathname();
+  const routeTaskId = params?.taskId || "task_demo_rnaseq";
   const [authed, setAuthed] = useState(false);
   const [task, setTask] = useState<ResearchTask | null>(null);
   const [events, setEvents] = useState(seedEvents);
@@ -91,8 +103,12 @@ export default function Home() {
   const [tab, setTab] = useState<InspectorTab>("todo");
   const [mobilePanel, setMobilePanel] = useState(false);
   const [messageText, setMessageText] = useState("");
-  const [sentMessages, setSentMessages] = useState<string[]>([]);
-  const [agentReplies, setAgentReplies] = useState<string[]>([]);
+  const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
+  const [notes, setNotes] = useState("");
+  const [streamStatus, setStreamStatus] = useState<"connected" | "reconnecting" | "disconnected">(
+    "disconnected",
+  );
+  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [submittingAnswers, setSubmittingAnswers] = useState(false);
@@ -126,13 +142,15 @@ export default function Home() {
   const [layoutVersionCount, setLayoutVersionCount] = useState(0);
   const [creatingLayoutVersion, setCreatingLayoutVersion] = useState(false);
   const lastSavedLayoutRef = useRef("");
+  const conversationHydratedRef = useRef(false);
+  const notesHydratedRef = useRef(false);
   const [activeNav, setActiveNav] = useState<"workspace" | "skills" | "files">("workspace");
-  const [activeTask, setActiveTask] = useState("rna");
+  const [activeTask, setActiveTask] = useState(routeTaskId);
   const [projectName, setProjectName] = useState("BioFlow 生命科学实验室");
   const [modal, setModal] = useState<WorkspaceModalState | null>(null);
   const [toast, setToast] = useState("");
   const [agentMode, setAgentMode] = useState<"标准模式" | "严谨模式" | "快速模式">("标准模式");
-  const [extraTasks, setExtraTasks] = useState<string[]>([]);
+  const [taskList, setTaskList] = useState<TaskListItem[]>([]);
   const [dataProfiles, setDataProfiles] = useState<DataFileProfile[]>([]);
   const [uploadingFileName, setUploadingFileName] = useState("");
   const [uploadError, setUploadError] = useState("");
@@ -141,6 +159,10 @@ export default function Home() {
   const [configOpen, setConfigOpen] = useState(false);
   const [configSaving, setConfigSaving] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [docsOpen, setDocsOpen] = useState(false);
+  const [skipBoot, setSkipBoot] = useState(false);
+  const [bootAttempt, setBootAttempt] = useState(0);
+  const [initializationError, setInitializationError] = useState("");
   const [ragTrace, setRagTrace] = useState<RagTrace | null>(null);
   const guideInitializedRef = useRef(false);
   const uploadedFiles = useMemo(
@@ -160,6 +182,26 @@ export default function Home() {
     () => JSON.stringify(workflowLayoutInput),
     [workflowLayoutInput],
   );
+  useEffect(() => {
+    setActiveTask(routeTaskId);
+    setTask(null);
+    setConversationMessages([]);
+    setNotes("");
+    setAnswers({ format: "", comparison: "", organism: "", deliverable: "" });
+    conversationHydratedRef.current = false;
+    notesHydratedRef.current = false;
+    setEvents(seedEvents);
+    setRagTrace(null);
+    setSelectedEvidenceId(null);
+    setRunning(false);
+    setCodeText("");
+    setCodeStreaming(false);
+    setLiveLogs([]);
+    setStreamStatus("disconnected");
+    setLayoutReady(false);
+    setLayoutSaveState("loading");
+    lastSavedLayoutRef.current = "";
+  }, [routeTaskId]);
   useEffect(() => {
     const syncViewport = () => setViewportWidth(window.innerWidth);
     syncViewport();
@@ -195,17 +237,35 @@ export default function Home() {
     }
   }, [authed, task]);
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
+        setInitializationError("");
         await bioflowApi.login();
-        const [taskResponse, configResponse, layoutResponse] = await Promise.all([
-          bioflowApi.getTask(),
-          bioflowApi.getConfig(),
-          bioflowApi.getWorkflowLayout(),
-          new Promise((resolve) => setTimeout(resolve, 850)),
-        ]);
+        const [taskResponse, configResponse, layoutResponse, conversationResponse, notesResponse] =
+          await Promise.all([
+            bioflowApi.getTask(routeTaskId),
+            bioflowApi.getConfig(),
+            bioflowApi.getWorkflowLayout(routeTaskId),
+            bioflowApi.getConversation(routeTaskId),
+            bioflowApi.getNotes(routeTaskId),
+            new Promise((resolve) => setTimeout(resolve, 850)),
+          ]);
+        if (cancelled) return;
         setTask(taskResponse.task);
+        setRunning(taskResponse.task.status === "running");
+        setTaskList(taskResponse.tasks ?? []);
         setDataProfiles(taskResponse.task.dataProfiles ?? []);
+        setAnswers({
+          format: taskResponse.task.clarification?.answers?.format || "",
+          comparison: taskResponse.task.clarification?.answers?.comparison || "",
+          organism: taskResponse.task.clarification?.answers?.organism || "",
+          deliverable: taskResponse.task.clarification?.answers?.deliverable || "",
+        });
+        setConversationMessages(conversationResponse.messages ?? []);
+        setNotes(notesResponse.notes ?? taskResponse.task.notes ?? "");
+        conversationHydratedRef.current = true;
+        notesHydratedRef.current = true;
         if (configResponse.config) setConfig(configResponse.config);
         const restoredLayout = layoutResponse.layout.current;
         const restoredLayoutInput = {
@@ -225,10 +285,30 @@ export default function Home() {
         setLayoutSaveState("saved");
         setAuthed(true);
       } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "工作区初始化失败，请检查服务状态";
+        setInitializationError(message);
         setToast(getApiErrorMessage(error, "工作区初始化失败，请检查服务状态"));
       }
     })();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [bootAttempt, routeTaskId]);
+  useEffect(() => {
+    if (!authed || !task || task.id !== activeTask || !conversationHydratedRef.current) return;
+    const saveTimer = window.setTimeout(() => {
+      void bioflowApi.saveConversation(activeTask, conversationMessages).catch(() => undefined);
+    }, 450);
+    return () => window.clearTimeout(saveTimer);
+  }, [activeTask, authed, conversationMessages, task?.id]);
+  useEffect(() => {
+    if (!authed || !task || task.id !== activeTask || !notesHydratedRef.current) return;
+    const saveTimer = window.setTimeout(() => {
+      void bioflowApi.saveNotes(activeTask, notes).catch(() => undefined);
+    }, 500);
+    return () => window.clearTimeout(saveTimer);
+  }, [activeTask, authed, notes, task?.id]);
   useEffect(() => {
     if (!authed || !layoutReady || serializedWorkflowLayout === lastSavedLayoutRef.current) return;
 
@@ -236,7 +316,7 @@ export default function Home() {
     let saveCancelled = false;
     const saveTimer = window.setTimeout(async () => {
       try {
-        const response = await bioflowApi.saveWorkflowLayout(workflowLayoutInput);
+        const response = await bioflowApi.saveWorkflowLayout(workflowLayoutInput, activeTask);
         if (saveCancelled) return;
         lastSavedLayoutRef.current = serializedWorkflowLayout;
         setLayoutRevision(response.layout.current.revision);
@@ -251,15 +331,16 @@ export default function Home() {
       saveCancelled = true;
       window.clearTimeout(saveTimer);
     };
-  }, [authed, layoutReady, serializedWorkflowLayout, workflowLayoutInput]);
+  }, [activeTask, authed, layoutReady, serializedWorkflowLayout, workflowLayoutInput]);
   useEffect(() => {
     if (!authed || !running) return;
     const sync = () =>
       bioflowApi
-        .getTask()
+        .getTask(activeTask)
         .then((response) => {
           if (response.task) {
             setTask(response.task);
+            if (response.tasks) setTaskList(response.tasks);
             if (["failed", "succeeded", "cancelled"].includes(response.task.status)) {
               setRunning(false);
             }
@@ -269,15 +350,22 @@ export default function Home() {
     sync();
     const timer = setInterval(sync, 300);
     return () => clearInterval(timer);
-  }, [authed, running]);
+  }, [activeTask, authed, running]);
   useEffect(() => {
-    if (!authed || !task) return;
+    if (!authed || !task?.runId) {
+      setStreamStatus("disconnected");
+      return;
+    }
     const sync = () =>
       bioflowApi
-        .getTask()
-        .then((response) => setTask(response.task))
+        .getTask(activeTask)
+        .then((response) => {
+          setTask(response.task);
+          if (response.tasks) setTaskList(response.tasks);
+        })
         .catch(() => undefined);
-    const es = new EventSource("/api/runs/run_demo_001/events");
+    const es = new EventSource(`/api/runs/${encodeURIComponent(task.runId)}/events`);
+    es.onopen = () => setStreamStatus("connected");
     es.onmessage = (message) => {
       try {
         const runEvent = JSON.parse(message.data) as RunStreamEvent;
@@ -349,15 +437,34 @@ export default function Home() {
       } catch {}
       sync();
     };
-    es.onerror = () => {
+    es.onerror = () => setStreamStatus("reconnecting");
+    return () => {
       es.close();
+      setStreamStatus("disconnected");
     };
-    return () => es.close();
-  }, [authed]);
+  }, [activeTask, authed, task?.runId]);
   const selectedNode = useMemo(
     () => task?.nodes.find((workflowNode) => workflowNode.id === selected),
     [task, selected],
   );
+  const impactNodeIds = useMemo(() => {
+    if (!task || !selected) return [];
+    const edges = [...task.edges, ...extraEdges];
+    const impacted = new Set<string>();
+    const queue = [selected];
+    while (queue.length) {
+      const current = queue.shift();
+      if (!current) continue;
+      edges
+        .filter(([from]) => from === current)
+        .forEach(([, target]) => {
+          if (impacted.has(target)) return;
+          impacted.add(target);
+          queue.push(target);
+        });
+    }
+    return [...impacted];
+  }, [extraEdges, selected, task]);
   useEffect(() => {
     if (selectedResidue) {
       notify(`已选择残基 ${selectedResidue}，证据与代码上下文已关联`);
@@ -369,8 +476,9 @@ export default function Home() {
     try {
       const configResponse = await bioflowApi.saveConfig(config);
       setConfig(configResponse.config);
-      const taskResponse = await bioflowApi.getTask();
+      const taskResponse = await bioflowApi.getTask(activeTask);
       setTask(taskResponse.task);
+      if (taskResponse.tasks) setTaskList(taskResponse.tasks);
       setConfigOpen(false);
       notify("演示配置已应用");
     } catch (error) {
@@ -385,7 +493,7 @@ export default function Home() {
   const switchNav = (next: "workspace" | "skills" | "files") => {
     setActiveNav(next);
     if (next === "workspace") {
-      router.push("/projects/proj_a5211690a4/tasks/task_demo_rnaseq");
+      router.push(`/projects/proj_a5211690a4/tasks/${activeTask}`);
     } else {
       router.push(next === "skills" ? "/skills" : "/files");
     }
@@ -440,13 +548,8 @@ ${task?.goal || config.goal}
     notify("Markdown 分析报告已下载");
   };
   const selectTask = (id: string, label: string, nextTab?: typeof tab) => {
-    setActiveTask(id);
-    if (id === "rna") {
-      router.push("/projects/proj_a5211690a4/tasks/task_demo_rnaseq");
-    } else if (id === "literature" || id === "structure") {
-      router.push(`/projects/proj_a5211690a4/tasks/${id}`);
-    }
-    if (id === "rna") {
+    router.push(`/projects/proj_a5211690a4/tasks/${id}`);
+    if (id === "task_demo_rnaseq") {
       setMobilePanel(false);
       notify("已切换到 RNA-seq 差异表达分析");
     } else if (nextTab) {
@@ -454,17 +557,25 @@ ${task?.goal || config.goal}
       notify(`已打开${label}`);
     } else notify(`已切换到${label}`);
   };
-  const createTask = () => {
+  const createTask = async () => {
     const name = newTaskName.trim();
     if (!name) {
       notify("请先填写任务名称");
       return;
     }
-    setExtraTasks((items) => [...items, name]);
-    setNewTaskName("");
-    setModal(null);
-    setActiveTask(`extra-${extraTasks.length}`);
-    notify(`已创建任务：${name}`);
+    try {
+      const response = await bioflowApi.createTask(name);
+      setTaskList(response.tasks ?? []);
+      const createdTask = response.task;
+      setNewTaskName("");
+      setModal(null);
+      if (createdTask) {
+        router.push(`/projects/proj_a5211690a4/tasks/${createdTask.id}`);
+      }
+      notify(`已创建任务：${name} · 已保存到服务端`);
+    } catch (error) {
+      notify(getApiErrorMessage(error, "新建任务失败，请稍后重试"));
+    }
   };
   const profileUploadedFiles = async (files: File[]) => {
     const uploadFailures: string[] = [];
@@ -472,7 +583,7 @@ ${task?.goal || config.goal}
     for (const file of files) {
       setUploadingFileName(file.name);
       try {
-        const response = await bioflowApi.profileTabularFile(file);
+        const response = await bioflowApi.profileTabularFile(file, activeTask);
         setTask(response.task);
         setDataProfiles(response.task.dataProfiles ?? []);
         notify(`${file.name} 结构检查完成`);
@@ -504,9 +615,15 @@ ${task?.goal || config.goal}
     if (submittingAnswers || Object.values(answers).some((answer) => !answer)) return;
     setSubmittingAnswers(true);
     try {
-      const response = await bioflowApi.submitClarifications({ answers });
-      setTask(response.task);
+      const response = await bioflowApi.submitClarifications(activeTask, { answers });
+      if (task?.executionMode === "real") {
+        const planResponse = await bioflowApi.generatePlan(activeTask, task.goal, answers);
+        setTask(planResponse.task || response.task);
+        notify("LLM 已生成分析计划，请检查证据和风险");
+      } else setTask(response.task);
     } catch (error) {
+      if (task?.executionMode === "real")
+        setTask((current) => (current ? { ...current, status: "awaiting_approval" } : current));
       notify(getApiErrorMessage(error, "澄清信息提交失败，请检查服务状态"));
     } finally {
       setSubmittingAnswers(false);
@@ -516,7 +633,7 @@ ${task?.goal || config.goal}
     if (approvingPlan) return;
     setApprovingPlan(true);
     try {
-      const response = await bioflowApi.approvePlan();
+      const response = await bioflowApi.approvePlan(activeTask);
       setTask(response.task);
       notify("分析计划已批准，等待运行");
     } catch (error) {
@@ -526,11 +643,19 @@ ${task?.goal || config.goal}
     }
   };
   const runDemo = async () => {
+    if (task?.executionMode === "real") {
+      document.getElementById("real-analysis")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
     if (running) {
       notify("工作流正在运行，请稍候");
       return;
     }
-    if (task?.status === "clarifying") {
+    if (task?.status === "running") {
+      notify("工作流正在运行，请稍候");
+      return;
+    }
+    if (task?.status === "draft" || task?.status === "clarifying") {
       notify("请先完成四项分析信息");
       return;
     }
@@ -543,7 +668,7 @@ ${task?.goal || config.goal}
     setCodeStreaming(false);
     notify("工作流已开始运行");
     try {
-      await bioflowApi.startRun();
+      await bioflowApi.startRun(activeTask);
     } catch (error) {
       setRunning(false);
       notify(getApiErrorMessage(error, "启动失败，请检查服务状态"));
@@ -554,7 +679,8 @@ ${task?.goal || config.goal}
     setRetrying(true);
     setCodeText("");
     try {
-      await bioflowApi.retryNode("run_demo_001", "design");
+      if (!task?.runId) throw new Error("当前任务没有可重试的运行");
+      await bioflowApi.retryNode(task.runId, "design");
       setTimeout(() => setRetrying(false), 1300);
     } catch (error) {
       setRetrying(false);
@@ -567,28 +693,111 @@ ${task?.goal || config.goal}
       notify("请输入问题后再发送");
       return;
     }
-    setSentMessages((items) => [...items, text]);
-    setMessageText("");
-    setAgentReplies((items) => [
+    const createdAt = new Date().toISOString();
+    const userMessageId = `user-${Date.now()}`;
+    const assistantMessageId = `assistant-${Date.now()}`;
+    setConversationMessages((items) => [
       ...items,
-      `已收到。我会按${agentMode}结合当前项目文件和分析上下文，先完成 RAG 证据链，再给出下一步可执行建议。`,
+      {
+        id: userMessageId,
+        role: "user",
+        content: text,
+        createdAt,
+        status: "completed",
+      },
+      {
+        id: assistantMessageId,
+        role: "assistant",
+        content: `已收到。我会按 **${agentMode}** 检查项目文件，检索相关证据并绑定到可审批的分析参数。`,
+        createdAt,
+        status: "sending",
+      },
     ]);
+    setMessageText("");
     void bioflowApi
-      .runRagQuery(text)
+      .runRagQuery(text, activeTask)
       .then((response) => {
+        const citations = response.trace.rerankedResults
+          .filter((item) => item.kept)
+          .slice(0, 3)
+          .map((item, index) => ({
+            id: item.chunkId,
+            label: `证据 ${index + 1}`,
+            detail: response.trace.chunks.find((chunk) => chunk.id === item.chunkId)?.text,
+          }));
+        setConversationMessages((items) =>
+          items.map((message) =>
+            message.id === assistantMessageId
+              ? {
+                  ...message,
+                  status: "completed",
+                  traceId: response.trace.id,
+                  citations,
+                  content:
+                    response.trace.indexSummary?.provider === "qdrant"
+                      ? `${response.trace.finalDecision.summary}${citations.length ? " [1]" : ""}`
+                      : `演示建议：${response.trace.finalDecision.summary} [1][2]`,
+                }
+              : message,
+          ),
+        );
+        setSelectedEvidenceId(citations[0]?.id || null);
         setRagTrace(response.trace);
         setTab("evidence");
         setMobilePanel(true);
         notify("RAG 全链路已完成，可展开查看 Top 20 召回与参数依据");
       })
-      .catch((error) => notify(getApiErrorMessage(error, "RAG 检索失败，请稍后重试")));
+      .catch((error) => {
+        setConversationMessages((items) =>
+          items.map((message) =>
+            message.id === assistantMessageId
+              ? {
+                  ...message,
+                  status: "failed",
+                  content: getApiErrorMessage(error, "RAG 检索失败，请稍后重试"),
+                }
+              : message,
+          ),
+        );
+        notify(getApiErrorMessage(error, "RAG 检索失败，请稍后重试"));
+      });
+  };
+  const copyMessage = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      notify("消息已复制");
+    } catch {
+      notify("当前浏览器不允许读取剪贴板");
+    }
+  };
+  const retryMessage = (content: string) => {
+    setMessageText(content);
+    notify("已恢复问题，请确认后重新发送");
+  };
+  const openTraceForMessage = async (traceId?: string) => {
+    if (traceId && traceId !== ragTrace?.id) {
+      try {
+        const response = await bioflowApi.getRagTrace(traceId);
+        setRagTrace(response.trace);
+      } catch (error) {
+        notify(getApiErrorMessage(error, "Trace 加载失败，请稍后重试"));
+        return;
+      }
+    }
+    setTab("evidence");
+    setMobilePanel(true);
+  };
+  const selectCitation = (citationId: string, traceId?: string) => {
+    setSelectedEvidenceId(citationId);
+    void openTraceForMessage(traceId);
   };
   const cancel = async () => {
     if (cancellingRun) return;
     setCancellingRun(true);
     try {
-      await bioflowApi.cancelRun("run_demo_001");
-      const taskResponse = await bioflowApi.getTask();
+      if (!task?.runId) throw new Error("当前任务没有正在运行的作业");
+      await bioflowApi.cancelRun(task.runId);
+      const taskResponse = await bioflowApi.getTask(activeTask);
       setTask(taskResponse.task);
       setRunning(false);
       setCodeStreaming(false);
@@ -688,6 +897,7 @@ ${task?.goal || config.goal}
       const response = await bioflowApi.createWorkflowLayoutVersion(
         versionName,
         workflowLayoutInput,
+        activeTask,
       );
       lastSavedLayoutRef.current = serializedWorkflowLayout;
       setLayoutRevision(response.layout.current.revision);
@@ -712,11 +922,30 @@ ${task?.goal || config.goal}
   if (!authed || !task) {
     return (
       <main className="boot">
-        <ParticleLoader />
+        {!skipBoot && <ParticleLoader onSkip={() => setSkipBoot(true)} />}
         <div className="boot-content">
           <div className="boot-mark">⦿</div>
-          <p>正在初始化安全科研工作区…</p>
-          <small>正在连接任务状态 · 加载证据索引</small>
+          {initializationError ? (
+            <>
+              <p>工作区连接失败</p>
+              <small>{initializationError}</small>
+              <button
+                className="boot-retry"
+                onClick={() => {
+                  setInitializationError("");
+                  setSkipBoot(false);
+                  setBootAttempt((attempt) => attempt + 1);
+                }}
+              >
+                重新连接
+              </button>
+            </>
+          ) : (
+            <>
+              <p>{skipBoot ? "正在进入安全科研工作区…" : "正在初始化安全科研工作区…"}</p>
+              <small>正在连接任务状态 · 加载证据索引 · 可随时跳过动画</small>
+            </>
+          )}
         </div>
       </main>
     );
@@ -764,7 +993,7 @@ ${task?.goal || config.goal}
         task={task}
         projectName={projectName}
         activeTaskId={activeTask}
-        extraTaskNames={extraTasks}
+        taskList={taskList}
         uploadedFileNames={uploadedFiles}
         dataProfiles={dataProfiles}
         statusLabels={statusLabel}
@@ -793,41 +1022,55 @@ ${task?.goal || config.goal}
             </span>
             <button onClick={shareTask}>分享</button>
             <button onClick={() => setModal({ kind: "layout", title: "工作区布局" })}>布局</button>
+            <button onClick={() => setDocsOpen(true)}>文档</button>
             <button onClick={() => setGuideOpen(true)}>使用指引</button>
           </div>
         </header>
         <div className="goal-strip" data-guide="goal">
           <div>
-            <small>当前研究目标 · 生物信息学</small>
+            <small>当前研究目标 · {task.executionMode === "real" ? "真实服务" : "演示数据"}</small>
             <h1>{task.goal}</h1>
           </div>
           <div className="goal-actions">
             <span className={`status-pill ${task.status}`}>
               ● {statusLabel[task.status] || task.status}
             </span>
-            <button className="secondary" onClick={() => setConfigOpen(true)}>
-              配置
-            </button>
+            {task.executionMode !== "real" && (
+              <button className="secondary" onClick={() => setConfigOpen(true)}>
+                配置
+              </button>
+            )}
             <button className="secondary" onClick={() => setPlanOpen((current) => !current)}>
               {planOpen ? "收起计划" : "分析计划"}
             </button>
             <button className="secondary" onClick={() => setMobilePanel(!mobilePanel)}>
               工具
             </button>
-            {task.status === "running" && (
+            {task.status === "running" && task.executionMode !== "real" && (
               <button className="secondary danger" onClick={cancel} disabled={cancellingRun}>
                 {cancellingRun ? "取消中…" : "取消"}
               </button>
             )}
-            <button className="primary" data-guide="run" onClick={runDemo}>
-              {running ? "运行中…" : "运行工作流"}
+            <button
+              className="primary"
+              data-guide="run"
+              onClick={
+                task.executionMode === "real"
+                  ? () =>
+                      document
+                        .getElementById("real-analysis")
+                        ?.scrollIntoView({ behavior: "smooth" })
+                  : runDemo
+              }
+            >
+              {task.executionMode === "real" ? "分析运行" : running ? "运行中…" : "运行工作流"}
             </button>
           </div>
         </div>
         <div className="dialogue-thread">
           <div className="user-message">
             <small>你 · 刚刚</small>
-            <p>我有 RNA-seq 数据，希望比较处理组与对照组，找出显著差异基因并生成火山图。</p>
+            <p>{task.goal}</p>
           </div>
           <div className="agent-message">
             <div className="assistant-avatar">✦</div>
@@ -837,7 +1080,11 @@ ${task?.goal || config.goal}
                 可以。我会先检查项目文件，再确认数据格式、实验设计和交付要求，然后生成一份可审批的分析计划。
               </p>
               <button className="trace-chip" onClick={() => setTraceOpen((current) => !current)}>
-                {traceOpen ? "收起执行轨迹" : "✓ 已检查项目文件 · 查看执行轨迹"}
+                {traceOpen
+                  ? "收起执行轨迹"
+                  : task.executionMode === "real"
+                    ? "查看文件与检索状态"
+                    : "演示执行轨迹"}
               </button>
             </div>
           </div>
@@ -872,7 +1119,7 @@ ${task?.goal || config.goal}
             title="拖拽调整证据区高度"
           />
         </div>
-        {task?.status === "clarifying" && (
+        {(task?.status === "clarifying" || task?.status === "draft") && (
           <ClarificationCard
             answers={answers}
             activeQuestion={activeQuestion}
@@ -886,6 +1133,23 @@ ${task?.goal || config.goal}
             }}
             onSubmit={submitClarifications}
             onUseDemoData={() => {
+              if (task.executionMode === "real") {
+                void fetch(`/api/tasks/${activeTask}/analysis`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "samples" }),
+                })
+                  .then(async (res) => {
+                    const body = await res.json();
+                    if (!res.ok) throw new Error(body.error);
+                    setTask((current) =>
+                      current?.id === activeTask
+                        ? { ...current, fileIds: body.task.fileIds }
+                        : current,
+                    );
+                  })
+                  .catch((error) => notify(error.message));
+              }
               setAnswers({
                 format: "Count 矩阵",
                 comparison: "处理组 vs 对照组",
@@ -902,25 +1166,44 @@ ${task?.goal || config.goal}
             <div className="gate-head">
               <div>
                 <small>分析计划待确认</small>
-                <h2>RNA-seq 候选基因分析工作流</h2>
-                <p>共 6 步 · 预计 2 分 30 秒 · 已绑定 3 个证据来源 · 不向外部传输数据</p>
+                <h2>{task.plan?.title || task.skill?.name || task.title}</h2>
+                <p>
+                  {task.executionMode === "real"
+                    ? `${task.plan?.provider === "llm" ? `LLM · ${task.plan.model}` : "等待 LLM 计划"} · 已绑定 ${task.fileIds?.length || 0} 份输入文件 · 本机分析`
+                    : "演示工作流 · 6 步"}
+                </p>
               </div>
               <span className="status-pill blocked">等待审批</span>
             </div>
             <div className="plan-preview">
-              <span>01 校验数据结构</span>
-              <span>02 构建设计矩阵</span>
-              <span>03 执行 DESeq2</span>
-              <span>04 生成火山图</span>
-              <span>05 排序候选基因</span>
-              <span>06 撰写科研报告</span>
+              {(
+                task.plan?.steps || [
+                  { id: "01", title: "校验数据结构" },
+                  { id: "02", title: "构建设计矩阵" },
+                  { id: "03", title: "执行 DESeq2" },
+                  { id: "04", title: "生成火山图" },
+                  { id: "05", title: "排序候选基因" },
+                  { id: "06", title: "撰写科研报告" },
+                ]
+              ).map((step) => (
+                <span key={step.id}>
+                  {step.id} {step.title}
+                </span>
+              ))}
             </div>
+            {task.plan?.risks?.length ? (
+              <p className="plan-risks">风险：{task.plan.risks.join("；")}</p>
+            ) : null}
             <div className="approval-actions">
               <button className="secondary" onClick={() => openTool("evidence")}>
                 查看证据
               </button>
-              <button className="primary" onClick={approvePlan} disabled={approvingPlan}>
-                {approvingPlan ? "审批中…" : "批准并执行 →"}
+              <button
+                className="primary"
+                onClick={approvePlan}
+                disabled={approvingPlan || (task.executionMode === "real" && !task.plan)}
+              >
+                {approvingPlan ? "审批中…" : "批准计划"}
               </button>
             </div>
           </div>
@@ -932,6 +1215,7 @@ ${task?.goal || config.goal}
             edges={task.edges}
             extraEdges={extraEdges}
             selected={selected}
+            impactNodeIds={impactNodeIds}
             connectingFrom={connectingFrom}
             canvasZoom={canvasZoom}
             canvasPan={canvasPan}
@@ -951,9 +1235,11 @@ ${task?.goal || config.goal}
             onNodePointerDown={startNodeDrag}
           />
         </div>
+        {task.executionMode === "real" && (
+          <RealAnalysisPanel key={task.id} task={task} onTaskChange={setTask} />
+        )}
         <ConversationPanel
-          sentMessages={sentMessages}
-          agentReplies={agentReplies}
+          messages={conversationMessages}
           taskStatus={task.status}
           messageText={messageText}
           agentMode={agentMode}
@@ -975,6 +1261,22 @@ ${task?.goal || config.goal}
             openTool("evidence");
           }}
           onOpenCode={() => openTool("code")}
+          onCopyMessage={(content) => void copyMessage(content)}
+          onRetryMessage={retryMessage}
+          onOpenTrace={openTraceForMessage}
+          onCitationClick={selectCitation}
+          onFeedback={(messageId, feedback) => {
+            setConversationMessages((items) =>
+              items.map((message) =>
+                message.id === messageId ? { ...message, feedback } : message,
+              ),
+            );
+            notify(feedback === "up" ? "已记录为有帮助" : "已记录改进反馈");
+          }}
+          onFollowUp={(question) => {
+            setMessageText(question);
+            notify("已填入后续问题，请确认后发送");
+          }}
         />
       </section>
       <nav className="tool-dock" aria-label="研究工具">
@@ -983,11 +1285,20 @@ ${task?.goal || config.goal}
           ["results", "结果", "▧"],
           ["compute", "计算", "◉"],
           ["notes", "笔记", "✎"],
+          ["docs", "文档", "▤"],
         ].map(([key, label, icon]) => (
           <button
             key={key}
             className={tab === key && mobilePanel ? "active" : ""}
             onClick={() => {
+              if (key === "docs") {
+                setDocsOpen(true);
+                return;
+              }
+              if (task.executionMode === "real" && (key === "results" || key === "compute")) {
+                document.getElementById("real-analysis")?.scrollIntoView({ behavior: "smooth" });
+                return;
+              }
               setTab(key as typeof tab);
               setMobilePanel(true);
             }}
@@ -1008,17 +1319,27 @@ ${task?.goal || config.goal}
         isOpen={mobilePanel}
         activeTab={tab}
         selectedNode={selectedNode}
+        workflowNodes={task.nodes}
+        workflowEdges={[...task.edges, ...extraEdges]}
         statusLabels={statusLabel}
         answers={answers}
         liveLogs={liveLogs}
+        streamStatus={streamStatus}
+        sampleCount={
+          dataProfiles.find((profile) => profile.dataRole === "count_matrix")?.sampleCount ||
+          config.sampleCount
+        }
         running={running}
         codeStreaming={codeStreaming}
         retrying={retrying}
         codeText={codeText}
+        notes={notes}
         selectedResidue={selectedResidue}
         artifacts={task.artifacts}
         ragTrace={ragTrace}
+        selectedChunkId={selectedEvidenceId}
         onTabChange={setTab}
+        onNotesChange={setNotes}
         onClose={() => setMobilePanel(false)}
         onSelectQuestion={(questionIndex) => {
           setActiveQuestion(questionIndex);
@@ -1109,6 +1430,11 @@ ${task?.goal || config.goal}
         />
       )}
       <ProductGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
+      <DocumentationDrawer
+        open={docsOpen}
+        activeTaskId={activeTask}
+        onClose={() => setDocsOpen(false)}
+      />
       <button className="mobile-inspector-trigger" onClick={() => setMobilePanel(true)}>
         检查器 · {selectedNode?.label}
       </button>

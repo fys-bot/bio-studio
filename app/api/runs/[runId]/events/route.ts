@@ -5,13 +5,15 @@ import { isAuthorized } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest, { params }: { params: { runId: string } }) {
   if (!isAuthorized()) return new Response("Unauthorized", { status: 401 });
-  const initial = Number(req.nextUrl.searchParams.get("after") || 0);
+  const initial = Number(
+    req.nextUrl.searchParams.get("after") || req.headers.get("last-event-id") || 0,
+  );
   let cursor = initial;
   let timer: ReturnType<typeof setInterval>;
   const stream = new ReadableStream({
     start(controller) {
       const send = () => {
-        const items = eventsAfter(cursor);
+        const items = eventsAfter(cursor, params.runId);
         items.forEach((eventRecord) => {
           cursor = eventRecord.id;
           controller.enqueue(`id: ${eventRecord.id}\ndata: ${JSON.stringify(eventRecord)}\n\n`);

@@ -134,18 +134,18 @@ export function WorkspaceModal({
         {modal.kind === "upload" && (
           <div className="modal-form">
             <label className={`upload-drop ${uploadingFileName ? "is-loading" : ""}`}>
-              {uploadingFileName ? "正在检查数据结构…" : "＋ 选择 CSV / TSV 文件"}
+              {uploadingFileName ? "正在解析文件…" : "＋ 选择数据或研究文档"}
               <input
                 type="file"
                 multiple
-                accept=".csv,.tsv,text/csv,text/tab-separated-values"
+                accept=".csv,.tsv,.txt,.md,.xlsx,.pdf,.docx,text/csv,text/tab-separated-values,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 disabled={Boolean(uploadingFileName)}
                 onChange={handleUpload}
               />
               <small>
                 {uploadingFileName
                   ? `服务端正在解析 ${uploadingFileName}`
-                  : "原始单元格仅在服务端解析，前端只接收字段、缺失值和分组建议"}
+                  : "CSV / TSV / Excel / PDF / DOCX / TXT / MD / 图片 · 最大 10MB"}
               </small>
             </label>
             {uploadError && (
@@ -166,12 +166,16 @@ export function WorkspaceModal({
                 </header>
                 <div className="profile-metrics">
                   <div>
-                    <b>{latestDataProfile.sampleCount}</b>
-                    <small>样本</small>
+                    <b>
+                      {latestDataProfile.dataRole === "document"
+                        ? latestDataProfile.recordCount
+                        : latestDataProfile.sampleCount}
+                    </b>
+                    <small>{latestDataProfile.dataRole === "document" ? "非空段落" : "样本"}</small>
                   </div>
                   <div>
                     <b>{latestDataProfile.columnCount}</b>
-                    <small>字段</small>
+                    <small>{latestDataProfile.dataRole === "document" ? "标题" : "字段"}</small>
                   </div>
                   <div>
                     <b>{latestDataProfile.missingCellCount}</b>
@@ -195,6 +199,15 @@ export function WorkspaceModal({
                     </span>
                   )}
                 </div>
+                {latestDataProfile.processing && (
+                  <div className="profile-processing" aria-label="文档处理阶段">
+                    {latestDataProfile.processing.stages.map((stage) => (
+                      <span className={stage.status} key={stage.key} title={stage.detail}>
+                        <i /> {stage.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <button
                   className="primary full"
                   onClick={() => onApplyDataProfile(latestDataProfile)}

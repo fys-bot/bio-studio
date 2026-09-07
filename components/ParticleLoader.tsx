@@ -2,7 +2,9 @@
 
 import { useEffect, useRef } from "react";
 
-export function ParticleLoader() {
+type ParticleLoaderProps = { onSkip?: () => void };
+
+export function ParticleLoader({ onSkip }: ParticleLoaderProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -11,8 +13,12 @@ export function ParticleLoader() {
     const context = canvas.getContext("2d");
     if (!context) return;
     let animation = 0;
-    const particles = Array.from({ length: 1800 }, (_, index) => ({
-      angle: (index / 1800) * Math.PI * 2,
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const particleCount = reducedMotion
+      ? 260
+      : Math.round(Math.min(1200, Math.max(260, window.innerWidth * 0.75)));
+    const particles = Array.from({ length: particleCount }, (_, index) => ({
+      angle: (index / particleCount) * Math.PI * 2,
       radius: 100 + Math.random() * 180,
       speed: 0.0007 + Math.random() * 0.0012,
       phase: Math.random() * Math.PI * 2,
@@ -52,17 +58,26 @@ export function ParticleLoader() {
         context.fillRect(particleX, particleY, 1.5 * scale, 1.5 * scale);
       });
 
-      animation = requestAnimationFrame(render);
+      if (!reducedMotion) animation = requestAnimationFrame(render);
     };
 
     resize();
     window.addEventListener("resize", resize);
-    animation = requestAnimationFrame(render);
+    render(0);
     return () => {
       cancelAnimationFrame(animation);
       window.removeEventListener("resize", resize);
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="particle-loader" aria-hidden="true" />;
+  return (
+    <>
+      <canvas ref={canvasRef} className="particle-loader" aria-hidden="true" />
+      {onSkip && (
+        <button className="boot-skip" onClick={onSkip}>
+          跳过动画，继续加载
+        </button>
+      )}
+    </>
+  );
 }

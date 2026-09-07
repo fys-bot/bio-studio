@@ -3,7 +3,12 @@
 import { useState } from "react";
 import type { RagTrace } from "@/lib/domain";
 
-type RagTracePanelProps = { trace: RagTrace | null; onCopy?: (value: string) => void };
+type RagTracePanelProps = {
+  trace: RagTrace | null;
+  selectedChunkId?: string | null;
+  onCopy?: (value: string) => void;
+  onChunkSelect?: (chunkId: string) => void;
+};
 
 const stages: Array<{ key: keyof RagTrace; label: string; description: string }> = [
   { key: "parsedDocuments", label: "文档解析", description: "识别文件来源、解析器和结构状态" },
@@ -19,11 +24,20 @@ const stages: Array<{ key: keyof RagTrace; label: string; description: string }>
   { key: "toolCalls", label: "工具调用", description: "选择并运行可审计的科研工具" },
 ];
 
-export function RagTracePanel({ trace, onCopy }: RagTracePanelProps) {
+export function RagTracePanel({
+  trace,
+  selectedChunkId,
+  onCopy,
+  onChunkSelect,
+}: RagTracePanelProps) {
   const [expanded, setExpanded] = useState<string | null>("retrievalTop20");
+  const [fallbackStrategy, setFallbackStrategy] = useState("");
   if (!trace)
     return (
       <section className="rag-trace-empty">
+        <div className="rag-demo-banner">
+          演示模式 · 当前 RAG 使用可替换的确定性 Adapter，接口契约与生产实现一致。
+        </div>
         <span>✦</span>
         <div>
           <b>等待下一次问题的 RAG Trace</b>
@@ -33,6 +47,27 @@ export function RagTracePanel({ trace, onCopy }: RagTracePanelProps) {
     );
   return (
     <section className="rag-trace-panel" aria-label="RAG 全链路 Trace">
+      <div className="rag-demo-banner">
+        {trace.indexSummary?.provider === "qdrant"
+          ? "真实文档检索 · Qdrant + multilingual MiniLM + BM25 / RRF"
+          : "演示 Trace · 非真实检索结论"}
+      </div>
+      <div className="rag-ingestion-summary" aria-label="文档摄取与索引状态">
+        <div className="rag-ingestion-head">
+          <b>文档摄取链路</b>
+          <small>
+            {trace.indexSummary?.provider || "legacy-demo"} · {trace.indexSummary?.dimensions || 0}d
+            · {trace.indexSummary?.collection}
+          </small>
+        </div>
+        <div className="rag-ingestion-stages">
+          {(trace.ingestionStages ?? []).map((stage) => (
+            <span className={stage.status} key={stage.key} title={stage.detail}>
+              <i /> {stage.label}
+            </span>
+          ))}
+        </div>
+      </div>
       <header>
         <div>
           <small>RAG TRACE · {trace.id.slice(0, 18)}</small>
@@ -78,7 +113,12 @@ export function RagTracePanel({ trace, onCopy }: RagTracePanelProps) {
                         <span>方式</span>
                       </div>
                       {trace.retrievalTop20.map((item) => (
-                        <div className="retrieval-row" key={item.chunkId}>
+                        <button
+                          className={`retrieval-row ${selectedChunkId === item.chunkId ? "selected" : ""}`}
+                          key={item.chunkId}
+                          type="button"
+                          onClick={() => onChunkSelect?.(item.chunkId)}
+                        >
                           <span>#{item.rank}</span>
                           <span>
                             {trace.chunks.find((chunk) => chunk.id === item.chunkId)?.text ||
@@ -86,7 +126,7 @@ export function RagTracePanel({ trace, onCopy }: RagTracePanelProps) {
                           </span>
                           <span>{item.score.toFixed(3)}</span>
                           <span>{item.retrievalMethod}</span>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -101,6 +141,21 @@ export function RagTracePanel({ trace, onCopy }: RagTracePanelProps) {
         <span className="trace-success">✓ {trace.finalDecision.summary}</span>
         <small>下一步：{trace.finalDecision.nextAction}</small>
       </footer>
+      {trace.status === "failed" && (
+        <div className="rag-fallback-actions">
+          <span>检索失败后的处理策略</span>
+          {["仅使用项目文件", "重新检索", "继续演示模式"].map((strategy) => (
+            <button
+              key={strategy}
+              className={fallbackStrategy === strategy ? "selected" : ""}
+              onClick={() => setFallbackStrategy(strategy)}
+            >
+              {strategy}
+            </button>
+          ))}
+          {fallbackStrategy && <small>已选择：{fallbackStrategy}</small>}
+        </div>
+      )}
     </section>
   );
 }

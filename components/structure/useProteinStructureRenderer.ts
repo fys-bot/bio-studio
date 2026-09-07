@@ -13,6 +13,7 @@ import {
 } from "@/lib/structure-model";
 
 type ProteinStructureRendererOptions = {
+  points?: typeof structurePoints;
   autoRotate: boolean;
   hoveredResidue: number | null;
   selectedResidue: number | null;
@@ -25,6 +26,7 @@ type ProteinStructureRendererOptions = {
  * 业务组件不依赖这套实现，因此可将本 Hook 替换为 Mol* / 3Dmol.js 适配器。
  */
 export function useProteinStructureRenderer({
+  points = structurePoints,
   autoRotate,
   hoveredResidue,
   selectedResidue,
@@ -60,7 +62,7 @@ export function useProteinStructureRenderer({
 
       const { yaw, pitch } = rotationRef.current;
       const scale = Math.min(width, height) * 0.105 * zoomRef.current;
-      const projectedPoints = structurePoints.map((point) => {
+      const projectedPoints = points.map((point) => {
         const rotatedX = point.x * Math.cos(yaw) - point.z * Math.sin(yaw);
         const yawDepth = point.x * Math.sin(yaw) + point.z * Math.cos(yaw);
         const rotatedY = point.y * Math.cos(pitch) - yawDepth * Math.sin(pitch);

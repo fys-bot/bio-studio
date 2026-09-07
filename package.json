@@ -3,16 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "services": "node scripts/start-services.mjs",
+    "test:parsers": ".venv/bin/python -m unittest discover -s services/tests -p 'test_*.py' -v",
+    "test:integration": ".venv/bin/python -u -m services.tests.integration",
     "dev": "node scripts/start-demo.mjs",
     "dev:poll": "WATCHPACK_POLLING=true node scripts/start-demo.mjs",
-    "build": "next build",
-    "start": "next start --hostname 127.0.0.1 --port 3000",
-    "preview": "npm run build && next start --hostname 127.0.0.1 --port 3000",
+    "build": "NEXT_DIST_DIR=.next-verification next build",
+    "start": "NEXT_DIST_DIR=.next-verification next start --hostname 127.0.0.1 --port 3000",
+    "preview": "npm run build && NEXT_DIST_DIR=.next-verification next start --hostname 127.0.0.1 --port 3000",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck && npm run format:check && npm run build",
     "format": "prettier --write \"{app,components,lib,scripts}/**/*.{ts,tsx,mjs,css}\" \"*.{json,mjs}\"",
     "format:check": "prettier --check \"{app,components,lib,scripts}/**/*.{ts,tsx,mjs,css}\" \"*.{json,mjs}\"",
-    "smoke": "node scripts/smoke-test.mjs"
+    "smoke": "npm run test:integration",
+    "smoke:legacy": "node scripts/smoke-test.mjs"
   },
   "dependencies": {
     "next": "14.2.5",

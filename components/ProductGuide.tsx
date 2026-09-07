@@ -35,9 +35,9 @@ const guideSteps: GuideStep[] = [
     target: '[data-guide="upload"]',
     fallbackTarget: '[data-guide="files-nav"]',
     eyebrow: "第 2 步 · 导入数据",
-    title: "上传 CSV 或 TSV",
+    title: "上传数据或研究文档",
     description:
-      "上传 counts 矩阵或样本元数据后，服务端会返回字段、缺失值和分组建议，原始单元格不会直接回传到浏览器。",
+      "上传 CSV、TSV、TXT 或 Markdown 后，服务端会返回字段、缺失值、段落和标题摘要，原始内容不会直接回传到浏览器。",
     action: "定位数据入口",
   },
   {
@@ -97,7 +97,13 @@ export function ProductGuide({ open, onClose }: ProductGuideProps) {
   const progressLabel = useMemo(() => `${activeIndex + 1} / ${guideSteps.length}`, [activeIndex]);
 
   useEffect(() => {
-    if (open) setActiveIndex(0);
+    if (!open) return;
+    const savedIndex = Number(window.localStorage.getItem("bioflow-studio-guide-step-v1"));
+    setActiveIndex(
+      Number.isInteger(savedIndex) && savedIndex >= 0
+        ? Math.min(savedIndex, guideSteps.length - 1)
+        : 0,
+    );
   }, [open]);
 
   useEffect(() => {
@@ -125,10 +131,19 @@ export function ProductGuide({ open, onClose }: ProductGuideProps) {
       closeGuide();
       return;
     }
-    setActiveIndex((index) => index + 1);
+    setActiveIndex((index) => {
+      const nextIndex = index + 1;
+      window.localStorage.setItem("bioflow-studio-guide-step-v1", String(nextIndex));
+      return nextIndex;
+    });
   };
 
-  const previous = () => setActiveIndex((index) => Math.max(0, index - 1));
+  const previous = () =>
+    setActiveIndex((index) => {
+      const previousIndex = Math.max(0, index - 1);
+      window.localStorage.setItem("bioflow-studio-guide-step-v1", String(previousIndex));
+      return previousIndex;
+    });
 
   const locateTarget = () => {
     const target = resolveTarget(activeStep);
@@ -174,6 +189,10 @@ export function ProductGuide({ open, onClose }: ProductGuideProps) {
         </div>
         <h2>{activeStep.title}</h2>
         <p>{activeStep.description}</p>
+        <div className="product-guide-next-step">
+          <span>当前状态</span>
+          <b>已定位 · 下一步：{activeStep.action}</b>
+        </div>
         <button className="product-guide-locate" onClick={locateTarget}>
           {activeStep.action} ↗
         </button>

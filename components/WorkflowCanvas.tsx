@@ -21,6 +21,7 @@ type WorkflowCanvasProps = {
   edges: string[][];
   extraEdges: string[][];
   selected: string;
+  impactNodeIds?: string[];
   connectingFrom: string | null;
   canvasZoom: number;
   canvasPan: WorkflowPosition;
@@ -46,6 +47,7 @@ export function WorkflowCanvas({
   edges,
   extraEdges,
   selected,
+  impactNodeIds = [],
   connectingFrom,
   canvasZoom,
   canvasPan,
@@ -132,11 +134,11 @@ export function WorkflowCanvas({
                   y1={sourcePosition.y + 55}
                   x2={targetPosition.x}
                   y2={targetPosition.y + 55}
-                  className={
+                  className={`${
                     source.status === "succeeded" && target.status !== "blocked"
                       ? "edge-done"
                       : "edge"
-                  }
+                  } ${impactNodeIds.includes(source.id) || impactNodeIds.includes(target.id) ? "edge-impact" : ""}`}
                 />
               );
             })}
@@ -148,7 +150,7 @@ export function WorkflowCanvas({
                 key={node.id}
                 className={`node ${node.status} ${
                   selected === node.id ? "selected" : ""
-                } ${connectingFrom === node.id ? "connecting" : ""}`}
+                } ${connectingFrom === node.id ? "connecting" : ""} ${impactNodeIds.includes(node.id) ? "impact" : ""}`}
                 style={{ left: position.x, top: position.y }}
                 onPointerDown={(event) => onNodePointerDown(node, event)}
               >

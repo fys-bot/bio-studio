@@ -1,0 +1,106 @@
+{
+  "enabledBySkillId": {
+    "single-cell": false
+  },
+  "fileStatusById": {
+    "seed-protocol": "indexed"
+  },
+  "customSkills": [
+    {
+      "id": "skill_a67c2cc0-429c-42b9-a7df-8fc2b6f05dfc",
+      "name": "Integration 1788783161",
+      "description": "Integration protocol",
+      "category": "转录组",
+      "inputs": [
+        "counts",
+        "metadata"
+      ],
+      "outputs": [
+        "report"
+      ],
+      "instructions": "Validate input before analysis",
+      "source": "Mine",
+      "enabled": true,
+      "version": "1.0.0",
+      "status": "available",
+      "updatedAt": "2026-09-07T12:12:42.123Z"
+    },
+    {
+      "id": "skill_5c1393f6-c163-41e4-9d8b-503b9757dd45",
+      "name": "Integration 1788783291",
+      "description": "Integration protocol",
+      "category": "转录组",
+      "inputs": [
+        "counts",
+        "metadata"
+      ],
+      "outputs": [
+        "report"
+      ],
+      "instructions": "Validate input before analysis",
+      "source": "Mine",
+      "enabled": true,
+      "version": "1.0.0",
+      "status": "available",
+      "updatedAt": "2026-09-07T12:14:51.480Z"
+    },
+    {
+      "id": "skill_1f496f48-59a8-48c9-aff5-467239485e3b",
+      "name": "实验方案证据审阅",
+      "description": "检索上传实验方案中的分组和批次依据",
+      "category": "转录组",
+      "inputs": [
+        "研究方案",
+        "样本元数据"
+      ],
+      "outputs": [
+        "来源片段",
+        "参数核对清单"
+      ],
+      "instructions": "仅引用已上传文档，列出分组字段和来源位置；未知信息不得推断。",
+      "source": "Mine",
+      "enabled": true,
+      "version": "1.0.0",
+      "status": "available",
+      "updatedAt": "2026-09-07T12:22:58.699Z"
+    },
+    {
+      "id": "skill_e9783982-c496-44bf-8c49-a79c983829d6",
+      "name": "Integration 1788784554",
+      "description": "Integration protocol",
+      "category": "转录组",
+      "inputs": [
+        "counts",
+        "metadata"
+      ],
+      "outputs": [
+        "report"
+      ],
+      "instructions": "Validate input before analysis",
+      "source": "Mine",
+      "enabled": true,
+      "version": "1.0.0",
+      "status": "available",
+      "updatedAt": "2026-09-07T12:35:54.842Z"
+    },
+    {
+      "id": "skill_02b3d333-9106-4c92-9aa3-84822f809587",
+      "name": "Integration 1788785107",
+      "description": "Integration protocol",
+      "category": "转录组",
+      "inputs": [
+        "counts",
+        "metadata"
+      ],
+      "outputs": [
+        "report"
+      ],
+      "instructions": "Validate input before analysis",
+      "source": "Mine",
+      "enabled": true,
+      "version": "1.0.0",
+      "status": "available",
+      "updatedAt": "2026-09-07T12:45:07.288Z"
+    }
+  ]
+}

@@ -1,12 +1,15 @@
 "use client";
 
 import type { PointerEvent } from "react";
-import type { DataFileProfile } from "@/lib/domain";
+import type { DataFileProfile, TaskListItem } from "@/lib/domain";
 
 type SidebarTask = {
+  executionMode?: "real" | "demo";
+  id: string;
   title: string;
   status: string;
   progress: number;
+  nodes: Array<{ id: string; detail: string }>;
 };
 
 type SidebarPanel = "evidence" | "structure";
@@ -15,7 +18,7 @@ type TaskSidebarProps = {
   task: SidebarTask;
   projectName: string;
   activeTaskId: string;
-  extraTaskNames: string[];
+  taskList: TaskListItem[];
   uploadedFileNames: string[];
   dataProfiles: DataFileProfile[];
   statusLabels: Record<string, string>;
@@ -34,7 +37,7 @@ export function TaskSidebar({
   task,
   projectName,
   activeTaskId,
-  extraTaskNames,
+  taskList,
   uploadedFileNames,
   dataProfiles,
   statusLabels,
@@ -52,6 +55,26 @@ export function TaskSidebar({
   const additionalFileNames = uploadedFileNames.filter(
     (fileName) => fileName !== "counts.csv" && fileName !== "sample_metadata.tsv",
   );
+  const countMatrixDetail = countMatrixProfile
+    ? `CSV · ${countMatrixProfile.sampleCount} 个样本 · ${countMatrixProfile.columnCount} 个字段 · ${countMatrixProfile.missingCellCount} 个缺失值`
+    : task.status === "clarifying"
+      ? "演示种子 · 等待服务端结构检查"
+      : task.nodes.find((node) => node.id === "input")?.detail || "服务端文件快照";
+  const countMatrixSummary = countMatrixProfile
+    ? `结构已就绪 · ${countMatrixProfile.sampleCount} 个样本`
+    : "演示种子 · 服务端配置";
+  const taskCards = taskList.length
+    ? taskList
+    : [
+        {
+          id: task.id,
+          title: task.title,
+          status: task.status,
+          progress: task.progress,
+          updatedAt: new Date().toISOString(),
+          hasUnreadResult: false,
+        },
+      ];
 
   return (
     <aside className="task-sidebar">
@@ -64,57 +87,42 @@ export function TaskSidebar({
       </button>
       <div className="side-title">
         <span>
-          任务 <em>{3 + extraTaskNames.length}</em>
+          任务 <em>{taskCards.length}</em>
         </span>
         <button onClick={onCreateTask}>＋ 新建任务</button>
       </div>
-      <button
-        className={`task-item task-button ${activeTaskId === "rna" ? "selected" : ""}`}
-        onClick={() => onSelectTask("rna", task.title)}
-      >
-        <i className="dot yellow" />
-        <div>
-          <b>{task.title}</b>
-          <small>
-            {statusLabels[task.status] || task.status} · {task.progress}%
-          </small>
-        </div>
-      </button>
-      <button
-        className={`task-item task-button ${activeTaskId === "literature" ? "selected" : ""}`}
-        onClick={() => onSelectTask("literature", "文献证据图谱", "evidence")}
-      >
-        <i className="dot blue" />
-        <div>
-          <b>文献证据图谱</b>
-          <small>已完成 · 2 小时前</small>
-        </div>
-      </button>
-      <button
-        className={`task-item task-button ${activeTaskId === "structure" ? "selected" : ""}`}
-        onClick={() => onSelectTask("structure", "蛋白质结构预览", "structure")}
-      >
-        <i className="dot gray" />
-        <div>
-          <b>蛋白质结构预览</b>
-          <small>草稿 · 昨天</small>
-        </div>
-      </button>
-      {extraTaskNames.map((taskName, taskIndex) => (
-        <button
-          key={`${taskName}-${taskIndex}`}
-          className={`task-item task-button ${
-            activeTaskId === `extra-${taskIndex}` ? "selected" : ""
-          }`}
-          onClick={() => onSelectTask(`extra-${taskIndex}`, taskName)}
-        >
-          <i className="dot gray" />
-          <div>
-            <b>{taskName}</b>
-            <small>草稿 · 刚刚</small>
-          </div>
-        </button>
-      ))}
+      {taskCards
+        .map((card) =>
+          card.id === task.id ? { ...card, status: task.status, progress: task.progress } : card,
+        )
+        .map((taskCard, taskIndex) => (
+          <button
+            key={taskCard.id}
+            className={`task-item task-button ${activeTaskId === taskCard.id ? "selected" : ""}`}
+            onClick={() =>
+              onSelectTask(
+                taskCard.id,
+                taskCard.title,
+                taskCard.id === "task_literature"
+                  ? "evidence"
+                  : taskCard.id === "task_structure"
+                    ? "structure"
+                    : undefined,
+              )
+            }
+          >
+            <i
+              className={`dot ${taskIndex === 0 ? "yellow" : taskCard.status === "succeeded" ? "blue" : "gray"}`}
+            />
+            <div>
+              <b>{taskCard.title}</b>
+              <small>
+                {statusLabels[taskCard.status] || taskCard.status} · {taskCard.progress}%
+                {taskCard.hasUnreadResult ? " · 新结果" : ""}
+              </small>
+            </div>
+          </button>
+        ))}
       <div className="side-divider" />
       <div className="side-title">
         <span>数据集</span>
@@ -122,48 +130,41 @@ export function TaskSidebar({
           ＋ 上传
         </button>
       </div>
-      <button
-        className="dataset dataset-button"
-        onClick={() =>
-          onOpenFile(
-            "counts.csv",
-            countMatrixProfile
-              ? `CSV · ${countMatrixProfile.sampleCount} 个样本 · ${countMatrixProfile.columnCount} 个字段 · ${countMatrixProfile.missingCellCount} 个缺失值`
-              : "RNA-seq 计数矩阵 · 2.4 MB · 24 个样本 · 18,432 个基因",
-          )
-        }
-      >
-        <span className="file-icon">CSV</span>
-        <div>
-          <b>counts.csv</b>
-          <small>
-            {countMatrixProfile
-              ? `结构已就绪 · ${countMatrixProfile.sampleCount} 个样本`
-              : "2.4 MB · 24 个样本"}
-          </small>
-        </div>
-      </button>
-      <button
-        className="dataset dataset-button"
-        onClick={() =>
-          onOpenFile(
-            "sample_metadata.tsv",
-            metadataProfile
-              ? `TSV · ${metadataProfile.sampleCount} 个样本 · ${metadataProfile.columnCount} 个字段 · ${metadataProfile.missingCellCount} 个缺失值`
-              : "样本元数据 · 12 KB · schema 已校验 · condition 字段待映射",
-          )
-        }
-      >
-        <span className="file-icon">TSV</span>
-        <div>
-          <b>sample_metadata.tsv</b>
-          <small>
-            {metadataProfile
-              ? `结构已就绪 · ${metadataProfile.sampleCount} 个样本`
-              : "12 KB · schema 已校验"}
-          </small>
-        </div>
-      </button>
+      {(task.executionMode !== "real" || countMatrixProfile) && (
+        <button
+          className="dataset dataset-button"
+          onClick={() => onOpenFile("counts.csv", countMatrixDetail)}
+        >
+          <span className="file-icon">CSV</span>
+          <div>
+            <b>counts.csv</b>
+            <small>{countMatrixSummary}</small>
+          </div>
+        </button>
+      )}
+      {(task.executionMode !== "real" || metadataProfile) && (
+        <button
+          className="dataset dataset-button"
+          onClick={() =>
+            onOpenFile(
+              "sample_metadata.tsv",
+              metadataProfile
+                ? `TSV · ${metadataProfile.sampleCount} 个样本 · ${metadataProfile.columnCount} 个字段 · ${metadataProfile.missingCellCount} 个缺失值`
+                : "样本元数据 · 12 KB · schema 已校验 · condition 字段待映射",
+            )
+          }
+        >
+          <span className="file-icon">TSV</span>
+          <div>
+            <b>sample_metadata.tsv</b>
+            <small>
+              {metadataProfile
+                ? `结构已就绪 · ${metadataProfile.sampleCount} 个样本`
+                : "12 KB · schema 已校验"}
+            </small>
+          </div>
+        </button>
+      )}
       {additionalFileNames.map((fileName) => {
         const dataProfile = dataProfiles.find((profile) => profile.fileName === fileName);
         const fileDetail = dataProfile
@@ -187,7 +188,7 @@ export function TaskSidebar({
           </button>
         );
       })}
-      <div className="sidebar-note">⌁ 云端计算会在你离开页面后继续运行。</div>
+      <div className="sidebar-note">计算服务：本机进程</div>
       <div
         className="vertical-splitter left"
         onPointerDown={onResizeStart}

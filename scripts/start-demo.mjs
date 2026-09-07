@@ -5,19 +5,17 @@ if (fs.existsSync(".env.local") && process.loadEnvFile) process.loadEnvFile(".en
 
 const port = Number(process.env.PORT || 3000);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid PORT");
+const workerUrl = process.env.BIOFLOW_WORKER_URL || "http://127.0.0.1:8000";
 const children = [];
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function workerReady() {
   try {
-    const response = await fetch(
-      (process.env.BIOFLOW_WORKER_URL || "http://127.0.0.1:8000") + "/health",
-      {
-        headers: {
-          "X-Bioflow-Worker-Token": process.env.BIOFLOW_WORKER_TOKEN || "local-development-only",
-        },
-        signal: AbortSignal.timeout(1000),
+    const response = await fetch(workerUrl + "/health", {
+      headers: {
+        "X-Bioflow-Worker-Token": process.env.BIOFLOW_WORKER_TOKEN || "local-development-only",
       },
-    );
+      signal: AbortSignal.timeout(1000),
+    });
     return response.ok && (await response.json()).compute === "PyDESeq2";
   } catch {
     return false;

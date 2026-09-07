@@ -28,7 +28,12 @@ os.environ.setdefault("HF_HOME", str(ROOT / "models"))
 MODEL_NAME = os.getenv("BIOFLOW_EMBED_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 COLLECTION = "bioflow_" + hashlib.sha256(MODEL_NAME.encode()).hexdigest()[:12]
 TOKEN = os.getenv("BIOFLOW_WORKER_TOKEN", "local-development-only")
-qdrant = QdrantClient(url=os.environ["QDRANT_URL"], api_key=os.getenv("QDRANT_API_KEY")) if os.getenv("QDRANT_URL") else QdrantClient(path=str(ROOT / "qdrant"))
+QDRANT_PATH = Path(os.getenv("BIOFLOW_QDRANT_PATH", str(ROOT / "qdrant"))).expanduser().resolve()
+qdrant = (
+    QdrantClient(url=os.environ["QDRANT_URL"], api_key=os.getenv("QDRANT_API_KEY"))
+    if os.getenv("QDRANT_URL")
+    else QdrantClient(path=str(QDRANT_PATH))
+)
 index_lock = threading.RLock()
 model = None
 model_error = None

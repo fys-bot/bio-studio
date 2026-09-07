@@ -24,7 +24,7 @@ export function ModuleContent({ children }: { children: ReactNode }) {
   return (
     <section
       ref={contentRef}
-      className={`module-content ${scrolled ? "is-scrolled" : ""}`}
+      className={`module-content ${pathname?.startsWith("/files") ? "module-content-files" : ""} ${scrolled ? "is-scrolled" : ""}`}
       onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 24)}
     >
       {children}

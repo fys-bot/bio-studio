@@ -1,7 +1,6 @@
 "use client";
 
-import { ChevronRight, Upload } from "lucide-react";
-import Link from "next/link";
+import { ChevronRight, Database, ExternalLink, Upload } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
   useCallback,
@@ -46,7 +45,7 @@ export function FileCatalog() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [browserWidth, setBrowserWidth] = useState(470);
+  const [browserWidth, setBrowserWidth] = useState(400);
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -128,13 +127,7 @@ export function FileCatalog() {
     <main className="catalog-page file-catalog-page">
       <div className="catalog-sticky">
         <header className="catalog-header">
-          <div>
-            <Link href="/projects/proj_a5211690a4/tasks/task_demo_rnaseq" className="back-link">
-              ← 返回工作台
-            </Link>
-            <span className="catalog-kicker">PROJECT FILES / 文件中心</span>
-            <h1>文件中心</h1>
-          </div>
+          <h1>文件中心</h1>
           <label className="primary upload-button">
             <Upload size={14} />
             上传文件
@@ -174,28 +167,43 @@ export function FileCatalog() {
                 </button>
               ))}
             </div>
-            <span className="catalog-meta-inline">{matchedFiles.length} 个文件 · 实时解析目录</span>
+            <div className="file-filter-aside">
+              <span className="catalog-meta-inline">
+                {matchedFiles.length} 个文件 · 实时解析目录
+              </span>
+              <details className="file-source-menu">
+                <summary>
+                  <Database size={13} />
+                  专业公开库
+                </summary>
+                <nav aria-label="专业生命科学资料来源">
+                  <a href="https://www.ncbi.nlm.nih.gov/geo/" target="_blank" rel="noreferrer">
+                    <span>
+                      <b>NCBI GEO</b>
+                      <small>转录组实验、Series 与补充文件</small>
+                    </span>
+                    <ExternalLink size={13} />
+                  </a>
+                  <a href="https://www.encodeproject.org/data/" target="_blank" rel="noreferrer">
+                    <span>
+                      <b>ENCODE</b>
+                      <small>功能基因组实验与分析产物</small>
+                    </span>
+                    <ExternalLink size={13} />
+                  </a>
+                  <a href="https://www.uniprot.org/" target="_blank" rel="noreferrer">
+                    <span>
+                      <b>UniProt</b>
+                      <small>蛋白序列、功能注释与参考蛋白组</small>
+                    </span>
+                    <ExternalLink size={13} />
+                  </a>
+                </nav>
+              </details>
+            </div>
           </div>
         </section>
       </div>
-
-      <details className="file-source-guide">
-        <summary>从专业公开库获取可验证资料</summary>
-        <nav aria-label="专业生命科学资料来源">
-          <a href="https://www.ncbi.nlm.nih.gov/geo/" target="_blank" rel="noreferrer">
-            <b>NCBI GEO</b>
-            <span>转录组实验、Series、样本与补充文件</span>
-          </a>
-          <a href="https://www.encodeproject.org/data/" target="_blank" rel="noreferrer">
-            <b>ENCODE</b>
-            <span>功能基因组实验、元数据与分析产物</span>
-          </a>
-          <a href="https://www.uniprot.org/" target="_blank" rel="noreferrer">
-            <b>UniProt</b>
-            <span>蛋白序列、功能注释与参考蛋白组</span>
-          </a>
-        </nav>
-      </details>
 
       {error && (
         <section className="catalog-state error">

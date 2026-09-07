@@ -86,6 +86,8 @@ function DocxPreview({ document }: { document: ResearchDocument }) {
 
   useEffect(() => {
     let cancelled = false;
+    let resizeObserver: ResizeObserver | undefined;
+    let resizeFrame = 0;
     const render = async () => {
       const container = containerRef.current;
       if (!container) return;
@@ -109,6 +111,26 @@ function DocxPreview({ document }: { document: ResearchDocument }) {
           renderHeaders: true,
           useBase64URL: true,
         });
+        const fitPages = () => {
+          window.cancelAnimationFrame(resizeFrame);
+          resizeFrame = window.requestAnimationFrame(() => {
+            const preview = container.closest<HTMLElement>(".document-docx-preview");
+            const page = container.querySelector<HTMLElement>(".docx-wrapper > section.docx");
+            if (!preview || !page) return;
+            const previewStyle = window.getComputedStyle(preview);
+            const horizontalPadding =
+              Number.parseFloat(previewStyle.paddingLeft) +
+              Number.parseFloat(previewStyle.paddingRight);
+            const availableWidth = Math.max(220, preview.clientWidth - horizontalPadding);
+            const naturalWidth = Math.max(page.scrollWidth, page.offsetWidth);
+            const scale = Math.min(1, Math.max(0.32, availableWidth / naturalWidth));
+            container.style.setProperty("--docx-fit", scale.toFixed(4));
+          });
+        };
+        fitPages();
+        resizeObserver = new ResizeObserver(fitPages);
+        const preview = container.closest<HTMLElement>(".document-docx-preview");
+        if (preview) resizeObserver.observe(preview);
       } catch (error) {
         if (!cancelled)
           setRenderError(error instanceof Error ? error.message : "DOCX 版式还原失败");
@@ -119,6 +141,8 @@ function DocxPreview({ document }: { document: ResearchDocument }) {
     void render();
     return () => {
       cancelled = true;
+      resizeObserver?.disconnect();
+      window.cancelAnimationFrame(resizeFrame);
     };
   }, [document.id]);
 

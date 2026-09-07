@@ -470,6 +470,15 @@ export default function Home() {
       notify(`已选择残基 ${selectedResidue}，证据与代码上下文已关联`);
     }
   }, [selectedResidue]);
+  useEffect(() => {
+    if (!planOpen) return;
+    const timer = window.setTimeout(() => {
+      document
+        .querySelector(".workflow-guide-target")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [planOpen]);
   const notify = (message: string) => setToast(message);
   const saveConfig = async () => {
     setConfigSaving(true);
@@ -1041,7 +1050,7 @@ ${task?.goal || config.goal}
               </button>
             )}
             <button className="secondary" onClick={() => setPlanOpen((current) => !current)}>
-              {planOpen ? "收起计划" : "分析计划"}
+              {planOpen ? "收起工作流" : "查看工作流"}
             </button>
             <button className="secondary" onClick={() => setMobilePanel(!mobilePanel)}>
               工具
@@ -1208,7 +1217,7 @@ ${task?.goal || config.goal}
             </div>
           </div>
         )}
-        <div className="workflow-guide-target">
+        <div className={`workflow-guide-target ${planOpen ? "workflow-open" : ""}`}>
           <WorkflowCanvas
             open={planOpen}
             nodes={task.nodes}

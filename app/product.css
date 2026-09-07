@@ -454,6 +454,46 @@
   }
 }
 
+/* 任务首页的垂直流程：计划审批、工作流、真实计算和对话各自占据独立区块。 */
+.workflow-guide-target {
+  order: 5;
+  flex: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: block;
+  clear: both;
+}
+
+.workflow-guide-target.workflow-open {
+  min-height: 446px;
+}
+
+.workflow-guide-target .canvas-wrap {
+  flex: none;
+  height: 430px;
+  min-height: 0;
+  margin: 0 auto 16px !important;
+}
+
+.real-analysis {
+  order: 6;
+}
+
+.conversation {
+  order: 7;
+}
+
+@media (max-width: 760px) {
+  .workflow-guide-target.workflow-open {
+    min-height: 376px;
+  }
+
+  .workflow-guide-target .canvas-wrap {
+    height: 360px;
+  }
+}
+
 /* 视口滚动边界：每个页面只保留一个主滚动容器，列表内部再按内容分区滚动。 */
 html {
   scrollbar-gutter: stable;

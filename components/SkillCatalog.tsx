@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
 import type { SkillRecord } from "@/lib/domain";
+import { CatalogSearch } from "./ui/CatalogSearch";
 import { SelectControl } from "./ui/SelectControl";
 
 const sources = ["全部来源", "BioFlow Lab", "Team", "Community", "Mine"];
@@ -29,11 +30,11 @@ function SkillFilters({
 }) {
   return (
     <section className="catalog-toolbar">
-      <input
+      <CatalogSearch
         value={query}
-        onChange={(event) => onQueryChange(event.target.value)}
+        onChange={onQueryChange}
         placeholder="搜索技能名称、用途或输入…"
-        aria-label="搜索技能"
+        ariaLabel="技能"
       />
       <div className="filter-row">
         {sources.map((item) => (

@@ -1,17 +1,34 @@
 import { isAuthorized } from "@/lib/auth";
-import { researchResponse } from "@/lib/research-service";
+import { researchJson, researchResponse, type ResearchDocument } from "@/lib/research-service";
 
-export async function GET(_request: Request, { params }: { params: { fileId: string } }) {
+const contentTypes: Record<string, string> = {
+  csv: "text/csv; charset=utf-8",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  jpeg: "image/jpeg",
+  jpg: "image/jpeg",
+  md: "text/markdown; charset=utf-8",
+  pdf: "application/pdf",
+  png: "image/png",
+  tsv: "text/tab-separated-values; charset=utf-8",
+  txt: "text/plain; charset=utf-8",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+};
+
+export async function GET(request: Request, { params }: { params: { fileId: string } }) {
   if (!isAuthorized()) return Response.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const response = await researchResponse(
-      `/documents/${encodeURIComponent(params.fileId)}/original`,
-    );
+    const [response, document] = await Promise.all([
+      researchResponse(`/documents/${encodeURIComponent(params.fileId)}/original`),
+      researchJson<ResearchDocument>(`/documents/${encodeURIComponent(params.fileId)}`),
+    ]);
+    const format = document.format.toLowerCase();
+    const download = new URL(request.url).searchParams.has("download");
+    const encodedName = encodeURIComponent(document.name);
     return new Response(response.body, {
       headers: {
-        "Content-Type": "application/octet-stream",
+        "Content-Type": contentTypes[format] || "application/octet-stream",
         "X-Content-Type-Options": "nosniff",
-        "Content-Disposition": response.headers.get("Content-Disposition") || "attachment",
+        "Content-Disposition": `${download ? "attachment" : "inline"}; filename*=UTF-8''${encodedName}`,
         "Cache-Control": "private, no-store",
       },
     });

@@ -8,7 +8,9 @@ type ContentLoadingProps = {
 export function ContentLoading({ label = "正在切换任务" }: ContentLoadingProps) {
   return (
     <div className="content-loading" role="status" aria-live="polite">
-      <div className="content-loading-orbit" aria-hidden="true">
+      <div className="content-loading-stream" aria-hidden="true">
+        <i />
+        <i />
         <i />
         <i />
         <i />

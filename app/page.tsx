@@ -80,6 +80,15 @@ const seedEvents: TimelineEvent[] = [
   },
 ];
 
+type WarmWorkspaceSnapshot = {
+  task: ResearchTask;
+  taskList: TaskListItem[];
+  dataProfiles: DataFileProfile[];
+};
+
+// 仅在当前 SPA 会话内保留最近工作区，硬刷新仍展示完整首载动画。
+let warmWorkspaceSnapshot: WarmWorkspaceSnapshot | null = null;
+
 const statusLabel: Record<string, string> = {
   draft: "草稿",
   succeeded: "已完成",
@@ -185,8 +194,8 @@ export default function Home() {
   const params = useParams<{ taskId?: string }>();
   const pathname = usePathname();
   const routeTaskId = params?.taskId || "task_demo_rnaseq";
-  const [authed, setAuthed] = useState(false);
-  const [task, setTask] = useState<ResearchTask | null>(null);
+  const [authed, setAuthed] = useState(() => Boolean(warmWorkspaceSnapshot));
+  const [task, setTask] = useState<ResearchTask | null>(() => warmWorkspaceSnapshot?.task ?? null);
   const [events, setEvents] = useState(seedEvents);
   const [liveLogs, setLiveLogs] = useState<string[]>([]);
   const [selected, setSelected] = useState("design");
@@ -242,8 +251,12 @@ export default function Home() {
   const [previewFileId, setPreviewFileId] = useState("");
   const [toast, setToast] = useState("");
   const [agentMode, setAgentMode] = useState<"标准模式" | "严谨模式" | "快速模式">("标准模式");
-  const [taskList, setTaskList] = useState<TaskListItem[]>([]);
-  const [dataProfiles, setDataProfiles] = useState<DataFileProfile[]>([]);
+  const [taskList, setTaskList] = useState<TaskListItem[]>(
+    () => warmWorkspaceSnapshot?.taskList ?? [],
+  );
+  const [dataProfiles, setDataProfiles] = useState<DataFileProfile[]>(
+    () => warmWorkspaceSnapshot?.dataProfiles ?? [],
+  );
   const [uploadingFileName, setUploadingFileName] = useState("");
   const [uploadError, setUploadError] = useState("");
   const [newTaskName, setNewTaskName] = useState("");
@@ -331,6 +344,10 @@ export default function Home() {
       setGuideOpen(true);
     }
   }, [authed, task]);
+  useEffect(() => {
+    if (!authed || !task) return;
+    warmWorkspaceSnapshot = { task, taskList, dataProfiles };
+  }, [authed, dataProfiles, task, taskList]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -1068,7 +1085,7 @@ ${task?.goal || config.goal}
       <main className="boot">
         {!skipBoot && <ParticleLoader onSkip={() => setSkipBoot(true)} />}
         <div className="boot-content">
-          <div className="boot-mark">⦿</div>
+          <div className="boot-mark">BIOFLOW / EVIDENCE WORKSPACE</div>
           {initializationError ? (
             <>
               <p>工作区连接失败</p>

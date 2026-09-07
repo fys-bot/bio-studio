@@ -1,6 +1,7 @@
 """Local research service: durable files, Qdrant retrieval and queued PyDESeq2 jobs."""
 import hashlib
 import json
+import mimetypes
 import math
 import os
 import re
@@ -278,7 +279,8 @@ def document(file_id: str):
 @app.get("/documents/{file_id}/original")
 def original(file_id: str):
     record = get("document", file_id)
-    return FileResponse(record["path"], filename=record["name"], media_type="application/octet-stream")
+    media_type = mimetypes.guess_type(record["name"])[0] or "application/octet-stream"
+    return FileResponse(record["path"], filename=record["name"], media_type=media_type)
 
 
 @app.post("/documents/{file_id}/reparse")

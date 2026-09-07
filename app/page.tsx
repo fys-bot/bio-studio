@@ -16,6 +16,7 @@ import { WorkspaceModal, type WorkspaceModalState } from "@/components/Workspace
 import { ProductGuide } from "@/components/ProductGuide";
 import { DocumentationDrawer } from "@/components/DocumentationDrawer";
 import { RealAnalysisPanel } from "@/components/RealAnalysisPanel";
+import { ContentLoading } from "@/components/ContentLoading";
 import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
 import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
 import type {
@@ -135,6 +136,7 @@ export default function Home() {
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [extraEdges, setExtraEdges] = useState<string[][]>([]);
   const [canvasPan, setCanvasPan] = useState({ x: 0, y: 0 });
+  const [canvasPanning, setCanvasPanning] = useState(false);
   const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>({});
   const [layoutReady, setLayoutReady] = useState(false);
   const [layoutSaveState, setLayoutSaveState] = useState<LayoutSaveState>("loading");
@@ -163,6 +165,8 @@ export default function Home() {
   const [skipBoot, setSkipBoot] = useState(false);
   const [bootAttempt, setBootAttempt] = useState(0);
   const [initializationError, setInitializationError] = useState("");
+  const [taskLoading, setTaskLoading] = useState(false);
+  const [taskLoadError, setTaskLoadError] = useState("");
   const [ragTrace, setRagTrace] = useState<RagTrace | null>(null);
   const guideInitializedRef = useRef(false);
   const uploadedFiles = useMemo(
@@ -184,7 +188,8 @@ export default function Home() {
   );
   useEffect(() => {
     setActiveTask(routeTaskId);
-    setTask(null);
+    setTaskLoading(true);
+    setTaskLoadError("");
     setConversationMessages([]);
     setNotes("");
     setAnswers({ format: "", comparison: "", organism: "", deliverable: "" });
@@ -241,6 +246,7 @@ export default function Home() {
     (async () => {
       try {
         setInitializationError("");
+        setTaskLoadError("");
         await bioflowApi.login();
         const [taskResponse, configResponse, layoutResponse, conversationResponse, notesResponse] =
           await Promise.all([
@@ -284,10 +290,13 @@ export default function Home() {
         setLayoutReady(true);
         setLayoutSaveState("saved");
         setAuthed(true);
+        setTaskLoading(false);
       } catch (error) {
         if (cancelled) return;
         const message = error instanceof Error ? error.message : "工作区初始化失败，请检查服务状态";
-        setInitializationError(message);
+        if (task) setTaskLoadError(message);
+        else setInitializationError(message);
+        setTaskLoading(false);
         setToast(getApiErrorMessage(error, "工作区初始化失败，请检查服务状态"));
       }
     })();
@@ -846,8 +855,13 @@ ${task?.goal || config.goal}
   };
   const clampZoom = (value: number) => Math.min(1.6, Math.max(0.55, value));
   const startCanvasPan = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest("button, a, input, textarea, select, .node")) {
+      return;
+    }
     event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setCanvasPanning(true);
     const start = { x: event.clientX, y: event.clientY },
       base = { ...canvasPan };
     const move = (e: PointerEvent) =>
@@ -856,6 +870,7 @@ ${task?.goal || config.goal}
         y: base.y + e.clientY - start.y,
       });
     const up = () => {
+      setCanvasPanning(false);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
     };
@@ -959,6 +974,7 @@ ${task?.goal || config.goal}
       </main>
     );
   }
+  const taskIsStale = task.id !== routeTaskId;
   return (
     <main
       className={`app-shell ${resizing ? "is-resizing" : ""}`}
@@ -1018,7 +1034,7 @@ ${task?.goal || config.goal}
         }
         onResizeStart={(event) => startResize("sidebar", event)}
       />
-      <section className="workspace">
+      <section className={`workspace ${taskLoading || taskIsStale ? "is-task-loading" : ""}`}>
         <header className="topbar">
           <div className="crumb">
             <span>快捷任务</span>
@@ -1076,6 +1092,17 @@ ${task?.goal || config.goal}
             </button>
           </div>
         </div>
+        {(taskLoading || taskIsStale) && (
+          <div className="content-loading-layer">
+            <ContentLoading label={taskLoadError ? "任务切换失败" : "正在切换任务"} />
+            {taskLoadError && (
+              <div className="content-loading-error">
+                <span>{taskLoadError}</span>
+                <button onClick={() => setBootAttempt((attempt) => attempt + 1)}>重试</button>
+              </div>
+            )}
+          </div>
+        )}
         <div className="dialogue-thread">
           <div className="user-message">
             <small>你 · 刚刚</small>
@@ -1228,6 +1255,7 @@ ${task?.goal || config.goal}
             connectingFrom={connectingFrom}
             canvasZoom={canvasZoom}
             canvasPan={canvasPan}
+            canvasPanning={canvasPanning}
             nodePositions={nodePositions}
             layoutRevision={layoutRevision}
             layoutVersionCount={layoutVersionCount}

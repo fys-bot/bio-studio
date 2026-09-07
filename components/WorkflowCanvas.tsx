@@ -25,6 +25,7 @@ type WorkflowCanvasProps = {
   connectingFrom: string | null;
   canvasZoom: number;
   canvasPan: WorkflowPosition;
+  canvasPanning: boolean;
   nodePositions: Record<string, WorkflowPosition>;
   layoutRevision: number;
   layoutVersionCount: number;
@@ -51,6 +52,7 @@ export function WorkflowCanvas({
   connectingFrom,
   canvasZoom,
   canvasPan,
+  canvasPanning,
   nodePositions,
   layoutRevision,
   layoutVersionCount,
@@ -110,7 +112,7 @@ export function WorkflowCanvas({
         </div>
       </div>
       <div
-        className="canvas canvas-viewport"
+        className={`canvas canvas-viewport ${canvasPanning ? "is-panning" : ""}`}
         onPointerDown={onCanvasPanStart}
         onWheel={onCanvasWheel}
       >

@@ -5862,3 +5862,125 @@ html {
     animation: none;
   }
 }
+
+/* 主流程对话化：运行轨迹与澄清属于智能体回复，不再作为页面外置面板。 */
+.dialogue-thread .agent-message {
+  width: min(94%, 980px);
+}
+
+.dialogue-thread .agent-message > div:last-child {
+  width: 100%;
+}
+
+.dialogue-thread .agent-message .run-stream-trace,
+.dialogue-thread .agent-message .clarification-card {
+  width: 100%;
+  max-width: none;
+  margin: 12px 0 0 !important;
+  box-shadow: none;
+}
+
+.dialogue-thread .agent-message .run-stream-trace {
+  border-color: #d6dfda;
+  background: #f8faf9;
+}
+
+.dialogue-thread .agent-message .run-trace-summary {
+  background: transparent;
+}
+
+.dialogue-thread .agent-message .clarification-card {
+  padding: 14px !important;
+  background: #fbfcf8;
+}
+
+.app-shell .goal-actions {
+  align-content: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.app-shell .goal-actions .primary {
+  margin-left: 0;
+}
+
+.app-shell .MuiButton-startIcon,
+.module-shell .MuiButton-startIcon {
+  margin-right: 5px;
+  margin-left: 0;
+}
+
+@media (min-width: 761px) and (max-width: 1200px) {
+  .app-shell .goal-actions .primary {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell .workspace {
+    padding-bottom: 92px;
+  }
+
+  .dialogue-thread {
+    padding: 12px 10px;
+  }
+
+  .dialogue-thread .agent-message {
+    width: 100%;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .dialogue-thread .agent-message > div:last-child {
+    padding: 10px;
+  }
+
+  .dialogue-thread .agent-message .run-stream-trace,
+  .dialogue-thread .agent-message .clarification-card {
+    margin-top: 10px !important;
+  }
+
+  .dialogue-thread .agent-message .clarification-card {
+    padding: 10px !important;
+  }
+
+  .dialogue-thread .agent-message .clarification-card .gate-head h2 {
+    font-size: 15px;
+  }
+
+  .dialogue-thread .agent-message .clarification-card .gate-head p {
+    display: none;
+  }
+
+  .app-shell .conversation {
+    padding-bottom: 72px;
+  }
+
+  .app-shell .conversation .composer {
+    position: fixed;
+    right: 10px;
+    bottom: 124px;
+    left: 10px;
+    z-index: 25;
+    width: auto;
+    min-height: 54px;
+    margin: 0;
+    padding: 8px 10px;
+    border-color: #bcc9c1;
+    background: color-mix(in srgb, #fff 96%, transparent);
+    box-shadow: 0 12px 32px #30483b2e;
+    backdrop-filter: blur(12px);
+  }
+
+  .app-shell .conversation .composer input {
+    font-size: 12px;
+  }
+
+  .app-shell .conversation .composer > button[type="submit"] {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex: none;
+    place-items: center;
+  }
+}

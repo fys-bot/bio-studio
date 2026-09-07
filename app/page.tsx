@@ -1413,60 +1413,57 @@ ${task?.goal || config.goal}
               <p>
                 可以。我会先检查项目文件，再确认数据格式、实验设计和交付要求，然后生成一份可审批的分析计划。
               </p>
-              <button className="trace-chip" onClick={() => setTraceOpen((current) => !current)}>
-                {traceOpen ? "收起运行过程" : "查看运行过程"}
-              </button>
+              <RunStreamTrace
+                events={streamEvents}
+                open={traceOpen}
+                streamStatus={streamStatus}
+                onToggle={() => setTraceOpen((current) => !current)}
+              />
+              {(task?.status === "clarifying" || task?.status === "draft") && (
+                <ClarificationCard
+                  answers={answers}
+                  activeQuestion={activeQuestion}
+                  submitting={submittingAnswers}
+                  onActiveQuestionChange={setActiveQuestion}
+                  onAnswer={(key, value, index) => {
+                    setAnswers((current) => ({ ...current, [key]: value }));
+                    if (index < clarificationQuestions.length - 1) {
+                      setTimeout(() => setActiveQuestion(index + 1), 180);
+                    }
+                  }}
+                  onSubmit={submitClarifications}
+                  onUseDemoData={() => {
+                    if (task.executionMode === "real") {
+                      void authorizedFetch(`/api/tasks/${activeTask}/analysis`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "samples" }),
+                      })
+                        .then(async (res) => {
+                          const body = await res.json();
+                          if (!res.ok) throw new Error(body.error);
+                          setTask((current) =>
+                            current?.id === activeTask
+                              ? { ...current, fileIds: body.task.fileIds }
+                              : current,
+                          );
+                        })
+                        .catch((error) => notify(error.message));
+                    }
+                    setAnswers({
+                      format: "Count 矩阵",
+                      comparison: "处理组 vs 对照组",
+                      organism: "人类",
+                      deliverable: "可发表结果",
+                    });
+                    setActiveQuestion(3);
+                    notify("已载入示例 RNA-seq 上下文，请检查后生成计划");
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>
-        <RunStreamTrace
-          events={streamEvents}
-          open={traceOpen}
-          streamStatus={streamStatus}
-          onToggle={() => setTraceOpen((current) => !current)}
-        />
-        {(task?.status === "clarifying" || task?.status === "draft") && (
-          <ClarificationCard
-            answers={answers}
-            activeQuestion={activeQuestion}
-            submitting={submittingAnswers}
-            onActiveQuestionChange={setActiveQuestion}
-            onAnswer={(key, value, index) => {
-              setAnswers((current) => ({ ...current, [key]: value }));
-              if (index < clarificationQuestions.length - 1) {
-                setTimeout(() => setActiveQuestion(index + 1), 180);
-              }
-            }}
-            onSubmit={submitClarifications}
-            onUseDemoData={() => {
-              if (task.executionMode === "real") {
-                void authorizedFetch(`/api/tasks/${activeTask}/analysis`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ action: "samples" }),
-                })
-                  .then(async (res) => {
-                    const body = await res.json();
-                    if (!res.ok) throw new Error(body.error);
-                    setTask((current) =>
-                      current?.id === activeTask
-                        ? { ...current, fileIds: body.task.fileIds }
-                        : current,
-                    );
-                  })
-                  .catch((error) => notify(error.message));
-              }
-              setAnswers({
-                format: "Count 矩阵",
-                comparison: "处理组 vs 对照组",
-                organism: "人类",
-                deliverable: "可发表结果",
-              });
-              setActiveQuestion(3);
-              notify("已载入示例 RNA-seq 上下文，请检查后生成计划");
-            }}
-          />
-        )}
         {task?.status === "awaiting_approval" && (
           <div className="gate-card approval">
             <div className="gate-head">

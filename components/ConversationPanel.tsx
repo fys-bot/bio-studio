@@ -1,5 +1,7 @@
 "use client";
 
+import AddRounded from "@mui/icons-material/AddRounded";
+import SendRounded from "@mui/icons-material/SendRounded";
 import type { ChangeEvent, FormEvent, KeyboardEvent } from "react";
 import type { ConversationMessage } from "@/lib/domain";
 
@@ -211,7 +213,7 @@ export function ConversationPanel({
           aria-label="添加项目文件"
           onClick={onAddFile}
         >
-          ＋
+          <AddRounded sx={{ fontSize: 19 }} />
         </button>
         <input
           value={messageText}
@@ -226,10 +228,10 @@ export function ConversationPanel({
           onClick={onAgentModeChange}
           aria-label="切换智能体模式"
         >
-          {agentMode}⌄
+          {agentMode}
         </button>
         <button type="submit" aria-label="发送">
-          ➤
+          <SendRounded sx={{ fontSize: 17 }} />
         </button>
       </form>
     </div>

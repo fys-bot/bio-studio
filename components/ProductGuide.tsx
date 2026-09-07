@@ -52,8 +52,7 @@ const guideSteps: GuideStep[] = [
     target: '[data-guide="workflow"]',
     eyebrow: "第 4 步 · 编辑工作流",
     title: "拖拽节点，保存你的分析布局",
-    description:
-      "打开分析计划后，可以拖动节点、缩放画布、平移视图，并保存布局版本，方便复盘和演示。",
+    description: "打开工作流后，可以拖动节点、缩放画布、平移视图，并保存布局版本，方便复盘和演示。",
     action: "查看工作流画布",
   },
   {

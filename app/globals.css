@@ -3091,7 +3091,7 @@ body {
   transform: scale(0.94);
 }
 .plan-collapsed + .conversation:before {
-  content: "分析计划已收起 · 点击上方“分析计划”查看可编辑画布";
+  content: "工作流已收起 · 点击上方“查看工作流”打开可编辑画布";
   display: block;
   grid-column: 1/-1;
   width: 100%;

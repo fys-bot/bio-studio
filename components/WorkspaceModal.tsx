@@ -232,7 +232,7 @@ export function WorkspaceModal({
               <span>⌘</span>
               <div>
                 <b>工作流布局</b>
-                <small>展开可编辑分析计划画布</small>
+                <small>展开可编辑工作流画布</small>
               </div>
               <em>应用</em>
             </button>

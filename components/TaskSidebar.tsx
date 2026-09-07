@@ -1,6 +1,6 @@
 "use client";
 
-import type { PointerEvent } from "react";
+import { useEffect, useMemo, useState, type PointerEvent } from "react";
 import type { DataFileProfile, TaskListItem } from "@/lib/domain";
 
 type SidebarTask = {
@@ -48,6 +48,8 @@ export function TaskSidebar({
   onOpenFile,
   onResizeStart,
 }: TaskSidebarProps) {
+  const [taskQuery, setTaskQuery] = useState("");
+  const [favoriteTaskIds, setFavoriteTaskIds] = useState<string[]>([]);
   const countMatrixProfile = dataProfiles.find((profile) => profile.fileName === "counts.csv");
   const metadataProfile = dataProfiles.find(
     (profile) => profile.fileName === "sample_metadata.tsv",
@@ -75,6 +77,46 @@ export function TaskSidebar({
           hasUnreadResult: false,
         },
       ];
+  const hasTaskSearch = taskCards.length > 8;
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("bioflow-favorite-tasks-v1");
+      if (stored) setFavoriteTaskIds(JSON.parse(stored) as string[]);
+    } catch {
+      setFavoriteTaskIds([]);
+    }
+  }, []);
+
+  const visibleTaskCards = useMemo(() => {
+    const normalizedQuery = taskQuery.trim().toLowerCase();
+    return taskCards
+      .map((card) =>
+        card.id === task.id ? { ...card, status: task.status, progress: task.progress } : card,
+      )
+      .filter((card) => {
+        if (!normalizedQuery) return true;
+        return `${card.title} ${statusLabels[card.status] || card.status}`
+          .toLowerCase()
+          .includes(normalizedQuery);
+      })
+      .sort((left, right) => {
+        const leftFavorite = favoriteTaskIds.includes(left.id) ? 1 : 0;
+        const rightFavorite = favoriteTaskIds.includes(right.id) ? 1 : 0;
+        if (leftFavorite !== rightFavorite) return rightFavorite - leftFavorite;
+        return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+      });
+  }, [favoriteTaskIds, statusLabels, task, taskCards, taskQuery]);
+
+  const toggleFavorite = (taskId: string) => {
+    setFavoriteTaskIds((current) => {
+      const next = current.includes(taskId)
+        ? current.filter((id) => id !== taskId)
+        : [taskId, ...current];
+      window.localStorage.setItem("bioflow-favorite-tasks-v1", JSON.stringify(next));
+      return next;
+    });
+  };
 
   return (
     <aside className="task-sidebar">
@@ -91,39 +133,72 @@ export function TaskSidebar({
         </span>
         <button onClick={onCreateTask}>＋ 新建任务</button>
       </div>
-      <div className="task-list" aria-label="任务列表">
-        {taskCards
-          .map((card) =>
-            card.id === task.id ? { ...card, status: task.status, progress: task.progress } : card,
-          )
-          .map((taskCard, taskIndex) => (
-            <button
-              key={taskCard.id}
-              className={`task-item task-button ${activeTaskId === taskCard.id ? "selected" : ""}`}
-              onClick={() =>
-                onSelectTask(
-                  taskCard.id,
-                  taskCard.title,
-                  taskCard.id === "task_literature"
-                    ? "evidence"
-                    : taskCard.id === "task_structure"
-                      ? "structure"
-                      : undefined,
-                )
-              }
-            >
-              <i
-                className={`dot ${taskIndex === 0 ? "yellow" : taskCard.status === "succeeded" ? "blue" : "gray"}`}
-              />
-              <div>
-                <b>{taskCard.title}</b>
-                <small>
-                  {statusLabels[taskCard.status] || taskCard.status} · {taskCard.progress}%
-                  {taskCard.hasUnreadResult ? " · 新结果" : ""}
-                </small>
-              </div>
+      {hasTaskSearch && (
+        <label className="task-search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            value={taskQuery}
+            onChange={(event) => setTaskQuery(event.target.value)}
+            placeholder="搜索任务名称或状态"
+            aria-label="搜索任务名称或状态"
+          />
+          {taskQuery && (
+            <button type="button" onClick={() => setTaskQuery("")} aria-label="清除任务搜索">
+              ×
             </button>
-          ))}
+          )}
+        </label>
+      )}
+      <div className="task-list" aria-label="任务列表">
+        {visibleTaskCards.length ? (
+          visibleTaskCards.map((taskCard) => {
+            const favorite = favoriteTaskIds.includes(taskCard.id);
+            return (
+              <div
+                key={taskCard.id}
+                className={`task-item-row ${activeTaskId === taskCard.id ? "selected" : ""} ${favorite ? "is-favorite" : ""}`}
+              >
+                <button
+                  className="task-item task-button"
+                  onClick={() =>
+                    onSelectTask(
+                      taskCard.id,
+                      taskCard.title,
+                      taskCard.id === "task_literature"
+                        ? "evidence"
+                        : taskCard.id === "task_structure"
+                          ? "structure"
+                          : undefined,
+                    )
+                  }
+                >
+                  <i
+                    className={`dot ${activeTaskId === taskCard.id ? "yellow" : taskCard.status === "succeeded" ? "blue" : "gray"}`}
+                  />
+                  <div>
+                    <b>{taskCard.title}</b>
+                    <small>
+                      {statusLabels[taskCard.status] || taskCard.status} · {taskCard.progress}%
+                      {taskCard.hasUnreadResult ? " · 新结果" : ""}
+                    </small>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  className="task-favorite"
+                  aria-label={favorite ? `取消收藏${taskCard.title}` : `收藏${taskCard.title}`}
+                  aria-pressed={favorite}
+                  title={favorite ? "取消收藏" : "收藏任务"}
+                  onClick={() => toggleFavorite(taskCard.id)}
+                >
+                  {favorite ? "★" : "☆"}
+                </button>
+              </div>
+            );
+          })
+        ) : (
+          <div className="task-empty">没有匹配的任务</div>
+        )}
       </div>
       <div className="side-divider" />
       <div className="side-title">

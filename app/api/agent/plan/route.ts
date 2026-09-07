@@ -43,7 +43,7 @@ export async function POST(request: Request) {
             evidence: body.evidence || [],
           }),
         },
-        120_000,
+        190_000,
       );
     } catch (workerError) {
       attempts.push({

@@ -401,6 +401,33 @@ export function createTaskRecord(
   return task;
 }
 
+/** 删除任务及其会话、布局和运行状态；默认演示任务始终保留为安全回退。 */
+export function deleteTaskRecord(taskId: string) {
+  const runtimeState = state();
+  if (taskId === "task_demo_rnaseq")
+    return { deleted: false, reason: "默认 RNA-seq 演示任务不可删除" };
+  if (!runtimeState.taskList.some((task) => task.id === taskId))
+    return { deleted: false, reason: "任务不存在" };
+  runtimeState.taskList = runtimeState.taskList.filter((task) => task.id !== taskId);
+  delete runtimeState.taskRecords?.[taskId];
+  delete runtimeState.conversations?.[taskId];
+  delete runtimeState.notesByTaskId?.[taskId];
+  delete runtimeState.workflowLayouts?.[taskId];
+  const runIds = Object.entries(runtimeState.runTaskIds ?? {})
+    .filter(([, linkedTaskId]) => linkedTaskId === taskId)
+    .map(([runId]) => runId);
+  runtimeState.cancelledRuns ??= {};
+  runtimeState.runningRunIds ??= {};
+  for (const runId of runIds) {
+    runtimeState.cancelledRuns[runId] = true;
+    runtimeState.runningRunIds[runId] = false;
+    delete runtimeState.runTaskIds?.[runId];
+  }
+  runtimeState.events = runtimeState.events.filter((event) => !runIds.includes(event.runId));
+  persist(runtimeState);
+  return { deleted: true };
+}
+
 export function attachTaskFiles(taskId: string, fileIds: string[]) {
   const task = taskReference(taskId);
   if (!task) return undefined;
@@ -450,7 +477,7 @@ export function syncAnalysisJob(taskId: string, status: string) {
 }
 
 export function conversationSnapshot(taskId: string) {
-  taskReference(taskId);
+  if (!taskReference(taskId)) return undefined;
   return structuredClone(state().conversations?.[taskId] ?? []);
 }
 
@@ -464,7 +491,7 @@ export function saveConversation(taskId: string, messages: ConversationMessage[]
 }
 
 export function notesSnapshot(taskId: string) {
-  taskReference(taskId);
+  if (!taskReference(taskId)) return undefined;
   return state().notesByTaskId?.[taskId] ?? "";
 }
 
@@ -512,11 +539,13 @@ function ensureWorkflowLayout(runtimeState: BioFlowRuntimeState, taskId = runtim
 }
 
 export function workflowLayoutSnapshot(taskId?: string) {
+  if (taskId && !taskReference(taskId)) return undefined;
   const runtimeState = state();
   return structuredClone(ensureWorkflowLayout(runtimeState, taskId));
 }
 
 export function saveWorkflowLayout(input: WorkflowLayoutInput, taskId?: string) {
+  if (taskId && !taskReference(taskId)) return undefined;
   const runtimeState = state();
   const workflowLayout = ensureWorkflowLayout(runtimeState, taskId);
   workflowLayout.current = normalizeWorkflowLayout(input, workflowLayout.current);
@@ -529,6 +558,7 @@ export function createWorkflowLayoutVersion(
   input: WorkflowLayoutInput,
   taskId?: string,
 ) {
+  if (taskId && !taskReference(taskId)) return undefined;
   const runtimeState = state();
   const workflowLayout = ensureWorkflowLayout(runtimeState, taskId);
   workflowLayout.current = normalizeWorkflowLayout(input, workflowLayout.current);

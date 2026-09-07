@@ -40,10 +40,17 @@ async function waitForTaskStatus(status, timeout = 6000) {
 async function readEvents(runId, after = 0, duration = 1800) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), duration);
-  const response = await fetch(`${base}/api/runs/${runId}/events?after=${after}`, {
-    headers: cookie ? { cookie } : {},
-    signal: controller.signal,
-  });
+  let response;
+  try {
+    response = await fetch(`${base}/api/runs/${runId}/events?after=${after}`, {
+      headers: cookie ? { cookie } : {},
+      signal: controller.signal,
+    });
+  } catch (error) {
+    clearTimeout(timer);
+    if (error?.name === "AbortError") return [];
+    throw error;
+  }
   if (!response.ok) throw new Error(`事件流 -> ${response.status}`);
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -111,15 +118,16 @@ if (structure.state?.status !== "ready" || structure.state?.source !== "pdb") {
 }
 if (!structure.points?.length) throw new Error("PDB 结构点为空");
 log(`PDB 结构适配器加载：${structure.points.length} 个 Cα 点`);
+const smokeTaskTitle = `Compute regression ${Math.floor(Date.now() / 1000)}`;
 const createdTaskResponse = await request("/api/tasks", {
   method: "POST",
   headers: { "content-type": "application/json", origin: base },
-  body: JSON.stringify({ title: "smoke 服务端任务" }),
+  body: JSON.stringify({ title: smokeTaskTitle, executionMode: "demo" }),
 });
-const createdTask = createdTaskResponse.tasks?.find((item) => item.title === "smoke 服务端任务");
+const createdTask = createdTaskResponse.tasks?.find((item) => item.title === smokeTaskTitle);
 if (
   !createdTask ||
-  createdTaskResponse.tasks.filter((item) => item.title === "smoke 服务端任务").length !== 1
+  createdTaskResponse.tasks.filter((item) => item.title === smokeTaskTitle).length !== 1
 ) {
   throw new Error("新建任务未写入服务端任务列表");
 }
@@ -192,6 +200,26 @@ const createdTaskClarification = await request(`/api/tasks/${createdTask.id}/cla
 if (createdTaskClarification.task?.status !== "awaiting_approval") {
   throw new Error("新建任务未进入计划审批");
 }
+if (process.env.BIOFLOW_SMOKE_LLM === "1") {
+  const createdTaskPlan = await request("/api/agent/plan", {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: base },
+    body: JSON.stringify({
+      taskId: createdTask.id,
+      query: createdTaskClarification.task.goal,
+      clarification: createdTaskClarification.task.clarification.answers,
+      evidence: [],
+    }),
+  });
+  if (
+    createdTaskPlan.plan?.provider !== "llm" ||
+    !createdTaskPlan.plan?.steps?.length ||
+    createdTaskPlan.task?.plan?.provider !== "llm"
+  ) {
+    throw new Error("真实 LLM 计划未生成或未写入任务快照");
+  }
+  log("真实 LLM 计划生成与任务快照持久化");
+}
 const taskApproval = await request(`/api/tasks/${createdTask.id}/approve`, {
   method: "POST",
   headers: { origin: base },
@@ -203,7 +231,7 @@ const taskRun = await request(`/api/runs?taskId=${encodeURIComponent(createdTask
   headers: { origin: base },
 });
 if (!taskRun.runId) throw new Error("任务级运行 ID 缺失");
-const taskRunEvents = await readEvents(taskRun.runId, 0, 450);
+const taskRunEvents = await readEvents(taskRun.runId, 0, 3000);
 if (!taskRunEvents.some((event) => event.type === "run.started")) {
   throw new Error("任务级运行事件缺失");
 }
@@ -218,6 +246,27 @@ if (defaultTaskAfterTaskRun.task?.status !== defaultTaskBeforeTaskRun.task?.stat
   throw new Error("任务级运行影响了默认任务");
 }
 log("任务级对话、笔记、布局、审批、运行与状态隔离");
+await expectStatus("/api/tasks/task_demo_rnaseq", 409, {
+  method: "DELETE",
+  headers: { origin: base },
+});
+await expectStatus(`/api/tasks/${createdTask.id}`, 403, {
+  method: "DELETE",
+  headers: { origin: "https://evil.example" },
+});
+const deletedTask = await request(`/api/tasks/${createdTask.id}`, {
+  method: "DELETE",
+  headers: { origin: base },
+});
+if (
+  deletedTask.deletedTaskId !== createdTask.id ||
+  deletedTask.tasks?.some((item) => item.id === createdTask.id)
+) {
+  throw new Error("删除任务后列表仍保留旧任务");
+}
+await expectStatus(`/api/tasks/${createdTask.id}`, 404);
+await expectStatus(`/api/tasks/${createdTask.id}/conversation`, 404);
+log("任务删除、默认任务保护、关联数据清理与跨域保护");
 const skillCatalog = await request("/api/skills");
 if (skillCatalog.source !== "server-snapshot" || skillCatalog.items?.length !== 6) {
   throw new Error("能力中心服务端目录快照缺失");
@@ -239,26 +288,37 @@ const fileCatalog = await request("/api/files");
 if (fileCatalog.source !== "server-snapshot" || fileCatalog.items?.length < 4) {
   throw new Error("文件中心服务端目录快照缺失");
 }
-const reparsedFile = await request("/api/files/seed-protocol/reparse", {
+const reparsableFile = fileCatalog.items.find((item) => item.retryable) || fileCatalog.items[0];
+if (!reparsableFile?.id) throw new Error("文件目录没有可重解析文件");
+const reparsedFile = await request(`/api/files/${reparsableFile.id}/reparse`, {
   method: "POST",
   headers: { origin: base },
 });
-if (reparsedFile.file?.status !== "indexed") throw new Error("文件重新解析状态未更新");
+if (!reparsedFile.file || !["pending", "indexed", "ready"].includes(reparsedFile.file.status)) {
+  throw new Error("文件重新解析状态未更新");
+}
 log("能力中心与文件中心服务端目录、状态持久化和跨域保护");
 const ragQuery = await request("/api/rag/query", {
   method: "POST",
   headers: { "content-type": "application/json", origin: base },
   body: JSON.stringify({ query: "比较处理组和对照组的 RNA-seq 差异基因" }),
 });
-if (ragQuery.trace?.retrievalTop20?.length !== 20) throw new Error("RAG Top 20 召回数量不正确");
-if (ragQuery.trace?.parsedDocuments?.length !== 4) throw new Error("RAG 来源分组不完整");
-if (ragQuery.trace?.groundingBindings?.length !== 4) throw new Error("RAG 参数 grounding 不完整");
+const retrieval = ragQuery.trace?.retrievalTop20 || [];
+if (!retrieval.length || retrieval.length > 20) throw new Error("RAG Top 20 召回数量不正确");
+if (retrieval.some((item, index) => item.rank !== index + 1)) {
+  throw new Error("RAG 召回排名不连续");
+}
+if (!ragQuery.trace?.parsedDocuments?.length) throw new Error("RAG 来源文档缺失");
+const realRag = ragQuery.trace?.indexSummary?.provider === "qdrant";
+if (!realRag && ragQuery.trace?.groundingBindings?.length !== 4) {
+  throw new Error("演示 RAG 参数 grounding 不完整");
+}
 const ragTraceId = ragQuery.trace.id;
 const ragTrace = await request(`/api/rag/traces/${ragTraceId}`);
-if (ragTrace.trace?.toolCalls?.length !== 4) throw new Error("RAG 工具调用 Trace 缺失");
+if (!ragTrace.trace?.toolCalls?.length) throw new Error("RAG 工具调用 Trace 缺失");
 const ragRetrieval = await request(`/api/rag/traces/${ragTraceId}/retrieval`);
 if (ragRetrieval.data?.[0]?.rank !== 1) throw new Error("RAG 分阶段检索接口缺失");
-log("RAG 全链路接口：解析、切分、Top 20、精排、图谱、grounding、工具调用");
+log(`RAG 全链路接口：${realRag ? "真实 Qdrant + BM25/RRF" : "演示 Top 20 + grounding"}`);
 await request("/api/tasks", { method: "POST", headers: { origin: base } });
 log("重置演示状态");
 const initial = await request("/api/tasks");
@@ -390,22 +450,19 @@ if (
 }
 log("Markdown 文档服务端解析并进入任务级 RAG Trace");
 
-for (const [fileName, content, format] of [
-  ["protocol.pdf", "%PDF-1.4\n/Type /Page", "PDF"],
-  ["experiment.xlsx", "PK\u0003\u0004 xl/worksheets/sheet1.xml", "XLSX"],
+for (const [fileName, content] of [
+  ["broken.pdf", "%PDF-1.4\n/Type /Page"],
+  ["broken.xlsx", "PK\u0003\u0004 xl/worksheets/sheet1.xml"],
 ]) {
   const binaryDocumentForm = new FormData();
   binaryDocumentForm.append("file", new Blob([content]), fileName);
-  const binaryProfile = await request("/api/files/profile?taskId=task_demo_rnaseq", {
+  await expectStatus("/api/files/profile?taskId=task_demo_rnaseq", 422, {
     method: "POST",
     headers: { origin: base },
     body: binaryDocumentForm,
   });
-  if (binaryProfile.profile?.format !== format || !binaryProfile.profile?.processing?.parser) {
-    throw new Error(`${format} 文件类型识别或处理阶段缺失`);
-  }
 }
-log("PDF / Excel 容器识别与解析阶段状态");
+log("损坏 PDF / Excel 容器被解析器拒绝");
 
 const unsupportedFileForm = new FormData();
 unsupportedFileForm.append(

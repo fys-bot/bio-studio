@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
 import type { SkillRecord } from "@/lib/domain";
+import { SelectControl } from "./ui/SelectControl";
 
 const sources = ["全部来源", "BioFlow Lab", "Team", "Community", "Mine"];
+const pageSize = 6;
 
 function SkillFilters({
   query,
@@ -43,7 +45,7 @@ function SkillFilters({
             {item}
           </button>
         ))}
-        <select
+        <SelectControl
           value={category}
           onChange={(event) => onCategoryChange(event.target.value)}
           aria-label="技能分类"
@@ -51,7 +53,7 @@ function SkillFilters({
           {categories.map((item) => (
             <option key={item}>{item}</option>
           ))}
-        </select>
+        </SelectControl>
       </div>
     </section>
   );
@@ -236,12 +238,12 @@ export function SkillCatalog() {
           ))}
         </section>
       )}
-      {total > 12 && (
+      {total > pageSize && (
         <nav className="catalog-pagination" aria-label="能力目录分页">
           <button disabled={page === 1} onClick={() => setPage(page - 1)}>
             上一页
           </button>
-          {Array.from({ length: Math.ceil(total / 12) }, (_, index) => index + 1).map(
+          {Array.from({ length: Math.ceil(total / pageSize) }, (_, index) => index + 1).map(
             (pageNumber) => (
               <button
                 className={page === pageNumber ? "current" : ""}
@@ -253,7 +255,7 @@ export function SkillCatalog() {
               </button>
             ),
           )}
-          <button disabled={page * 12 >= total} onClick={() => setPage(page + 1)}>
+          <button disabled={page * pageSize >= total} onClick={() => setPage(page + 1)}>
             下一页
           </button>
         </nav>

@@ -1,6 +1,7 @@
 "use client";
 
 import { DemoConfig } from "@/lib/demo-config";
+import { SelectControl } from "./ui/SelectControl";
 
 type Props = {
   config: DemoConfig;
@@ -64,13 +65,13 @@ export function ConfigPanel({ config, onChange, onSave, onClose, saving = false 
           </label>
           <label>
             失败节点
-            <select
+            <SelectControl
               value={config.failAt}
               onChange={(event) => update("failAt", event.target.value as DemoConfig["failAt"])}
             >
               <option value="design">设计矩阵（演示恢复）</option>
               <option value="none">不失败（演示成功链路）</option>
-            </select>
+            </SelectControl>
           </label>
           <label>
             运行等待（毫秒）

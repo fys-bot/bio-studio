@@ -1,7 +1,9 @@
 "use client";
 
+import { Search, Star, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState, type PointerEvent } from "react";
 import type { DataFileProfile, TaskListItem } from "@/lib/domain";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 
 type SidebarTask = {
   executionMode?: "real" | "demo";
@@ -25,6 +27,7 @@ type TaskSidebarProps = {
   onOpenProjectPicker: () => void;
   onCreateTask: () => void;
   onSelectTask: (taskId: string, taskLabel: string, panel?: SidebarPanel) => void;
+  onDeleteTask: (taskId: string, taskLabel: string) => Promise<void>;
   onUploadFile: () => void;
   onOpenFile: (fileName: string, detail: string, fileId?: string) => void;
   onResizeStart: (event: PointerEvent<HTMLDivElement>) => void;
@@ -44,12 +47,16 @@ export function TaskSidebar({
   onOpenProjectPicker,
   onCreateTask,
   onSelectTask,
+  onDeleteTask,
   onUploadFile,
   onOpenFile,
   onResizeStart,
 }: TaskSidebarProps) {
   const [taskQuery, setTaskQuery] = useState("");
   const [favoriteTaskIds, setFavoriteTaskIds] = useState<string[]>([]);
+  const [pendingDelete, setPendingDelete] = useState<TaskListItem | null>(null);
+  const [deletingTaskId, setDeletingTaskId] = useState("");
+  const [deleteError, setDeleteError] = useState("");
   const countMatrixProfile = dataProfiles.find((profile) => profile.fileName === "counts.csv");
   const metadataProfile = dataProfiles.find(
     (profile) => profile.fileName === "sample_metadata.tsv",
@@ -117,6 +124,18 @@ export function TaskSidebar({
       return next;
     });
   };
+  const taskGroups = taskQuery.trim()
+    ? [{ label: `搜索结果 ${visibleTaskCards.length}`, items: visibleTaskCards }]
+    : [
+        {
+          label: "收藏",
+          items: visibleTaskCards.filter((card) => favoriteTaskIds.includes(card.id)),
+        },
+        {
+          label: favoriteTaskIds.length ? "其他任务" : "全部任务",
+          items: visibleTaskCards.filter((card) => !favoriteTaskIds.includes(card.id)),
+        },
+      ].filter((group) => group.items.length);
 
   return (
     <aside className="task-sidebar">
@@ -135,7 +154,7 @@ export function TaskSidebar({
       </div>
       {hasTaskSearch && (
         <label className="task-search">
-          <span aria-hidden="true">⌕</span>
+          <Search size={14} aria-hidden="true" />
           <input
             value={taskQuery}
             onChange={(event) => setTaskQuery(event.target.value)}
@@ -144,58 +163,83 @@ export function TaskSidebar({
           />
           {taskQuery && (
             <button type="button" onClick={() => setTaskQuery("")} aria-label="清除任务搜索">
-              ×
+              <X size={14} />
             </button>
           )}
         </label>
       )}
       <div className="task-list" aria-label="任务列表">
         {visibleTaskCards.length ? (
-          visibleTaskCards.map((taskCard) => {
-            const favorite = favoriteTaskIds.includes(taskCard.id);
-            return (
-              <div
-                key={taskCard.id}
-                className={`task-item-row ${activeTaskId === taskCard.id ? "selected" : ""} ${favorite ? "is-favorite" : ""}`}
-              >
-                <button
-                  className="task-item task-button"
-                  onClick={() =>
-                    onSelectTask(
-                      taskCard.id,
-                      taskCard.title,
-                      taskCard.id === "task_literature"
-                        ? "evidence"
-                        : taskCard.id === "task_structure"
-                          ? "structure"
-                          : undefined,
-                    )
-                  }
-                >
-                  <i
-                    className={`dot ${activeTaskId === taskCard.id ? "yellow" : taskCard.status === "succeeded" ? "blue" : "gray"}`}
-                  />
-                  <div>
-                    <b>{taskCard.title}</b>
-                    <small>
-                      {statusLabels[taskCard.status] || taskCard.status} · {taskCard.progress}%
-                      {taskCard.hasUnreadResult ? " · 新结果" : ""}
-                    </small>
+          taskGroups.map((group) => (
+            <section className="task-group" key={group.label} aria-label={group.label}>
+              <small className="task-group-label">{group.label}</small>
+              {group.items.map((taskCard) => {
+                const favorite = favoriteTaskIds.includes(taskCard.id);
+                const protectedTask = taskCard.id === "task_demo_rnaseq";
+                return (
+                  <div
+                    key={taskCard.id}
+                    className={`task-item-row ${activeTaskId === taskCard.id ? "selected" : ""} ${favorite ? "is-favorite" : ""} ${protectedTask ? "is-protected" : "has-delete"}`}
+                  >
+                    <button
+                      className="task-item task-button"
+                      title={taskCard.title}
+                      onClick={() =>
+                        onSelectTask(
+                          taskCard.id,
+                          taskCard.title,
+                          taskCard.id === "task_literature"
+                            ? "evidence"
+                            : taskCard.id === "task_structure"
+                              ? "structure"
+                              : undefined,
+                        )
+                      }
+                    >
+                      <i
+                        className={`dot ${activeTaskId === taskCard.id ? "yellow" : taskCard.status === "succeeded" ? "blue" : "gray"}`}
+                      />
+                      <div>
+                        <b>{taskCard.title}</b>
+                        <small>
+                          {statusLabels[taskCard.status] || taskCard.status} · {taskCard.progress}%
+                          {taskCard.hasUnreadResult ? " · 新结果" : ""}
+                        </small>
+                      </div>
+                    </button>
+                    <div className="task-row-actions">
+                      <button
+                        type="button"
+                        className="task-favorite"
+                        aria-label={
+                          favorite ? `取消收藏${taskCard.title}` : `收藏${taskCard.title}`
+                        }
+                        aria-pressed={favorite}
+                        title={favorite ? "取消收藏" : "收藏任务"}
+                        onClick={() => toggleFavorite(taskCard.id)}
+                      >
+                        <Star size={14} fill={favorite ? "currentColor" : "none"} />
+                      </button>
+                      {!protectedTask && (
+                        <button
+                          type="button"
+                          className="task-delete"
+                          aria-label={`删除${taskCard.title}`}
+                          title="删除任务"
+                          onClick={() => {
+                            setDeleteError("");
+                            setPendingDelete(taskCard);
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </button>
-                <button
-                  type="button"
-                  className="task-favorite"
-                  aria-label={favorite ? `取消收藏${taskCard.title}` : `收藏${taskCard.title}`}
-                  aria-pressed={favorite}
-                  title={favorite ? "取消收藏" : "收藏任务"}
-                  onClick={() => toggleFavorite(taskCard.id)}
-                >
-                  {favorite ? "★" : "☆"}
-                </button>
-              </div>
-            );
-          })
+                );
+              })}
+            </section>
+          ))
         ) : (
           <div className="task-empty">没有匹配的任务</div>
         )}
@@ -273,6 +317,29 @@ export function TaskSidebar({
         className="vertical-splitter left"
         onPointerDown={onResizeStart}
         title="拖拽调整任务栏宽度"
+      />
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={`删除任务“${pendingDelete?.title || ""}”？`}
+        description="任务的对话、笔记、工作流布局和运行记录会一起删除，删除后无法恢复。"
+        busy={Boolean(deletingTaskId)}
+        error={deleteError}
+        onClose={() => {
+          setDeleteError("");
+          setPendingDelete(null);
+        }}
+        onConfirm={() => {
+          if (!pendingDelete || deletingTaskId) return;
+          const taskToDelete = pendingDelete;
+          setDeleteError("");
+          setDeletingTaskId(pendingDelete.id);
+          void onDeleteTask(taskToDelete.id, taskToDelete.title)
+            .then(() => setPendingDelete(null))
+            .catch((error) =>
+              setDeleteError(error instanceof Error ? error.message : "删除失败，请稍后重试"),
+            )
+            .finally(() => setDeletingTaskId(""));
+        }}
       />
     </aside>
   );

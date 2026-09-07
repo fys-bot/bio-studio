@@ -5,7 +5,9 @@ import type { ConversationMessage } from "@/lib/domain";
 
 export async function GET(_request: Request, { params }: { params: { taskId: string } }) {
   if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  return NextResponse.json({ messages: conversationSnapshot(params.taskId) });
+  const messages = conversationSnapshot(params.taskId);
+  if (!messages) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  return NextResponse.json({ messages });
 }
 
 export async function PUT(request: Request, { params }: { params: { taskId: string } }) {

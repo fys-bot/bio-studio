@@ -148,7 +148,8 @@ export function createRagTrace(
         retrievalMethod: "vector" as const,
         reason: "向量召回候选",
       })),
-    );
+    )
+    .slice(0, 20);
 
   const rerankedResults: RagRerankResult[] = retrievalTop20.map((item, index) => ({
     ...item,

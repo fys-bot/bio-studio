@@ -15,13 +15,16 @@ export function ParticleLoader({ onSkip }: ParticleLoaderProps) {
     let animation = 0;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const particleCount = reducedMotion
-      ? 260
-      : Math.round(Math.min(1200, Math.max(260, window.innerWidth * 0.75)));
+      ? 220
+      : Math.round(Math.min(1350, Math.max(420, window.innerWidth * 0.92)));
     const particles = Array.from({ length: particleCount }, (_, index) => ({
       angle: (index / particleCount) * Math.PI * 2,
-      radius: 100 + Math.random() * 180,
-      speed: 0.0007 + Math.random() * 0.0012,
+      radius: 92 + Math.random() * 205,
+      speed: 0.0008 + Math.random() * 0.0015,
       phase: Math.random() * Math.PI * 2,
+      depth: 0.34 + Math.random() * 0.22,
+      size: 0.9 + Math.random() * 1.9,
+      highlighted: index % 9 === 0,
     }));
 
     const resize = () => {
@@ -42,21 +45,35 @@ export function ParticleLoader({ onSkip }: ParticleLoaderProps) {
       const centerY = height * 0.42;
       const scale = Math.min(width, height) / 720;
       context.clearRect(0, 0, width, height);
-      const glow = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, 260 * scale);
-      glow.addColorStop(0, "rgba(18, 148, 108, .14)");
-      glow.addColorStop(1, "rgba(4, 12, 10, 0)");
-      context.fillStyle = glow;
-      context.fillRect(0, 0, width, height);
+      context.strokeStyle = "rgba(55, 94, 75, .22)";
+      context.lineWidth = 1.15;
+      for (const radius of [108, 172, 242]) {
+        context.beginPath();
+        context.ellipse(centerX, centerY, radius * scale, radius * scale * 0.43, 0, 0, 7);
+        context.stroke();
+      }
 
       particles.forEach((particle) => {
         const angle = particle.angle + time * particle.speed;
-        const wave = Math.sin(time * 0.001 + particle.phase) * 14 * scale;
+        const wave = Math.sin(time * 0.0014 + particle.phase) * 18 * scale;
         const particleX = centerX + Math.cos(angle) * (particle.radius * scale + wave);
-        const particleY = centerY + Math.sin(angle) * (particle.radius * scale) * 0.42;
-        const alpha = 0.28 + ((Math.sin(angle * 3 + time * 0.002) + 1) / 2) * 0.68;
-        context.fillStyle = `rgba(66, 236, 183, ${alpha})`;
-        context.fillRect(particleX, particleY, 1.5 * scale, 1.5 * scale);
+        const particleY = centerY + Math.sin(angle) * (particle.radius * scale) * particle.depth;
+        const alpha = 0.38 + ((Math.sin(angle * 3 + time * 0.0024) + 1) / 2) * 0.5;
+        const size = Math.max(1.25, particle.size * scale);
+        context.fillStyle = particle.highlighted
+          ? `rgba(126, 151, 6, ${Math.min(0.98, alpha + 0.08)})`
+          : `rgba(36, 91, 67, ${alpha})`;
+        context.beginPath();
+        context.arc(particleX, particleY, size, 0, Math.PI * 2);
+        context.fill();
       });
+
+      const pulse = reducedMotion ? 0 : (Math.sin(time * 0.003) + 1) / 2;
+      context.strokeStyle = `rgba(127, 151, 10, ${0.46 + pulse * 0.28})`;
+      context.lineWidth = 2;
+      context.beginPath();
+      context.arc(centerX, centerY, (24 + pulse * 5) * scale, 0, Math.PI * 2);
+      context.stroke();
 
       if (!reducedMotion) animation = requestAnimationFrame(render);
     };

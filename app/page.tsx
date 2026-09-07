@@ -1,4 +1,5 @@
 "use client";
+import { AlertCircle, ChevronDown, FileInput } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { ParticleLoader } from "@/components/ParticleLoader";
@@ -19,7 +20,7 @@ import { RealAnalysisPanel } from "@/components/RealAnalysisPanel";
 import { ContentLoading } from "@/components/ContentLoading";
 import { FilePreview } from "@/components/FilePreview";
 import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
-import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
+import { ApiClientError, bioflowApi, getApiErrorMessage } from "@/lib/api-client";
 import type {
   ConversationMessage,
   DataFileProfile,
@@ -692,6 +693,28 @@ ${task?.goal || config.goal}
       notify(getApiErrorMessage(error, "新建任务失败，请稍后重试"));
     }
   };
+  const deleteTask = async (taskId: string, taskTitle: string) => {
+    try {
+      const response = await bioflowApi.deleteTask(taskId);
+      setTaskList(response.tasks ?? []);
+      if (activeTask === taskId) {
+        router.replace("/projects/proj_a5211690a4/tasks/task_demo_rnaseq");
+      }
+      notify(`已删除任务：${taskTitle}`);
+    } catch (error) {
+      if (error instanceof ApiClientError && error.code === "NOT_FOUND") {
+        const response = await bioflowApi.getTask("task_demo_rnaseq");
+        setTaskList(response.tasks ?? []);
+        if (activeTask === taskId) {
+          router.replace("/projects/proj_a5211690a4/tasks/task_demo_rnaseq");
+        }
+        notify(`任务“${taskTitle}”已不存在，列表已刷新`);
+        return;
+      }
+      notify(getApiErrorMessage(error, "删除任务失败"));
+      throw error;
+    }
+  };
   const profileUploadedFiles = async (files: File[]) => {
     const uploadFailures: string[] = [];
     setUploadError("");
@@ -1122,6 +1145,7 @@ ${task?.goal || config.goal}
         onOpenProjectPicker={() => setModal({ kind: "projects", title: "切换项目" })}
         onCreateTask={() => setModal({ kind: "new-task", title: "新建科研任务" })}
         onSelectTask={selectTask}
+        onDeleteTask={deleteTask}
         onUploadFile={() => {
           setUploadError("");
           setModal({ kind: "upload", title: "上传项目文件" });
@@ -1313,25 +1337,48 @@ ${task?.goal || config.goal}
               </div>
               <span className="status-pill blocked">等待审批</span>
             </div>
+            {task.plan?.summary && <p className="plan-summary">{task.plan.summary}</p>}
             <div className="plan-preview">
               {(
                 task.plan?.steps || [
-                  { id: "01", title: "校验数据结构" },
-                  { id: "02", title: "构建设计矩阵" },
-                  { id: "03", title: "执行 DESeq2" },
-                  { id: "04", title: "生成火山图" },
-                  { id: "05", title: "排序候选基因" },
-                  { id: "06", title: "撰写科研报告" },
+                  { id: "01", title: "校验数据结构", detail: "检查输入矩阵和样本字段" },
+                  { id: "02", title: "构建设计矩阵", detail: "确认分组、对照和批次参数" },
+                  { id: "03", title: "执行 DESeq2", detail: "运行差异表达统计模型" },
+                  { id: "04", title: "生成火山图", detail: "输出显著性和效应量视图" },
+                  { id: "05", title: "排序候选基因", detail: "按 FDR 与效应量筛选候选" },
+                  { id: "06", title: "撰写科研报告", detail: "汇总方法、结果和可复现参数" },
                 ]
               ).map((step) => (
-                <span key={step.id}>
-                  {step.id} {step.title}
-                </span>
+                <details key={step.id}>
+                  <summary>
+                    <span>{step.id}</span>
+                    <b>{step.title}</b>
+                    <ChevronDown size={14} aria-hidden="true" />
+                  </summary>
+                  <p>{step.detail}</p>
+                </details>
               ))}
             </div>
-            {task.plan?.risks?.length ? (
-              <p className="plan-risks">风险：{task.plan.risks.join("；")}</p>
-            ) : null}
+            {(task.plan?.risks?.length || task.plan?.requiredInputs?.length) && (
+              <div className="plan-context-grid">
+                {task.plan.requiredInputs.length > 0 && (
+                  <section>
+                    <span>
+                      <FileInput size={14} /> 必需输入
+                    </span>
+                    <p>{task.plan.requiredInputs.join("；")}</p>
+                  </section>
+                )}
+                {task.plan.risks.length > 0 && (
+                  <section>
+                    <span>
+                      <AlertCircle size={14} /> 运行前风险
+                    </span>
+                    <p>{task.plan.risks.join("；")}</p>
+                  </section>
+                )}
+              </div>
+            )}
             <div className="approval-actions">
               <button className="secondary" onClick={() => openTool("evidence")}>
                 查看证据

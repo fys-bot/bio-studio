@@ -4,7 +4,9 @@ import { notesSnapshot, saveNotes } from "@/lib/store";
 
 export async function GET(_request: Request, { params }: { params: { taskId: string } }) {
   if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  return NextResponse.json({ notes: notesSnapshot(params.taskId) });
+  const notes = notesSnapshot(params.taskId);
+  if (notes === undefined) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  return NextResponse.json({ notes });
 }
 
 export async function PUT(request: Request, { params }: { params: { taskId: string } }) {

@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowRight, Database } from "lucide-react";
+
 export type ClarificationKey = "format" | "comparison" | "organism" | "deliverable";
 
 export type ClarificationAnswers = Record<ClarificationKey, string>;
@@ -130,19 +132,35 @@ export function ClarificationCard({
         </div>
       </section>
       <div className="clarification-actions">
-        <span>{completed < 4 ? "完成全部选择后生成计划" : "上下文已完整，可以生成分析计划"}</span>
-        {onUseDemoData && (
-          <button className="text-button" onClick={onUseDemoData}>
-            使用示例数据
+        <div className="clarification-action-copy">
+          <b>{completed < 4 ? `还需完成 ${4 - completed} 项` : "分析上下文已完整"}</b>
+          <span>
+            {completed < 4 ? "也可以载入示例输入后再调整" : "下一步将调用 LLM 生成可审批计划"}
+          </span>
+        </div>
+        <div className="clarification-action-buttons">
+          {onUseDemoData && (
+            <button
+              className="secondary demo-data-button"
+              disabled={submitting}
+              onClick={onUseDemoData}
+            >
+              <Database size={15} />
+              <span>
+                <b>载入示例输入</b>
+                <small>Count 矩阵与样本元数据</small>
+              </span>
+            </button>
+          )}
+          <button
+            className="primary"
+            onClick={onSubmit}
+            disabled={submitting || Object.values(answers).some((value) => !value)}
+          >
+            {submitting ? "正在生成计划…" : "生成分析计划"}
+            {!submitting && <ArrowRight size={15} />}
           </button>
-        )}
-        <button
-          className="primary"
-          onClick={onSubmit}
-          disabled={submitting || Object.values(answers).some((value) => !value)}
-        >
-          {submitting ? "提交中…" : "生成分析计划 →"}
-        </button>
+        </div>
       </div>
     </div>
   );

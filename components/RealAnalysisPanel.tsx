@@ -1,9 +1,11 @@
 "use client";
+import { Database } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ProjectFileRecord, ResearchTask } from "@/lib/domain";
 import type { AnalysisJob } from "@/lib/research-service";
 import { bioflowApi } from "@/lib/api-client";
 import { FilePreview } from "./FilePreview";
+import { SelectControl } from "./ui/SelectControl";
 
 export function RealAnalysisPanel({
   task,
@@ -121,16 +123,21 @@ export function RealAnalysisPanel({
       <header className="real-analysis-head">
         <div>
           <small className="analysis-eyebrow">
-            {task.skill ? `${task.skill.name} · v${task.skill.version}` : "真实数据分析"}
+            {task.skill ? `技能 / ${task.skill.name} / v${task.skill.version}` : "真实数据分析"}
           </small>
-          <h2>{computeSupported ? "输入与计算" : "任务文件与技能配置"}</h2>
-          <p>先绑定输入文件，再确认实验设计，最后提交本机 PyDESeq2 作业。</p>
+          <h2>{computeSupported ? "准备分析输入" : "配置任务文件"}</h2>
+          <p>
+            {computeSupported
+              ? "按输入、实验设计和运行三个步骤完成真实 PyDESeq2 分析。"
+              : "先检查技能契约与绑定文件，再继续配置该技能的执行适配器。"}
+          </p>
         </div>
         <div className="real-analysis-actions">
           <span className={`analysis-status ${readyToRun ? "ready" : ""}`}>{statusLabel}</span>
           {computeSupported && (
             <button disabled={busy} onClick={() => void post("samples")}>
-              载入练习文件
+              <Database size={14} />
+              载入示例输入
             </button>
           )}
         </div>
@@ -209,7 +216,7 @@ export function RealAnalysisPanel({
                 ).map(([key, label, selectedFile]) => (
                   <label key={key}>
                     <span>{label}</span>
-                    <select
+                    <SelectControl
                       required
                       value={config[key]}
                       onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
@@ -222,7 +229,7 @@ export function RealAnalysisPanel({
                             {file.name}
                           </option>
                         ))}
-                    </select>
+                    </SelectControl>
                     <small className="field-hint">
                       {selectedFile ? `${selectedFile.format} · ${selectedFile.status}` : "必填"}
                     </small>

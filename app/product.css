@@ -42,6 +42,40 @@
   --muted: #647169;
   background: var(--bg);
 }
+
+/* 初始化动画沿用工作台浅色主题，避免进入页面时出现割裂的深色全屏。 */
+.boot {
+  background: #f4f7f5;
+  color: #425249;
+}
+
+.boot-content {
+  text-shadow: none;
+}
+
+.boot-mark {
+  color: #81910f;
+}
+
+.boot-content p {
+  color: #33443b;
+  letter-spacing: 0;
+}
+
+.boot-content small {
+  color: #718078;
+}
+
+.boot-skip {
+  border-color: #aabbb1;
+  background: #ffffff;
+  color: #405a4d;
+}
+
+.boot-skip:hover {
+  border-color: #87998e;
+  background: #edf3ef;
+}
 .module-shell .rail {
   background: #edf1ef;
 }
@@ -1176,11 +1210,11 @@ html {
 
 .module-shell .skill-grid {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .module-shell .skill-card {
-  min-height: 218px;
+  min-height: 174px;
   border-radius: 7px;
 }
 
@@ -1190,24 +1224,24 @@ html {
 
 .module-shell .skill-card-top,
 .module-shell .skill-card footer {
-  padding: 10px 12px;
+  padding: 8px 10px;
 }
 
 .module-shell .skill-glyph {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 6px;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .module-shell .skill-card-body {
-  padding: 13px 12px;
+  padding: 10px;
 }
 
 .module-shell .skill-card h2,
 .skill-card-body h2 {
-  margin: 6px 0;
-  font-size: 15px;
+  margin: 4px 0;
+  font-size: 14px;
   line-height: 1.35;
 }
 
@@ -1216,16 +1250,16 @@ html {
   margin: 0;
   overflow: hidden;
   font-size: 11px;
-  line-height: 1.55;
+  line-height: 1.45;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
 }
 
 .module-shell .skill-io {
-  gap: 3px;
-  margin-top: 9px;
+  gap: 2px;
+  margin-top: 6px;
   font-size: 9px;
-  line-height: 1.45;
+  line-height: 1.35;
 }
 
 .module-shell .skill-card footer {
@@ -1243,7 +1277,7 @@ html {
 
 .catalog-pagination {
   max-width: 1180px;
-  margin: 14px auto 0;
+  margin: 10px auto 0;
   justify-content: center;
   gap: 5px;
 }
@@ -1400,11 +1434,36 @@ html {
 
 @media (max-width: 1100px) {
   .module-shell .catalog-page {
-    padding-inline: 20px;
+    padding: 14px 18px 28px;
   }
 
   .module-shell .skill-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .module-shell .catalog-header {
+    min-height: 62px;
+    margin-bottom: 8px;
+  }
+
+  .module-shell .catalog-header h1 {
+    font-size: 22px;
+  }
+
+  .module-shell .catalog-toolbar {
+    padding: 8px;
+  }
+
+  .module-shell .catalog-toolbar > input {
+    height: 36px;
+  }
+
+  .module-shell .catalog-meta {
+    margin-block: 8px;
+  }
+
+  .module-shell .skill-card {
+    min-height: 164px;
   }
 }
 
@@ -1575,9 +1634,8 @@ html {
 .real-analysis-head h2 {
   margin: 5px 0 4px;
   color: #292d27;
-  font:
-    600 22px Georgia,
-    serif;
+  font-size: 22px;
+  font-weight: 650;
 }
 
 .real-analysis-head p {
@@ -1880,9 +1938,8 @@ html {
 .real-results h3 {
   margin: 0;
   color: #34372f;
-  font:
-    600 17px Georgia,
-    serif;
+  font-size: 17px;
+  font-weight: 650;
 }
 
 .real-results p {
@@ -2092,5 +2149,797 @@ html {
 
   .analysis-run-button {
     width: 100%;
+  }
+}
+
+/* 产品级设计基线：工作台、资源中心和弹层共享同一套浅色 Token、字体与控件尺寸。 */
+.app-shell,
+.module-shell {
+  --bf-bg: #f4f7f5;
+  --bf-surface: #ffffff;
+  --bf-surface-subtle: #f7faf8;
+  --bf-surface-accent: #f1f5cf;
+  --bf-line: #d5ddd8;
+  --bf-line-strong: #aabbb1;
+  --bf-text: #24312a;
+  --bf-text-secondary: #53645b;
+  --bf-text-muted: #758078;
+  --bf-accent: #dff337;
+  --bf-accent-strong: #809213;
+  --bf-danger: #a54236;
+  --bf-danger-surface: #fff1ef;
+  --bf-content-max: 960px;
+  background: var(--bf-bg);
+  color: var(--bf-text);
+  font-family: Manrope, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  letter-spacing: 0;
+}
+
+.app-shell :where(h1, h2, h3, h4, p, button, input, select, textarea, small, b, strong),
+.module-shell :where(h1, h2, h3, h4, p, button, input, select, textarea, small, b, strong),
+.ui-modal :where(h1, h2, h3, h4, p, button, input, select, textarea, small, b, strong) {
+  font-family: inherit;
+  letter-spacing: 0;
+}
+
+.app-shell .project-head strong,
+.app-shell .goal-strip h1,
+.app-shell .inspector-title h2,
+.app-shell .gate-head h2,
+.product-guide-panel h2 {
+  font-family: inherit;
+}
+
+.app-shell :where(button, input, select, textarea),
+.module-shell :where(button, input, select, textarea),
+.ui-modal :where(button, input, select, textarea) {
+  line-height: 1.4;
+}
+
+.app-shell :where(button, a, input, select, textarea):focus-visible,
+.module-shell :where(button, a, input, select, textarea):focus-visible,
+.ui-modal :where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #8da11c;
+  outline-offset: 2px;
+}
+
+.app-shell button svg,
+.module-shell button svg,
+.ui-modal button svg {
+  display: block;
+  flex: none;
+}
+
+.app-shell .workspace {
+  background: var(--bf-bg);
+}
+
+.app-shell .dialogue-thread,
+.app-shell .evidence-strip,
+.app-shell .gate-card,
+.app-shell .workflow-guide-target .canvas-wrap,
+.app-shell .real-analysis,
+.app-shell .conversation {
+  width: min(calc(100% - 40px), var(--bf-content-max));
+  max-width: var(--bf-content-max);
+  margin-right: auto !important;
+  margin-left: auto !important;
+}
+
+.app-shell .gate-card,
+.app-shell .real-analysis,
+.app-shell .conversation .composer,
+.module-shell .catalog-toolbar,
+.module-shell .file-list,
+.module-shell .skill-card,
+.ui-modal {
+  border-radius: 8px;
+}
+
+.app-shell .goal-strip h1,
+.app-shell .gate-head h2,
+.app-shell .question-copy h3,
+.app-shell .real-analysis h2,
+.app-shell .real-results h3,
+.app-shell .inspector-title h2,
+.module-shell .catalog-header h1,
+.module-shell .detail-hero h1,
+.module-shell .project-page h1,
+.ui-modal > header h2 {
+  color: var(--bf-text);
+  font-family: Manrope, "PingFang SC", system-ui, sans-serif;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.app-shell .goal-strip h1 {
+  max-width: 760px;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.app-shell .gate-head h2,
+.app-shell .real-analysis h2 {
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.app-shell .gate-head p,
+.app-shell .question-copy p,
+.app-shell .real-analysis p,
+.app-shell .field-hint {
+  color: var(--bf-text-muted);
+}
+
+.app-shell .primary,
+.app-shell .secondary,
+.module-shell .primary,
+.module-shell .secondary,
+.ui-modal .primary,
+.ui-modal .secondary,
+.danger-button {
+  min-height: 36px;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.app-shell .primary,
+.module-shell .primary,
+.ui-modal .primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-color: var(--bf-accent);
+  background: var(--bf-accent);
+  color: #1f2a12;
+}
+
+.app-shell .primary:hover:not(:disabled),
+.module-shell .primary:hover:not(:disabled),
+.ui-modal .primary:hover:not(:disabled) {
+  border-color: #cbe21c;
+  background: #cbe21c;
+}
+
+.app-shell .secondary,
+.module-shell .secondary,
+.ui-modal .secondary {
+  border-color: var(--bf-line-strong);
+  background: var(--bf-surface);
+  color: #365247;
+}
+
+.app-shell .secondary:hover:not(:disabled),
+.module-shell .secondary:hover:not(:disabled),
+.ui-modal .secondary:hover:not(:disabled) {
+  border-color: #82998c;
+  background: #edf3ef;
+}
+
+.select-control {
+  position: relative;
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+.select-control select {
+  width: 100%;
+  appearance: none;
+  padding-right: 34px !important;
+}
+
+.select-control > svg {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  color: #63736a;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.module-shell .filter-row .select-control {
+  width: auto;
+  min-width: 150px;
+  margin-left: auto;
+}
+
+.app-shell .analysis-config input,
+.app-shell .analysis-config select,
+.app-shell .config-panel input,
+.app-shell .config-panel select,
+.module-shell .catalog-toolbar input,
+.module-shell .filter-row select,
+.ui-modal .modal-form input,
+.ui-modal .skill-create-form input,
+.ui-modal .skill-create-form textarea {
+  min-height: 38px;
+  border: 1px solid var(--bf-line);
+  border-radius: 6px;
+  background: var(--bf-surface);
+  color: var(--bf-text);
+  font-size: 11px;
+}
+
+.app-shell .analysis-config input:hover,
+.app-shell .analysis-config select:hover,
+.module-shell .catalog-toolbar input:hover,
+.module-shell .filter-row select:hover,
+.ui-modal :where(input, select, textarea):hover {
+  border-color: var(--bf-line-strong);
+}
+
+/* 任务侧栏：收藏与普通任务分区，操作在 hover/focus 时出现且不挤压标题。 */
+.task-group + .task-group {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e4e9e6;
+}
+
+.task-group-label {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: block;
+  padding: 3px 7px 5px;
+  background: #fff;
+  color: #7b867f;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.task-item-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  border-radius: 7px;
+}
+
+.task-row-actions {
+  position: relative;
+  width: 26px;
+  min-width: 26px;
+}
+
+.task-favorite,
+.task-delete {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 100%;
+  border: 0;
+  border-left: 1px solid transparent;
+  background: transparent;
+  color: #8c9790;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.task-favorite {
+  opacity: 1;
+}
+
+.task-delete {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.task-item-row.has-delete:hover .task-favorite,
+.task-item-row.has-delete:focus-within .task-favorite {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.task-item-row.has-delete:hover .task-delete,
+.task-item-row.has-delete:focus-within .task-delete {
+  pointer-events: auto;
+  border-left-color: #d7dfda;
+  opacity: 1;
+}
+
+.task-item-row:focus-within .task-favorite:focus-visible {
+  pointer-events: auto;
+  border-left-color: #d7dfda;
+  opacity: 1;
+}
+
+.task-item-row:focus-within .task-favorite:focus-visible ~ .task-delete {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.task-item-row.is-favorite .task-favorite {
+  color: #879607;
+}
+
+.task-item-row.is-protected:hover .task-favorite {
+  border-left-color: #d7dfda;
+}
+
+.task-favorite:hover {
+  color: #879607;
+  background: #f2f6d7;
+}
+
+.task-delete:hover:not(:disabled) {
+  color: var(--bf-danger);
+  background: var(--bf-danger-surface);
+}
+
+.task-search {
+  min-height: 36px;
+  margin-top: 0;
+  border-color: var(--bf-line);
+  background: var(--bf-surface);
+}
+
+.task-search > svg {
+  align-self: center;
+  color: #738078;
+}
+
+.task-search input {
+  line-height: 20px;
+}
+
+.task-list {
+  max-height: clamp(220px, 42dvh, 390px);
+}
+
+.dataset-list {
+  max-height: clamp(130px, 24dvh, 240px);
+}
+
+/* 澄清与审批：把辅助入口、主动作和审批依据组织成清晰的连续流程。 */
+.clarification-card,
+.gate-card.approval,
+.real-analysis {
+  border-color: var(--bf-line);
+  background: var(--bf-surface);
+  box-shadow: 0 10px 30px #53685d12;
+}
+
+.clarification-card {
+  padding: 18px !important;
+}
+
+.question-nav {
+  gap: 6px;
+}
+
+.question-nav button {
+  min-width: 0;
+  min-height: 40px;
+  border-radius: 6px;
+  background: var(--bf-surface-subtle);
+  color: var(--bf-text-secondary);
+}
+
+.question-nav button.active {
+  border-color: #9daa2a;
+  background: var(--bf-surface-accent);
+}
+
+.question-panel {
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 16px;
+  padding: 15px 0;
+}
+
+.question-copy h3 {
+  font-size: 16px;
+}
+
+.option-cards button {
+  min-height: 52px;
+  border-radius: 6px;
+  background: var(--bf-surface);
+}
+
+.option-cards button:hover,
+.option-cards button.selected {
+  border-color: #98a71b;
+  background: #f4f8d8;
+  box-shadow: none;
+}
+
+.clarification-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.clarification-action-copy,
+.clarification-action-copy b,
+.clarification-action-copy span {
+  display: block;
+}
+
+.clarification-action-copy b {
+  color: var(--bf-text-secondary);
+  font-size: 10px;
+}
+
+.clarification-action-copy span {
+  margin-top: 3px;
+  color: var(--bf-text-muted);
+  font-size: 9px;
+}
+
+.clarification-action-buttons {
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.clarification-action-buttons .primary {
+  min-width: 132px;
+}
+
+.demo-data-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.demo-data-button span,
+.demo-data-button b,
+.demo-data-button small {
+  display: block;
+}
+
+.demo-data-button b {
+  color: #385247;
+  font-size: 10px;
+}
+
+.demo-data-button small {
+  margin-top: 2px;
+  color: #758078;
+  font-size: 8px;
+}
+
+.gate-card.approval {
+  padding: 18px;
+}
+
+.plan-summary {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid #afc027;
+  background: #f5f8e4;
+  color: #516056;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.plan-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin: 12px 0;
+}
+
+.plan-preview details {
+  min-width: 0;
+  border: 1px solid var(--bf-line);
+  border-radius: 6px;
+  background: var(--bf-surface-subtle);
+  color: var(--bf-text-secondary);
+}
+
+.plan-preview details[open] {
+  border-color: #b3c26b;
+  background: #f7fae9;
+}
+
+.plan-preview summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.plan-preview summary::-webkit-details-marker {
+  display: none;
+}
+
+.plan-preview summary > span {
+  min-width: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #74820e;
+  font:
+    9px "DM Mono",
+    monospace;
+}
+
+.plan-preview summary b {
+  min-width: 0;
+  overflow: hidden;
+  color: #39483f;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-preview summary svg {
+  color: #718077;
+  transition: transform 0.15s ease;
+}
+
+.plan-preview details[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.plan-preview details > p {
+  margin: 0;
+  padding: 0 10px 10px 42px;
+  color: var(--bf-text-muted);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.plan-context-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.plan-context-grid section {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--bf-line);
+  border-radius: 6px;
+  background: var(--bf-surface-subtle);
+}
+
+.plan-context-grid span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #4d5f55;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.plan-context-grid p {
+  margin: 5px 0 0;
+  color: var(--bf-text-muted);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.real-analysis {
+  padding: 18px;
+}
+
+.real-analysis-head {
+  padding-bottom: 14px;
+}
+
+.real-analysis-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  border-color: var(--bf-line-strong);
+  background: var(--bf-surface);
+}
+
+.analysis-section,
+.analysis-run-section {
+  padding: 16px 0;
+}
+
+.analysis-step {
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.analysis-step h3 {
+  font-size: 14px;
+}
+
+.bound-file {
+  border-color: var(--bf-line);
+  background: var(--bf-surface);
+}
+
+.bound-file:hover,
+.bound-file:focus-visible {
+  border-color: #96a85f;
+  background: #f4f8e7;
+}
+
+/* 统一危险确认弹层，避免删除操作依赖浏览器原生 confirm。 */
+.confirm-backdrop {
+  z-index: 140;
+}
+
+.confirm-dialog {
+  width: min(420px, calc(100vw - 28px));
+  overflow: hidden;
+  background: var(--bf-surface, #fff);
+}
+
+.confirm-dialog > header {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 30px;
+  gap: 10px;
+  align-items: center;
+  padding: 16px;
+}
+
+.confirm-dialog > header > button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+}
+
+.confirm-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: var(--bf-danger-surface, #fff1ef);
+  color: var(--bf-danger, #a54236);
+}
+
+.confirm-dialog > p {
+  margin: 0;
+  padding: 16px;
+  color: #657168;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.confirm-dialog > .confirm-dialog-error {
+  margin: 0 16px 12px;
+  padding: 9px 10px;
+  border: 1px solid #e4b3ad;
+  border-radius: 6px;
+  background: var(--bf-danger-surface, #fff1ef);
+  color: var(--bf-danger, #a54236);
+  font-size: 10px;
+}
+
+.confirm-dialog > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #e0e6e2;
+  background: #f7f9f8;
+}
+
+.danger-button {
+  border: 1px solid #b34f43;
+  background: #a54236;
+  color: #fff;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #8f342b;
+}
+
+@media (min-width: 761px) and (max-width: 1200px) {
+  .app-shell .dialogue-thread,
+  .app-shell .evidence-strip,
+  .app-shell .gate-card,
+  .app-shell .workflow-guide-target .canvas-wrap,
+  .app-shell .real-analysis,
+  .app-shell .conversation {
+    width: calc(100% - 28px);
+  }
+
+  .app-shell .goal-strip {
+    padding-inline: 14px;
+  }
+
+  .question-panel {
+    grid-template-columns: 132px minmax(0, 1fr);
+  }
+
+  .question-nav button {
+    padding: 7px;
+    font-size: 9px;
+  }
+
+  .question-nav button span {
+    width: 19px;
+    height: 19px;
+  }
+
+  .clarification-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .clarification-action-buttons {
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell .dialogue-thread,
+  .app-shell .evidence-strip,
+  .app-shell .gate-card,
+  .app-shell .workflow-guide-target .canvas-wrap,
+  .app-shell .real-analysis,
+  .app-shell .conversation {
+    width: calc(100% - 20px);
+  }
+
+  .app-shell .goal-strip h1 {
+    font-size: 18px;
+  }
+
+  .clarification-card,
+  .gate-card.approval,
+  .real-analysis {
+    padding: 13px !important;
+  }
+
+  .question-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .question-panel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .clarification-actions,
+  .plan-context-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .clarification-action-buttons {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .demo-data-button,
+  .clarification-action-buttons .primary {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .plan-preview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .plan-preview summary {
+    min-height: 38px;
+  }
+
+  .module-shell .filter-row .select-control {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .confirm-dialog > header,
+  .confirm-dialog > p,
+  .confirm-dialog > footer {
+    padding-inline: 13px;
   }
 }

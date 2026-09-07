@@ -16,7 +16,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const taskId = new URL(request.url).searchParams.get("taskId") || undefined;
-  return NextResponse.json({ layout: workflowLayoutSnapshot(taskId) });
+  const layout = workflowLayoutSnapshot(taskId);
+  if (!layout) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  return NextResponse.json({ layout });
 }
 
 export async function PUT(request: Request) {
@@ -29,7 +31,9 @@ export async function PUT(request: Request) {
 
   const input = (await request.json().catch(() => ({}))) as LayoutRequestBody;
   const taskId = new URL(request.url).searchParams.get("taskId") || undefined;
-  return NextResponse.json({ layout: saveWorkflowLayout(input, taskId) });
+  const layout = saveWorkflowLayout(input, taskId);
+  if (!layout) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  return NextResponse.json({ layout });
 }
 
 export async function POST(request: Request) {
@@ -43,5 +47,6 @@ export async function POST(request: Request) {
   const input = (await request.json().catch(() => ({}))) as LayoutRequestBody;
   const taskId = new URL(request.url).searchParams.get("taskId") || undefined;
   const result = createWorkflowLayoutVersion(input.name ?? "", input, taskId);
+  if (!result) return NextResponse.json({ error: "Task not found" }, { status: 404 });
   return NextResponse.json(result);
 }

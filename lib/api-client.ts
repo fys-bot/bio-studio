@@ -74,6 +74,9 @@ export type NotesResponse = { notes: string };
 export type RagTraceResponse = { trace: RagTrace };
 export type SkillResponse = { skill: SkillRecord };
 export type ProjectFileResponse = { file: ProjectFileRecord };
+export type DeleteTaskResponse = { deletedTaskId: string; tasks: TaskResponse["tasks"] };
+
+const SKILL_CATALOG_PAGE_SIZE = 6;
 
 /**
  * 前端 API 适配层：统一错误转换、JSON 解析和请求方法，页面不再直接拼接接口细节。
@@ -116,7 +119,9 @@ async function requestJson<ResponsePayload extends object>(
             path.includes("/files/profile") ||
               path.includes("/rag/query") ||
               path.includes("/agent/plan")
-              ? 140_000
+              ? path.includes("/agent/plan")
+                ? 210_000
+                : 140_000
               : 15_000,
           ),
       });
@@ -170,6 +175,11 @@ export const bioflowApi = {
       method: "POST",
       headers: jsonHeaders,
       body: JSON.stringify({ title, ...options }),
+    }),
+
+  deleteTask: (taskId: string) =>
+    requestJson<DeleteTaskResponse>(`/api/tasks/${encodeURIComponent(taskId)}`, {
+      method: "DELETE",
     }),
 
   resetTask: () =>
@@ -300,7 +310,7 @@ export const bioflowApi = {
     query: { search?: string; source?: string; category?: string; page?: string } = {},
   ) => {
     const searchParams = new URLSearchParams();
-    searchParams.set("pageSize", "12");
+    searchParams.set("pageSize", String(SKILL_CATALOG_PAGE_SIZE));
     Object.entries(query).forEach(([key, value]) => value && searchParams.set(key, value));
     const queryString = searchParams.toString();
     return requestJson<CatalogPage<SkillRecord>>(

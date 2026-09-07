@@ -70,12 +70,20 @@ counts = next(doc for doc in samples if doc["name"].endswith("counts.csv"))
 metadata = next(doc for doc in samples if doc["name"].endswith("metadata.tsv"))
 assert counts["id"] in task["fileIds"]
 request("POST", f"/api/tasks/{task_id}/clarifications", json={"answers":{"format":"Count 矩阵","comparison":"处理组 vs 对照组","organism":"人类","deliverable":"可发表结果"}})
-request("POST", f"/api/tasks/{task_id}/approve")
+# Real tasks must not bypass the LLM planning gate. Compute regression below uses
+# a demo-mode task so the test remains deterministic and offline.
+blocked = client.post(f"/api/tasks/{task_id}/approve")
+assert blocked.status_code == 404 and "LLM plan" in blocked.text
+compute_task = request("POST", "/api/tasks", json={"title": "Compute regression " + stamp, "skillId": "rnaseq-deseq2", "executionMode": "demo"})["task"]
+compute_task_id = compute_task["id"]
+task = request("POST", f"/api/tasks/{compute_task_id}/analysis", json={"action":"samples"})["task"]
 params = {"action":"run","countsId":counts["id"],"metadataId":metadata["id"],"condition":"condition","control":"control","treated":"treated","alpha":.05}
-job = request("POST", f"/api/tasks/{task_id}/analysis", json=params)["job"]
+request("POST", f"/api/tasks/{compute_task_id}/clarifications", json={"answers":{"format":"Count 矩阵","comparison":"处理组 vs 对照组","organism":"人类","deliverable":"可发表结果"}})
+request("POST", f"/api/tasks/{compute_task_id}/approve")
+job = request("POST", f"/api/tasks/{compute_task_id}/analysis", json=params)["job"]
 deadline = time.time() + 120
 while time.time() < deadline:
-    current = request("GET", f"/api/tasks/{task_id}/analysis")["job"]
+    current = request("GET", f"/api/tasks/{compute_task_id}/analysis")["job"]
     if current["status"] not in {"queued","running"}:
         break
     time.sleep(.5)
@@ -84,22 +92,22 @@ result = current["result"]
 assert result["engine"] == "PyDESeq2" and result["sampleCount"] == 8
 assert result["summary"]["testedGeneCount"] == 150
 assert result["summary"]["significantGeneCount"] > 0
-csv_result = client.get(f"/api/tasks/{task_id}/analysis/results.csv")
+csv_result = client.get(f"/api/tasks/{compute_task_id}/analysis/results.csv")
 rows = list(csv.DictReader(io.StringIO(csv_result.text)))
 assert len(rows) == 150 and "padj" in rows[0]
-image = client.get(f"/api/tasks/{task_id}/analysis/volcano.png")
+image = client.get(f"/api/tasks/{compute_task_id}/analysis/volcano.png")
 assert image.content.startswith(b"\x89PNG")
 print("PASS queued PyDESeq2 worker + actual statistics + CSV + PNG + report:", result["summary"])
 
-bad = request("POST", f"/api/tasks/{task_id}/analysis", json={**params,"condition":"missing_field"})["job"]
+bad = request("POST", f"/api/tasks/{compute_task_id}/analysis", json={**params,"condition":"missing_field"})["job"]
 deadline=time.time()+60
 while time.time()<deadline:
-    failed=request("GET",f"/api/tasks/{task_id}/analysis")["job"]
+    failed=request("GET",f"/api/tasks/{compute_task_id}/analysis")["job"]
     if failed["status"] not in {"queued","running"}: break
     time.sleep(.5)
 assert failed["status"]=="failed" and "Missing design factor" in failed["error"]
-request("POST",f"/api/tasks/{task_id}/analysis",json=params)
-cancelled=request("POST",f"/api/tasks/{task_id}/analysis",json={"action":"cancel"})["job"]
+request("POST",f"/api/tasks/{compute_task_id}/analysis",json=params)
+cancelled=request("POST",f"/api/tasks/{compute_task_id}/analysis",json={"action":"cancel"})["job"]
 assert cancelled["status"]=="cancelled"
 print("PASS invalid input failure + retry creates new job + cancellation")
-print(json.dumps({"taskId":task_id,"retrievalTaskId":retrieval_task["id"],"skillId":skill["id"]}))
+print(json.dumps({"taskId":compute_task_id,"realGateTaskId":task_id,"retrievalTaskId":retrieval_task["id"],"skillId":skill["id"]}))

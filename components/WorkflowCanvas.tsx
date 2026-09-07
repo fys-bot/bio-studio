@@ -66,14 +66,15 @@ export function WorkflowCanvas({
   onNodePointerDown,
 }: WorkflowCanvasProps) {
   const updateZoom = (delta: number) => {
-    onZoomChange((value) => Math.min(1.6, Math.max(0.55, value + delta)));
+    onZoomChange((value) => Math.min(1.6, Math.max(0.5, value + delta)));
   };
 
   return (
     <div className={`canvas-wrap ${open ? "" : "plan-collapsed"}`} data-guide="workflow">
       <div className="canvas-toolbar">
-        <span>
-          分析工作流 / v1.{layoutVersionCount}
+        <div className="canvas-toolbar-copy">
+          <strong>分析工作流</strong>
+          <span>v1.{layoutVersionCount}</span>
           <em>
             {connectingFrom
               ? `正在连线：${connectingFrom} → Shift 点击目标节点`
@@ -90,16 +91,23 @@ export function WorkflowCanvas({
                     ? "自动保存失败"
                     : "布局已就绪"}
           </small>
-        </span>
-        <div>
-          <button onClick={() => updateZoom(-0.1)} aria-label="缩小">
-            −
-          </button>
-          <span>{Math.round(canvasZoom * 100)}%</span>
-          <button onClick={() => updateZoom(0.1)} aria-label="放大">
-            ＋
-          </button>
-          <button onClick={onReset} aria-label="居中并重置">
+        </div>
+        <div className="canvas-toolbar-actions">
+          <div className="canvas-zoom-control" aria-label="画布缩放">
+            <button onClick={() => updateZoom(-0.1)} aria-label="缩小画布" title="缩小画布">
+              −
+            </button>
+            <span>{Math.round(canvasZoom * 100)}%</span>
+            <button onClick={() => updateZoom(0.1)} aria-label="放大画布" title="放大画布">
+              ＋
+            </button>
+          </div>
+          <button
+            className="canvas-fit-button"
+            onClick={onReset}
+            aria-label="适应视图"
+            title="适应视图"
+          >
             ⊙
           </button>
           <button

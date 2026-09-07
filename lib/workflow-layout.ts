@@ -66,7 +66,7 @@ export function normalizeWorkflowLayout(
   return {
     nodePositions: normalizedPositions,
     extraEdges: [...uniqueEdges.values()],
-    zoom: clamp(finiteNumber(input.zoom, previousLayout.zoom), 0.55, 1.6),
+    zoom: clamp(finiteNumber(input.zoom, previousLayout.zoom), 0.5, 1.6),
     pan: normalizePosition(input.pan, previousLayout.pan),
     revision: previousLayout.revision + 1,
     updatedAt: new Date().toISOString(),

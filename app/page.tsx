@@ -91,6 +91,93 @@ const statusLabel: Record<string, string> = {
   awaiting_approval: "待审批",
 };
 
+const clampCanvasZoom = (value: number) => Math.min(1.6, Math.max(0.5, value));
+
+function getCanvasViewportSize(viewportWidth: number, sidebarWidth: number) {
+  if (viewportWidth <= 760) {
+    return { width: Math.max(300, viewportWidth - 30), height: 300 };
+  }
+  const railWidth = viewportWidth <= 1500 ? 58 : 68;
+  const visibleSidebarWidth = viewportWidth <= 1200 ? 190 : Math.min(sidebarWidth, 220);
+  return {
+    width: Math.max(360, viewportWidth - railWidth - visibleSidebarWidth - 128),
+    height: 370,
+  };
+}
+
+function getWorkflowBounds(
+  nodes: WorkflowNodeState[],
+  nodePositions: Record<string, { x: number; y: number }>,
+) {
+  const positions = nodes.map((node) => nodePositions[node.id] || node);
+  const minimumX = Math.min(...positions.map((position) => position.x));
+  const minimumY = Math.min(...positions.map((position) => position.y));
+  const maximumX = Math.max(...positions.map((position) => position.x + 170));
+  const maximumY = Math.max(...positions.map((position) => position.y + 104));
+  return {
+    minimumX,
+    minimumY,
+    width: Math.max(170, maximumX - minimumX),
+    height: Math.max(104, maximumY - minimumY),
+  };
+}
+
+function fitWorkflowCanvas(
+  nodes: WorkflowNodeState[],
+  nodePositions: Record<string, { x: number; y: number }>,
+  viewportWidth: number,
+  sidebarWidth: number,
+) {
+  if (!nodes.length) return { zoom: 1, pan: { x: 0, y: 0 } };
+  const viewport = getCanvasViewportSize(viewportWidth, sidebarWidth);
+  const bounds = getWorkflowBounds(nodes, nodePositions);
+  const zoom = clampCanvasZoom(
+    Math.min(1, (viewport.width - 24) / bounds.width, (viewport.height - 24) / bounds.height),
+  );
+  const scaledWidth = bounds.width * zoom;
+  const scaledHeight = bounds.height * zoom;
+  return {
+    zoom,
+    pan: {
+      x: Math.max(12, (viewport.width - scaledWidth) / 2) - bounds.minimumX * zoom,
+      y: Math.max(12, (viewport.height - scaledHeight) / 2) - bounds.minimumY * zoom,
+    },
+  };
+}
+
+function normalizeRestoredCanvas(
+  nodes: WorkflowNodeState[],
+  nodePositions: Record<string, { x: number; y: number }>,
+  zoom: number,
+  pan: { x: number; y: number },
+  viewportWidth: number,
+  sidebarWidth: number,
+) {
+  if (!nodes.length) return { zoom: clampCanvasZoom(zoom), pan };
+  const viewport = getCanvasViewportSize(viewportWidth, sidebarWidth);
+  const bounds = getWorkflowBounds(nodes, nodePositions);
+  const responsiveMaximum = viewportWidth <= 760 ? 0.9 : viewportWidth <= 1200 ? 1 : 1.25;
+  const fitZoom = Math.min(
+    1,
+    (viewport.width - 24) / bounds.width,
+    (viewport.height - 24) / bounds.height,
+  );
+  const safeZoom = clampCanvasZoom(Math.min(zoom, responsiveMaximum, fitZoom));
+  const minimumPanX = 12 - bounds.minimumX * safeZoom;
+  const maximumPanX = viewport.width - 12 - (bounds.minimumX + bounds.width) * safeZoom;
+  const minimumPanY = 12 - bounds.minimumY * safeZoom;
+  const maximumPanY = viewport.height - 12 - (bounds.minimumY + bounds.height) * safeZoom;
+  const clampPan = (value: number, minimum: number, maximum: number) =>
+    maximum < minimum ? minimum : Math.min(maximum, Math.max(minimum, value));
+  return {
+    zoom: safeZoom,
+    pan: {
+      x: clampPan(pan.x, minimumPanX, maximumPanX),
+      y: clampPan(pan.y, minimumPanY, maximumPanY),
+    },
+  };
+}
+
 /** BioFlow Studio 主工作台，负责领域状态编排，不承载具体工具视图实现。 */
 export default function Home() {
   const router = useRouter();
@@ -276,16 +363,24 @@ export default function Home() {
         notesHydratedRef.current = true;
         if (configResponse.config) setConfig(configResponse.config);
         const restoredLayout = layoutResponse.layout.current;
+        const restoredViewport = normalizeRestoredCanvas(
+          taskResponse.task.nodes,
+          restoredLayout.nodePositions,
+          restoredLayout.zoom,
+          restoredLayout.pan,
+          window.innerWidth,
+          sidebarWidth,
+        );
         const restoredLayoutInput = {
           nodePositions: restoredLayout.nodePositions,
           extraEdges: restoredLayout.extraEdges,
-          zoom: restoredLayout.zoom,
-          pan: restoredLayout.pan,
+          zoom: restoredViewport.zoom,
+          pan: restoredViewport.pan,
         };
         setNodePositions(restoredLayout.nodePositions);
         setExtraEdges(restoredLayout.extraEdges);
-        setCanvasZoom(restoredLayout.zoom);
-        setCanvasPan(restoredLayout.pan);
+        setCanvasZoom(restoredViewport.zoom);
+        setCanvasPan(restoredViewport.pan);
         setLayoutRevision(restoredLayout.revision);
         setLayoutVersionCount(layoutResponse.layout.versions.length);
         lastSavedLayoutRef.current = JSON.stringify(restoredLayoutInput);
@@ -855,7 +950,6 @@ ${task?.goal || config.goal}
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
   };
-  const clampZoom = (value: number) => Math.min(1.6, Math.max(0.55, value));
   const startCanvasPan = (event: React.PointerEvent<HTMLDivElement>) => {
     const target = event.target;
     if (target instanceof Element && target.closest("button, a, input, textarea, select, .node")) {
@@ -938,12 +1032,13 @@ ${task?.goal || config.goal}
     }
   };
   const resetCanvas = () => {
-    setCanvasZoom(1);
-    setCanvasPan({ x: 0, y: 0 });
-    setNodePositions({});
+    if (!task) return;
+    const fittedLayout = fitWorkflowCanvas(task.nodes, nodePositions, viewportWidth, sidebarWidth);
+    setCanvasZoom(fittedLayout.zoom);
+    setCanvasPan(fittedLayout.pan);
     setExtraEdges([]);
     setConnectingFrom(null);
-    notify("画布位置和缩放已重置");
+    notify("已适应当前工作流视图");
   };
   if (!authed || !task) {
     return (
@@ -1268,13 +1363,13 @@ ${task?.goal || config.goal}
             layoutVersionCount={layoutVersionCount}
             layoutSaveState={layoutSaveState}
             creatingVersion={creatingLayoutVersion}
-            onZoomChange={(update) => setCanvasZoom((value) => clampZoom(update(value)))}
+            onZoomChange={(update) => setCanvasZoom((value) => clampCanvasZoom(update(value)))}
             onReset={resetCanvas}
             onCreateVersion={createLayoutVersion}
             onCanvasPanStart={startCanvasPan}
             onCanvasWheel={(event) => {
               event.preventDefault();
-              setCanvasZoom((value) => clampZoom(value + (event.deltaY < 0 ? 0.08 : -0.08)));
+              setCanvasZoom((value) => clampCanvasZoom(value + (event.deltaY < 0 ? 0.08 : -0.08)));
             }}
             onNodePointerDown={startNodeDrag}
           />

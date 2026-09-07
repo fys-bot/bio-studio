@@ -61,12 +61,44 @@ export function useProteinStructureRenderer({
       if (autoRotate && !dragRef.current.active) rotationRef.current.yaw += 0.0025;
 
       const { yaw, pitch } = rotationRef.current;
-      const scale = Math.min(width, height) * 0.105 * zoomRef.current;
+      const pointBounds = points.reduce(
+        (bounds, point) => ({
+          minimumX: Math.min(bounds.minimumX, point.x),
+          maximumX: Math.max(bounds.maximumX, point.x),
+          minimumY: Math.min(bounds.minimumY, point.y),
+          maximumY: Math.max(bounds.maximumY, point.y),
+          minimumZ: Math.min(bounds.minimumZ, point.z),
+          maximumZ: Math.max(bounds.maximumZ, point.z),
+        }),
+        {
+          minimumX: Number.POSITIVE_INFINITY,
+          maximumX: Number.NEGATIVE_INFINITY,
+          minimumY: Number.POSITIVE_INFINITY,
+          maximumY: Number.NEGATIVE_INFINITY,
+          minimumZ: Number.POSITIVE_INFINITY,
+          maximumZ: Number.NEGATIVE_INFINITY,
+        },
+      );
+      const center = {
+        x: (pointBounds.minimumX + pointBounds.maximumX) / 2,
+        y: (pointBounds.minimumY + pointBounds.maximumY) / 2,
+        z: (pointBounds.minimumZ + pointBounds.maximumZ) / 2,
+      };
+      const modelSpan = Math.max(
+        pointBounds.maximumX - pointBounds.minimumX,
+        pointBounds.maximumY - pointBounds.minimumY,
+        pointBounds.maximumZ - pointBounds.minimumZ,
+        1,
+      );
+      const scale = (Math.min(width, height) * 0.72 * zoomRef.current) / modelSpan;
       const projectedPoints = points.map((point) => {
-        const rotatedX = point.x * Math.cos(yaw) - point.z * Math.sin(yaw);
-        const yawDepth = point.x * Math.sin(yaw) + point.z * Math.cos(yaw);
-        const rotatedY = point.y * Math.cos(pitch) - yawDepth * Math.sin(pitch);
-        const depth = point.y * Math.sin(pitch) + yawDepth * Math.cos(pitch);
+        const centeredX = point.x - center.x;
+        const centeredY = point.y - center.y;
+        const centeredZ = point.z - center.z;
+        const rotatedX = centeredX * Math.cos(yaw) - centeredZ * Math.sin(yaw);
+        const yawDepth = centeredX * Math.sin(yaw) + centeredZ * Math.cos(yaw);
+        const rotatedY = centeredY * Math.cos(pitch) - yawDepth * Math.sin(pitch);
+        const depth = centeredY * Math.sin(pitch) + yawDepth * Math.cos(pitch);
         return {
           ...point,
           screenX: width / 2 + rotatedX * scale,
@@ -117,7 +149,7 @@ export function useProteinStructureRenderer({
     };
     animationFrame = window.requestAnimationFrame(drawStructure);
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [autoRotate, hoveredResidue, selectedResidue]);
+  }, [autoRotate, hoveredResidue, points, selectedResidue]);
 
   const findResidueAtPoint = (clientX: number, clientY: number) => {
     const bounds = canvasRef.current?.getBoundingClientRect();

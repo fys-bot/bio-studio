@@ -1890,6 +1890,185 @@ html {
   line-height: 1.6;
 }
 
+/* 最后一层响应式收口：工作台工具栏在中屏分层，避免标题、缩放和保存按钮互相挤压。 */
+.app-shell .topbar {
+  min-width: 0;
+}
+
+.app-shell .top-actions {
+  color: #53645b;
+}
+
+.app-shell .top-actions button {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 5px 7px;
+  color: #405a4d;
+}
+
+.app-shell .top-actions button:hover,
+.app-shell .top-actions button:focus-visible {
+  border-color: #c6d3ca;
+  background: #f1f5f2;
+}
+
+.app-shell .live {
+  color: #5d7065;
+}
+
+.canvas-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 52px;
+}
+
+.canvas-toolbar-copy {
+  display: grid !important;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 2px 8px;
+  min-width: 0;
+  color: #626c64;
+  line-height: 1.35;
+}
+
+.canvas-toolbar-copy strong {
+  color: #4b5c52;
+  font:
+    600 11px Manrope,
+    system-ui,
+    sans-serif;
+}
+
+.canvas-toolbar-copy > span {
+  color: #7c877f;
+  font:
+    10px "DM Mono",
+    monospace;
+}
+
+.canvas-toolbar-copy em {
+  grid-column: 1 / -1;
+  margin: 0;
+  max-width: 100%;
+  color: #879189;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-toolbar-copy .layout-save-state {
+  grid-column: 1 / -1;
+  margin: 0;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #667119;
+  font:
+    9px "DM Mono",
+    monospace;
+  white-space: nowrap;
+}
+
+.canvas-toolbar-actions {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 0;
+}
+
+.canvas-zoom-control {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.canvas-zoom-control span {
+  min-width: 34px;
+  color: #647168;
+  text-align: center;
+}
+
+.canvas-toolbar-actions button {
+  flex: none;
+  margin: 0;
+}
+
+.canvas-toolbar-actions .canvas-fit-button {
+  width: 30px;
+}
+
+@media (min-width: 761px) and (max-width: 1200px) {
+  .app-shell .topbar {
+    padding: 10px 16px;
+  }
+
+  .app-shell .top-actions button {
+    background: #f7f9f6;
+  }
+
+  .canvas-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    padding: 9px 10px;
+  }
+
+  .canvas-toolbar-actions {
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell .topbar {
+    padding: 0 12px;
+  }
+
+  .canvas-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 58px;
+    padding: 8px 9px;
+  }
+
+  .canvas-toolbar-copy em {
+    display: none;
+  }
+
+  .canvas-toolbar-actions {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .module-shell .catalog-page {
+    padding-inline: 10px;
+  }
+
+  .module-shell .catalog-header h1 {
+    font-size: 19px;
+  }
+
+  .module-shell .catalog-header .primary,
+  .module-shell .upload-button {
+    min-height: 32px;
+    padding-inline: 9px;
+    font-size: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-toolbar-copy,
+  .module-shell .catalog-header,
+  .module-shell .catalog-header h1 {
+    transition: none;
+  }
+}
+
 @media (max-width: 760px) {
   .real-analysis {
     width: calc(100% - 30px);

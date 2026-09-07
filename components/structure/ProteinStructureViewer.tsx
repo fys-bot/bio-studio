@@ -112,7 +112,7 @@ export function ProteinStructureViewer({
         <canvas
           ref={renderer.canvasRef}
           tabIndex={0}
-          aria-label={`${structure.name} 三维结构，可拖拽旋转、滚轮缩放并点击残基`}
+          aria-label={`${structure.name} 三维结构，可拖拽旋转、按住 Control 或 Command 使用滚轮缩放并点击残基`}
           onPointerDown={renderer.handlePointerDown}
           onPointerMove={renderer.handlePointerMove}
           onPointerUp={renderer.handlePointerUp}

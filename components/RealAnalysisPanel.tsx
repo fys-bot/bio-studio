@@ -99,105 +99,204 @@ export function RealAnalysisPanel({
   };
   const active = job && ["queued", "running"].includes(job.status);
   const computeSupported = !task.skill || task.skill.id === "rnaseq-deseq2";
+  const selectedCountsFile = files.find((file) => file.id === config.countsId);
+  const selectedMetadataFile = files.find((file) => file.id === config.metadataId);
+  const inputsReady = Boolean(selectedCountsFile && selectedMetadataFile);
+  const designReady = Boolean(config.condition && config.control && config.treated);
+  const blockedByTask = ["draft", "clarifying", "awaiting_approval"].includes(task.status);
+  const readyToRun = inputsReady && designReady && !blockedByTask && !active;
+  const statusLabel = active
+    ? "计算进行中"
+    : job?.status === "succeeded"
+      ? "结果已生成"
+      : job?.status === "failed"
+        ? "计算失败"
+        : blockedByTask
+          ? "等待计划确认"
+          : readyToRun
+            ? "可以运行"
+            : "等待配置";
   return (
     <section className="real-analysis" id="real-analysis">
-      <header>
+      <header className="real-analysis-head">
         <div>
-          <small>
+          <small className="analysis-eyebrow">
             {task.skill ? `${task.skill.name} · v${task.skill.version}` : "真实数据分析"}
           </small>
           <h2>{computeSupported ? "输入与计算" : "任务文件与技能配置"}</h2>
+          <p>先绑定输入文件，再确认实验设计，最后提交本机 PyDESeq2 作业。</p>
         </div>
-        {computeSupported && (
-          <button disabled={busy} onClick={() => void post("samples")}>
-            载入练习文件
-          </button>
-        )}
+        <div className="real-analysis-actions">
+          <span className={`analysis-status ${readyToRun ? "ready" : ""}`}>{statusLabel}</span>
+          {computeSupported && (
+            <button disabled={busy} onClick={() => void post("samples")}>
+              载入练习文件
+            </button>
+          )}
+        </div>
       </header>
       {task.skill && (
-        <p className="bound-skill">
+        <p className="bound-skill analysis-contract">
           输入：{task.skill.inputs.join("、")} · 输出：{task.skill.outputs.join("、")}
         </p>
       )}
-      <div className="bound-files">
-        {files.map((file) => (
-          <button key={file.id} onClick={() => setPreview(file.id)}>
-            {file.format} · {file.name}
-          </button>
-        ))}
-        {!files.length && <p>尚未绑定文件</p>}
-      </div>
+      <section className="analysis-section analysis-inputs">
+        <div className="analysis-section-head">
+          <div className="analysis-step">
+            <span>01</span>
+            <div>
+              <h3>绑定输入文件</h3>
+              <p>文件只在当前项目内使用，点击文件卡片可查看解析正文和索引状态。</p>
+            </div>
+          </div>
+          <span className={`analysis-section-state ${inputsReady ? "ready" : ""}`}>
+            {files.length ? `${files.length} 份已绑定` : "尚未绑定"}
+          </span>
+        </div>
+        <div className="bound-files">
+          {files.map((file) => (
+            <button className="bound-file" key={file.id} onClick={() => setPreview(file.id)}>
+              <span className="bound-file-format">{file.format}</span>
+              <span className="bound-file-copy">
+                <b>{file.name}</b>
+                <small>
+                  {file.role} · {file.detail}
+                </small>
+              </span>
+              <span className="bound-file-action">预览</span>
+            </button>
+          ))}
+          {!files.length && (
+            <div className="bound-files-empty">
+              <b>尚未绑定文件</b>
+              <small>可以先点击右上角“载入练习文件”，或从项目文件中心上传真实数据。</small>
+            </div>
+          )}
+        </div>
+      </section>
       {computeSupported && (
         <form
-          className="analysis-config"
+          className="analysis-form"
           onSubmit={(e) => {
             e.preventDefault();
             void post("run");
           }}
         >
-          {(
-            [
-              ["countsId", "Count 矩阵"],
-              ["metadataId", "样本元数据"],
-            ] as const
-          ).map(([key, label]) => (
-            <label key={key}>
-              {label}
-              <select
-                required
-                value={config[key]}
-                onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
-              >
-                <option value="">选择文件</option>
-                {files
-                  .filter((f) => ["CSV", "TSV", "XLSX"].includes(f.format))
-                  .map((file) => (
-                    <option key={file.id} value={file.id}>
-                      {file.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-          ))}
-          {(
-            [
-              ["condition", "分组字段"],
-              ["control", "对照组"],
-              ["treated", "处理组"],
-              ["batch", "批次字段（可选）"],
-            ] as const
-          ).map(([key, label]) => (
-            <label key={key}>
-              {label}
-              <input
-                required={key !== "batch"}
-                value={config[key]}
-                onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
-              />
-            </label>
-          ))}
-          <label>
-            FDR 阈值
-            <input
-              type="number"
-              min="0.001"
-              max="0.999"
-              step="0.001"
-              value={config.alpha}
-              onChange={(e) => setConfig({ ...config, alpha: Number(e.target.value) })}
-            />
-          </label>
-          <button
-            id="analysis-run"
-            className="primary"
-            disabled={
-              busy ||
-              Boolean(active) ||
-              ["draft", "clarifying", "awaiting_approval"].includes(task.status)
-            }
-          >
-            {active ? "计算中…" : "运行 PyDESeq2"}
-          </button>
+          <section className="analysis-section analysis-design">
+            <div className="analysis-section-head">
+              <div className="analysis-step">
+                <span>02</span>
+                <div>
+                  <h3>确认分析设计</h3>
+                  <p>这些参数会直接进入设计矩阵和差异表达计算，请在运行前核对。</p>
+                </div>
+              </div>
+              <span className={`analysis-section-state ${designReady ? "ready" : ""}`}>
+                {designReady ? "字段已填写" : "待填写"}
+              </span>
+            </div>
+            <div className="analysis-form-group">
+              <div className="analysis-form-group-head">
+                <b>数据角色</b>
+                <small>选择要用于本次计算的真实文件</small>
+              </div>
+              <div className="analysis-config analysis-file-grid">
+                {(
+                  [
+                    ["countsId", "Count 矩阵", selectedCountsFile],
+                    ["metadataId", "样本元数据", selectedMetadataFile],
+                  ] as const
+                ).map(([key, label, selectedFile]) => (
+                  <label key={key}>
+                    <span>{label}</span>
+                    <select
+                      required
+                      value={config[key]}
+                      onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
+                    >
+                      <option value="">选择文件</option>
+                      {files
+                        .filter((f) => ["CSV", "TSV", "XLSX"].includes(f.format))
+                        .map((file) => (
+                          <option key={file.id} value={file.id}>
+                            {file.name}
+                          </option>
+                        ))}
+                    </select>
+                    <small className="field-hint">
+                      {selectedFile ? `${selectedFile.format} · ${selectedFile.status}` : "必填"}
+                    </small>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="analysis-form-group">
+              <div className="analysis-form-group-head">
+                <b>实验设计</b>
+                <small>用于生成 condition 与 batch 关系</small>
+              </div>
+              <div className="analysis-config analysis-design-grid">
+                {(
+                  [
+                    ["condition", "分组字段", "如 condition"],
+                    ["control", "对照组", "如 control"],
+                    ["treated", "处理组", "如 treated"],
+                    ["batch", "批次字段（可选）", "没有批次可留空"],
+                  ] as const
+                ).map(([key, label, placeholder]) => (
+                  <label key={key}>
+                    <span>{label}</span>
+                    <input
+                      required={key !== "batch"}
+                      placeholder={placeholder}
+                      value={config[key]}
+                      onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
+                    />
+                  </label>
+                ))}
+                <label>
+                  <span>FDR 阈值</span>
+                  <input
+                    type="number"
+                    min="0.001"
+                    max="0.999"
+                    step="0.001"
+                    value={config.alpha}
+                    onChange={(e) => setConfig({ ...config, alpha: Number(e.target.value) })}
+                  />
+                  <small className="field-hint">默认 0.05</small>
+                </label>
+              </div>
+            </div>
+          </section>
+          <section className="analysis-run-section">
+            <div className="analysis-section-head">
+              <div className="analysis-step">
+                <span>03</span>
+                <div>
+                  <h3>校验并运行</h3>
+                  <p>服务端会在本机 Worker 中执行 PyDESeq2，并持续回传作业状态。</p>
+                </div>
+              </div>
+              <span className={`analysis-section-state ${readyToRun ? "ready" : ""}`}>
+                {statusLabel}
+              </span>
+            </div>
+            <div className="analysis-readiness">
+              <span className={inputsReady ? "ready" : ""}>✓ 输入文件</span>
+              <span className={designReady ? "ready" : ""}>✓ 实验设计</span>
+              <span className={!blockedByTask ? "ready" : ""}>
+                {blockedByTask ? "○ 等待计划确认" : "✓ 任务已解锁"}
+              </span>
+            </div>
+            <button
+              id="analysis-run"
+              className="primary analysis-run-button"
+              disabled={busy || !readyToRun}
+            >
+              {active ? "计算中…" : "运行 PyDESeq2"}
+            </button>
+          </section>
         </form>
       )}
       {error && (

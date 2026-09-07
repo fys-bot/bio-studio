@@ -864,3 +864,369 @@ html {
 .inspector .python-code-line:hover {
   background: #e9edcf;
 }
+
+/* 真实分析面板：按“文件 -> 设计 -> 运行”组织操作，减少字段寻找和来回滚动。 */
+.real-analysis {
+  max-width: 900px;
+  width: calc(100% - 48px);
+  margin: 24px auto;
+  padding: 22px;
+  border: 1px solid #d1d0c5;
+  border-radius: 10px;
+  background: #fbfaf4;
+  box-shadow: 0 8px 24px #7d806b12;
+  color: #34372f;
+}
+
+.real-analysis-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e0dfd5;
+}
+
+.real-analysis-head h2 {
+  margin: 5px 0 4px;
+  color: #292d27;
+  font:
+    600 22px Georgia,
+    serif;
+}
+
+.real-analysis-head p {
+  margin: 0;
+  color: #777970;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.analysis-eyebrow {
+  color: #23766b !important;
+  font: 9px "DM Mono" !important;
+  letter-spacing: 0.1em;
+}
+
+.real-analysis-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: none;
+}
+
+.analysis-status,
+.analysis-section-state {
+  border: 1px solid #d1d0c5;
+  border-radius: 999px;
+  padding: 6px 9px;
+  color: #777970;
+  background: #f1f2eb;
+  font: 9px "DM Mono";
+  white-space: nowrap;
+}
+
+.analysis-status.ready,
+.analysis-section-state.ready {
+  border-color: #c8cf7a;
+  background: #edf0c9;
+  color: #596515;
+}
+
+.analysis-contract {
+  margin: 14px 0 0;
+  padding: 9px 11px;
+  border-left: 3px solid #c8cf7a;
+  background: #f6f8d8;
+  color: #697245;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.analysis-section,
+.analysis-run-section {
+  padding: 20px 0;
+  border-bottom: 1px solid #e0dfd5;
+}
+
+.analysis-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.analysis-step {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+}
+
+.analysis-step > span {
+  color: #69751a;
+  font: 10px "DM Mono";
+  padding-top: 3px;
+}
+
+.analysis-step h3 {
+  margin: 0;
+  color: #34372f;
+  font-size: 15px;
+}
+
+.analysis-step p {
+  margin: 4px 0 0;
+  color: #777970;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.bound-files {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 14px 0 0;
+}
+
+.bound-file {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #d1d0c5;
+  border-radius: 7px;
+  background: #fffef8;
+  color: #34372f;
+  text-align: left;
+}
+
+.bound-file:hover,
+.bound-file:focus-visible {
+  border-color: #b8c14c;
+  background: #f6f8d8;
+}
+
+.bound-file-format {
+  display: grid;
+  place-items: center;
+  min-height: 28px;
+  border-radius: 5px;
+  background: #e1ecc9;
+  color: #657118;
+  font: 9px "DM Mono";
+}
+
+.bound-file-copy,
+.bound-file-copy b,
+.bound-file-copy small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bound-file-copy b,
+.bound-file-copy small {
+  display: block;
+}
+
+.bound-file-copy b {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.bound-file-copy small {
+  margin-top: 4px;
+  color: #777970;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.bound-file-action {
+  color: #69751a;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.bound-files-empty {
+  display: grid;
+  gap: 4px;
+  grid-column: 1 / -1;
+  padding: 14px;
+  border: 1px dashed #c7c8bc;
+  border-radius: 7px;
+  color: #59635a;
+  background: #f6f7f0;
+}
+
+.bound-files-empty b {
+  font-size: 11px;
+}
+
+.bound-files-empty small {
+  color: #777970;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.analysis-form {
+  display: grid;
+}
+
+.analysis-form .analysis-section {
+  border-bottom: 1px solid #e0dfd5;
+}
+
+.analysis-form-group {
+  margin-top: 17px;
+}
+
+.analysis-form-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin-bottom: 9px;
+}
+
+.analysis-form-group-head b {
+  color: #4f584d;
+  font-size: 11px;
+}
+
+.analysis-form-group-head small {
+  color: #85887f;
+  font-size: 9px;
+}
+
+.analysis-config {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.analysis-config label {
+  min-width: 0;
+  gap: 6px;
+  color: #4f584d;
+}
+
+.analysis-config label > span {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.analysis-config input,
+.analysis-config select {
+  min-height: 38px;
+  padding: 9px 10px;
+  border: 1px solid #c7c8bc;
+  border-radius: 6px;
+  background: #fffef8;
+  color: #34372f;
+  font-size: 12px;
+}
+
+.analysis-config input::placeholder {
+  color: #a0a399;
+}
+
+.analysis-config input:focus,
+.analysis-config select:focus {
+  border-color: #aab535;
+  box-shadow: 0 0 0 3px #dbe78055;
+  outline: none;
+}
+
+.field-hint {
+  color: #85887f;
+  font-size: 9px;
+}
+
+.analysis-run-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 16px;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.analysis-run-section .analysis-section-head {
+  grid-column: 1 / -1;
+}
+
+.analysis-readiness {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  color: #85887f;
+  font-size: 10px;
+}
+
+.analysis-readiness span.ready {
+  color: #657118;
+}
+
+.analysis-run-button {
+  min-width: 150px;
+  min-height: 40px;
+}
+
+.real-job-status {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #d1d0c5;
+  border-radius: 7px;
+  background: #f6f7f0;
+  color: #59635a;
+  font-size: 11px;
+}
+
+.real-results {
+  margin-top: 20px;
+  padding: 20px 0 0;
+  border-top: 1px solid #d1d0c5;
+}
+
+.real-results h3 {
+  margin: 0;
+  color: #34372f;
+  font:
+    600 17px Georgia,
+    serif;
+}
+
+.real-results p {
+  color: #777970;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .real-analysis {
+    width: calc(100% - 30px);
+    padding: 16px;
+  }
+
+  .real-analysis-head,
+  .analysis-run-section {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .real-analysis-actions {
+    justify-content: flex-start;
+  }
+
+  .bound-files,
+  .analysis-config {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .analysis-run-button {
+    width: 100%;
+  }
+}

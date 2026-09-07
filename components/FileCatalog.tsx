@@ -26,9 +26,12 @@ const formatBytes = (bytes: number) =>
     : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
 export function FileCatalog() {
+  const pageSize = 10;
   const [files, setFiles] = useState<ProjectFileRecord[]>([]);
   const [selected, setSelected] = useState<ProjectFileRecord | null>(null);
   const [filter, setFilter] = useState<ProjectFileRecord["status"] | undefined>();
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [reparsing, setReparsing] = useState(false);
@@ -50,10 +53,25 @@ export function FileCatalog() {
     void loadFiles();
   }, [loadFiles]);
 
+  const matchedFiles = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return files.filter((file) => {
+      const matchesStatus = !filter || file.status === filter;
+      const matchesQuery = `${file.name} ${file.format} ${file.role} ${file.detail}`
+        .toLowerCase()
+        .includes(normalizedQuery);
+      return matchesStatus && matchesQuery;
+    });
+  }, [files, filter, query]);
+  const pageCount = Math.max(1, Math.ceil(matchedFiles.length / pageSize));
   const visibleFiles = useMemo(
-    () => files.filter((file) => !filter || file.status === filter),
-    [files, filter],
+    () => matchedFiles.slice((page - 1) * pageSize, page * pageSize),
+    [matchedFiles, page],
   );
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
 
   const reparse = async (file: ProjectFileRecord) => {
     setReparsing(true);
@@ -79,41 +97,67 @@ export function FileCatalog() {
 
   return (
     <main className="catalog-page">
-      <header className="catalog-header">
-        <div>
-          <Link href="/projects/proj_a5211690a4/tasks/task_demo_rnaseq" className="back-link">
-            ← 返回工作台
-          </Link>
-          <span className="catalog-kicker">PROJECT FILES / 文件中心</span>
-          <h1>文件中心</h1>
-        </div>
-        <label className="primary upload-button">
-          ＋ 上传文件
-          <input
-            type="file"
-            accept=".csv,.tsv,.txt,.md,.xlsx,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void handleUpload(file);
-              event.currentTarget.value = "";
-            }}
-          />
-        </label>
-      </header>
-      <section className="catalog-toolbar file-toolbar">
-        <div className="filter-row">
-          {filterOptions.map((option) => (
-            <button
-              key={option.label}
-              className={filter === option.value ? "active" : ""}
-              onClick={() => setFilter(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-        <span className="catalog-meta-inline">{visibleFiles.length} 个文件 · 服务端目录快照</span>
-      </section>
+      <div className="catalog-sticky">
+        <header className="catalog-header">
+          <div>
+            <Link href="/projects/proj_a5211690a4/tasks/task_demo_rnaseq" className="back-link">
+              ← 返回工作台
+            </Link>
+            <span className="catalog-kicker">PROJECT FILES / 文件中心</span>
+            <h1>文件中心</h1>
+          </div>
+          <label className="primary upload-button">
+            ＋ 上传文件
+            <input
+              type="file"
+              accept=".csv,.tsv,.txt,.md,.xlsx,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void handleUpload(file);
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
+        </header>
+        <section className="catalog-toolbar file-toolbar">
+          <label className="file-search">
+            <span aria-hidden="true">⌕</span>
+            <input
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setPage(1);
+              }}
+              placeholder="搜索文件名、格式或解析器"
+              aria-label="搜索项目文件"
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery("")} aria-label="清除文件搜索">
+                ×
+              </button>
+            )}
+          </label>
+          <div className="file-filter-line">
+            <div className="filter-row">
+              {filterOptions.map((option) => (
+                <button
+                  key={option.label}
+                  className={filter === option.value ? "active" : ""}
+                  onClick={() => {
+                    setFilter(option.value);
+                    setPage(1);
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <span className="catalog-meta-inline">
+              {matchedFiles.length} 个文件 · 服务端目录快照
+            </span>
+          </div>
+        </section>
+      </div>
       {loading && <section className="catalog-state">正在读取文件目录…</section>}
       {error && (
         <section className="catalog-state error">
@@ -149,6 +193,26 @@ export function FileCatalog() {
           ))}
           {visibleFiles.length === 0 && <div className="catalog-state">当前筛选没有文件。</div>}
         </section>
+      )}
+      {!loading && !error && matchedFiles.length > pageSize && (
+        <nav className="catalog-pagination" aria-label="文件目录分页">
+          <button disabled={page === 1} onClick={() => setPage(page - 1)}>
+            上一页
+          </button>
+          {Array.from({ length: pageCount }, (_, index) => index + 1).map((pageNumber) => (
+            <button
+              className={page === pageNumber ? "current" : ""}
+              aria-current={page === pageNumber ? "page" : undefined}
+              key={pageNumber}
+              onClick={() => setPage(pageNumber)}
+            >
+              {pageNumber}
+            </button>
+          ))}
+          <button disabled={page === pageCount} onClick={() => setPage(page + 1)}>
+            下一页
+          </button>
+        </nav>
       )}
       {selected && <FilePreview fileId={selected.id} onClose={() => setSelected(null)} />}
     </main>

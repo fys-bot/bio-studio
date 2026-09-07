@@ -1075,6 +1075,366 @@ html {
   }
 }
 
+/* 能力中心与文件中心：滚动压缩头部、提高信息密度并保留核心筛选。 */
+.module-shell .catalog-page {
+  padding-top: 18px;
+}
+
+.catalog-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  margin: 0 -2px;
+  padding: 2px 2px 12px;
+  background: color-mix(in srgb, #f6f8f7 94%, transparent);
+  backdrop-filter: blur(10px);
+  transition: padding 0.2s ease;
+}
+
+.module-content.is-scrolled .catalog-sticky {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #dbe2de;
+  box-shadow: 0 8px 18px #53685d12;
+}
+
+.module-shell .catalog-header {
+  min-height: 88px;
+  margin-bottom: 12px;
+  transition: min-height 0.2s ease;
+}
+
+.module-shell .catalog-header h1 {
+  margin: 5px 0 0;
+  font-size: 26px;
+  line-height: 1.15;
+  transition: font-size 0.2s ease;
+}
+
+.module-shell .catalog-kicker {
+  margin: 8px 0 0;
+  font-size: 10px;
+}
+
+.module-shell .back-link {
+  display: inline-block;
+  font-size: 11px;
+}
+
+.module-content.is-scrolled .catalog-header {
+  min-height: 42px;
+  margin-bottom: 7px;
+  align-items: center;
+}
+
+.module-content.is-scrolled .catalog-header h1 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.module-content.is-scrolled .catalog-header .catalog-kicker,
+.module-content.is-scrolled .catalog-header .back-link {
+  display: none;
+}
+
+.module-shell .catalog-header .primary,
+.module-shell .upload-button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.module-shell .catalog-toolbar {
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.module-shell .catalog-toolbar > input {
+  height: 40px;
+  padding: 8px 11px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.module-shell .filter-row {
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.module-shell .filter-row button,
+.module-shell .filter-row select {
+  min-height: 30px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 10px;
+}
+
+.module-shell .catalog-meta {
+  margin: 12px auto;
+  font-size: 10px;
+}
+
+.module-shell .skill-grid {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.module-shell .skill-card {
+  min-height: 218px;
+  border-radius: 7px;
+}
+
+.module-shell .skill-card:hover {
+  transform: translateY(-1px);
+}
+
+.module-shell .skill-card-top,
+.module-shell .skill-card footer {
+  padding: 10px 12px;
+}
+
+.module-shell .skill-glyph {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 18px;
+}
+
+.module-shell .skill-card-body {
+  padding: 13px 12px;
+}
+
+.module-shell .skill-card h2,
+.skill-card-body h2 {
+  margin: 6px 0;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.module-shell .skill-card p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.module-shell .skill-io {
+  gap: 3px;
+  margin-top: 9px;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.module-shell .skill-card footer {
+  font-size: 8px;
+}
+
+.module-shell .skill-card footer > div {
+  gap: 7px;
+}
+
+.module-shell .skill-card footer .text-button {
+  min-height: 28px;
+  font-size: 9px;
+}
+
+.catalog-pagination {
+  max-width: 1180px;
+  margin: 14px auto 0;
+  justify-content: center;
+  gap: 5px;
+}
+
+.catalog-pagination button {
+  min-width: 31px;
+  min-height: 31px;
+  padding: 5px 8px;
+  font-size: 10px;
+}
+
+.catalog-pagination button.current {
+  border-color: #8f9d28;
+  background: #e9eeb9;
+  color: #48550f;
+  font-weight: 700;
+}
+
+.file-toolbar {
+  display: grid;
+  gap: 8px;
+}
+
+.file-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid #c7d1ca;
+  border-radius: 6px;
+  background: #fff;
+  color: #738077;
+}
+
+.file-search:focus-within {
+  border-color: #8fa899;
+  box-shadow: 0 0 0 2px #b9d2c455;
+}
+
+.file-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #26322c;
+  font-size: 11px;
+}
+
+.file-search button {
+  border: 0;
+  background: transparent;
+  color: #6f7a72;
+  font-size: 15px;
+}
+
+.file-filter-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.file-filter-line .filter-row {
+  margin-top: 0;
+}
+
+.module-shell .file-list {
+  margin-top: 12px;
+  border-radius: 7px;
+}
+
+.module-shell .file-row {
+  grid-template-columns: 50px minmax(0, 1fr) 78px 88px 18px;
+  gap: 10px;
+  min-height: 66px;
+  padding: 11px 13px;
+}
+
+.module-shell .file-main b {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.module-shell .file-main small,
+.module-shell .file-size,
+.module-shell .file-status {
+  font-size: 9px;
+}
+
+.module-shell .file-type {
+  padding: 6px 4px;
+  font-size: 9px;
+}
+
+@media (max-width: 1100px) {
+  .module-shell .catalog-page {
+    padding-inline: 20px;
+  }
+
+  .module-shell .skill-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .module-shell .catalog-page {
+    padding: 12px 12px 78px;
+  }
+
+  .catalog-sticky {
+    margin: 0 -12px;
+    padding: 0 12px 9px;
+  }
+
+  .module-shell .catalog-header {
+    min-height: 66px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .module-shell .catalog-header h1 {
+    font-size: 20px;
+  }
+
+  .module-shell .catalog-kicker {
+    display: none;
+  }
+
+  .module-shell .catalog-header .primary,
+  .module-shell .upload-button {
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .module-shell .catalog-toolbar {
+    padding: 8px;
+  }
+
+  .module-shell .filter-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .module-shell .filter-row button:nth-of-type(n + 4) {
+    display: none;
+  }
+
+  .module-shell .filter-row select {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .module-shell .skill-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .module-shell .skill-card {
+    min-height: 0;
+  }
+
+  .module-shell .catalog-meta small,
+  .catalog-meta-inline {
+    display: none;
+  }
+
+  .file-filter-line {
+    display: block;
+  }
+
+  .module-shell .file-row {
+    grid-template-columns: 42px minmax(0, 1fr) 64px;
+    gap: 8px;
+    min-height: 62px;
+    padding: 9px;
+  }
+
+  .module-shell .file-row .file-size,
+  .module-shell .file-row > span:last-child {
+    display: none;
+  }
+}
+
 /* 统一截断规则，避免中英文长标题在 hover 时把父容器撑开。 */
 .rag-source > span:last-child,
 .rag-stage > button > span:nth-child(2),

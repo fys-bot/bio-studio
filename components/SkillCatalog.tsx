@@ -172,42 +172,44 @@ export function SkillCatalog() {
 
   return (
     <main className="catalog-page">
-      <header className="catalog-header">
-        <div>
-          <Link href="/projects/proj_a5211690a4/tasks/task_demo_rnaseq" className="back-link">
-            ← 返回工作台
-          </Link>
-          <span className="catalog-kicker">SKILL HUB / 能力中心</span>
-          <h1>能力中心</h1>
-        </div>
-        <button
-          className="primary"
-          onClick={() => {
-            setCreateError("");
-            setCreating(true);
+      <div className="catalog-sticky">
+        <header className="catalog-header">
+          <div>
+            <Link href="/projects/proj_a5211690a4/tasks/task_demo_rnaseq" className="back-link">
+              ← 返回工作台
+            </Link>
+            <span className="catalog-kicker">SKILL HUB / 能力中心</span>
+            <h1>能力中心</h1>
+          </div>
+          <button
+            className="primary"
+            onClick={() => {
+              setCreateError("");
+              setCreating(true);
+            }}
+          >
+            ＋ 新建技能
+          </button>
+        </header>
+        <SkillFilters
+          query={query}
+          source={source}
+          category={category}
+          categories={categories}
+          onQueryChange={(value) => {
+            setQuery(value);
+            setPage(1);
           }}
-        >
-          ＋ 新建技能
-        </button>
-      </header>
-      <SkillFilters
-        query={query}
-        source={source}
-        category={category}
-        categories={categories}
-        onQueryChange={(value) => {
-          setQuery(value);
-          setPage(1);
-        }}
-        onSourceChange={(value) => {
-          setSource(value);
-          setPage(1);
-        }}
-        onCategoryChange={(value) => {
-          setCategory(value);
-          setPage(1);
-        }}
-      />
+          onSourceChange={(value) => {
+            setSource(value);
+            setPage(1);
+          }}
+          onCategoryChange={(value) => {
+            setCategory(value);
+            setPage(1);
+          }}
+        />
+      </div>
       <section className="catalog-meta">
         <span>{total} 个技能</span>
         <small>服务端目录快照 · 状态跨刷新持久化 · 运行前可审计版本</small>
@@ -235,13 +237,22 @@ export function SkillCatalog() {
         </section>
       )}
       {total > 12 && (
-        <nav className="catalog-pagination">
+        <nav className="catalog-pagination" aria-label="能力目录分页">
           <button disabled={page === 1} onClick={() => setPage(page - 1)}>
             上一页
           </button>
-          <span>
-            {page} / {Math.ceil(total / 12)}
-          </span>
+          {Array.from({ length: Math.ceil(total / 12) }, (_, index) => index + 1).map(
+            (pageNumber) => (
+              <button
+                className={page === pageNumber ? "current" : ""}
+                aria-current={page === pageNumber ? "page" : undefined}
+                key={pageNumber}
+                onClick={() => setPage(pageNumber)}
+              >
+                {pageNumber}
+              </button>
+            ),
+          )}
           <button disabled={page * 12 >= total} onClick={() => setPage(page + 1)}>
             下一页
           </button>

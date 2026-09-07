@@ -76,7 +76,7 @@ export type SkillResponse = { skill: SkillRecord };
 export type ProjectFileResponse = { file: ProjectFileRecord };
 export type DeleteTaskResponse = { deletedTaskId: string; tasks: TaskResponse["tasks"] };
 
-const SKILL_CATALOG_PAGE_SIZE = 6;
+const SKILL_CATALOG_PAGE_SIZE = 12;
 
 /**
  * 前端 API 适配层：统一错误转换、JSON 解析和请求方法，页面不再直接拼接接口细节。

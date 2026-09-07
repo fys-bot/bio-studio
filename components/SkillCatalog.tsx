@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -9,7 +10,7 @@ import { CatalogSearch } from "./ui/CatalogSearch";
 import { SelectControl } from "./ui/SelectControl";
 
 const sources = ["全部来源", "BioFlow Lab", "Team", "Community", "Mine"];
-const pageSize = 6;
+const pageSize = 12;
 
 function SkillFilters({
   query,
@@ -71,36 +72,50 @@ function SkillCard({
 }) {
   return (
     <article className="skill-card">
-      <div className="skill-card-top">
-        <span className="skill-glyph">◇</span>
+      <header className="skill-card-top">
+        <div className="skill-card-heading">
+          <span className="skill-glyph">◇</span>
+          <div>
+            <span className="skill-category">{skill.category}</span>
+            <h2>
+              <Link className="skill-card-link" href={`/skills/${skill.id}`}>
+                {skill.name}
+              </Link>
+            </h2>
+          </div>
+        </div>
         <span className={`skill-state ${skill.enabled ? "enabled" : ""}`}>
           {skill.enabled ? "已启用" : "可用"}
         </span>
-      </div>
+      </header>
       <div className="skill-card-body">
-        <span className="skill-category">{skill.category}</span>
-        <h2>
-          <Link className="skill-card-link" href={`/skills/${skill.id}`}>
-            {skill.name}
-          </Link>
-        </h2>
         <p>{skill.description}</p>
-        <div className="skill-io">
-          <span>输入：{skill.inputs.join(" · ")}</span>
-          <span>输出：{skill.outputs.join(" · ")}</span>
-        </div>
+        <dl className="skill-contract">
+          <div>
+            <dt>输入</dt>
+            <dd>{skill.inputs.slice(0, 2).join(" · ")}</dd>
+          </div>
+          <div>
+            <dt>产出</dt>
+            <dd>{skill.outputs.slice(0, 2).join(" · ")}</dd>
+          </div>
+        </dl>
       </div>
       <footer>
         <small>
-          {skill.source} · v{skill.version} ·{" "}
-          {new Date(skill.updatedAt).toLocaleDateString("zh-CN")}
+          {skill.source} · v{skill.version}
         </small>
-        <div>
+        <div className="skill-card-actions">
           <button className="text-button" disabled={busy} onClick={onToggle}>
             {busy ? "保存中…" : skill.enabled ? "停用" : "启用"}
           </button>
-          <Link className="text-button" href={`/skills/${skill.id}`}>
-            查看详情 →
+          <Link
+            className="skill-open-button"
+            href={`/skills/${skill.id}`}
+            aria-label={`查看${skill.name}详情`}
+            title="查看技能详情"
+          >
+            <ArrowUpRight size={15} />
           </Link>
         </div>
       </footer>
@@ -177,13 +192,7 @@ export function SkillCatalog() {
     <main className="catalog-page">
       <div className="catalog-sticky">
         <header className="catalog-header">
-          <div>
-            <Link href="/projects/proj_a5211690a4/tasks/task_demo_rnaseq" className="back-link">
-              ← 返回工作台
-            </Link>
-            <span className="catalog-kicker">SKILL HUB / 能力中心</span>
-            <h1>能力中心</h1>
-          </div>
+          <h1>能力中心</h1>
           <button
             className="primary"
             onClick={() => {

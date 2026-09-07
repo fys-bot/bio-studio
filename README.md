@@ -41,7 +41,8 @@ npm run services
 - 计算：PyDESeq2 0.5.4 独立子进程；SQLite 持久化排队与状态，支持取消、失败及重试。
 - 原文件和解析结果保存在本机 `data/runtime`；授权预览返回正文和表格，不再只有元信息。
 - 未配置 `BIOFLOW_OCR_MODEL` 时扫描文档明确显示需要 OCR，不伪造全文或索引成功。
-- 真实 LLM Agent、cross-encoder、知识图谱、其他科研计算器和生产多租户暂未完成。
+- LLM 计划适配器已接入服务端 OpenAI-compatible 接口；真实任务没有 LLM 计划时不能审批。当前这台开发机的供应商连通性尚未完成验收，不能把它当作已验证的生产能力。
+- cross-encoder、知识图谱、其他科研计算器和生产多租户暂未完成。
 
 完整选型、来源、数据边界和验收见 [真实科研链路-选型与验收](./docs/真实科研链路-选型与验收.md)。历史待办文件含旧阶段记录，不应作为当前完成度依据。
 
@@ -60,6 +61,7 @@ npm run smoke
 查看 [.env.example](./.env.example)。真实研究服务需要前后端一致的 `BIOFLOW_WORKER_TOKEN`；开发默认令牌仅限本机，不可用于部署。
 
 - `QDRANT_URL` / `QDRANT_API_KEY`：切换 Qdrant Server。
+- `LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY`：服务端生成真实分析计划；Key 只放 `.env.local`，不要提交到 Git 或发送到浏览器。
 - `BIOFLOW_OCR_MODEL` / `BIOFLOW_OCR_URL`：启用视觉 OCR；默认请求本机 Ollama，配置远程地址前应确认数据外发权限。
 - `BIOFLOW_DATA_DIR`：科研文件、元数据、索引和作业目录；模型缓存默认同目录下 models。
 - 服务端点不执行用户上传脚本或自定义技能代码。新建技能保存的是声明式配置。

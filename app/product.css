@@ -813,6 +813,268 @@ html {
   stroke: #aab535;
 }
 
+/* 工作台交互收口：对话、计划、画布和文件预览保持同一套浅色密度。 */
+.dialogue-thread {
+  padding: 16px 18px;
+  border-block: 1px solid #e1e4df;
+  background: #f9fbfa;
+}
+
+.dialogue-thread .user-message,
+.conversation .sent-message {
+  width: fit-content;
+  max-width: min(72%, 620px);
+  margin-left: auto;
+  border: 1px solid #d7ddd9;
+  border-radius: 12px 12px 3px 12px;
+  background: #eef2f0;
+  box-shadow: none;
+}
+
+.dialogue-thread .agent-message,
+.conversation .reply-message {
+  align-self: flex-start;
+  width: min(86%, 720px);
+  max-width: 100%;
+  border: 0;
+  padding: 0;
+}
+
+.dialogue-thread .agent-message > div:last-child,
+.conversation .reply-message .message-content {
+  min-width: 0;
+  padding: 11px 13px;
+  border: 1px solid #dce2de;
+  border-radius: 3px 12px 12px 12px;
+  background: #fff;
+}
+
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.conversation .sent-message {
+  align-self: flex-end;
+  padding: 10px 12px;
+}
+
+.conversation .composer {
+  position: sticky;
+  bottom: 12px;
+  width: 100%;
+  margin-top: 6px;
+  border-color: #c9d2cc;
+  background: #fff;
+}
+
+.plan-preview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.plan-preview span {
+  min-width: 0;
+  border-color: #d6ddd7;
+  background: #f2f5f3;
+  color: #425047;
+  overflow-wrap: anywhere;
+}
+
+.canvas-toolbar {
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #dedfd6;
+  background: #f7f7f1f2;
+}
+
+.canvas-toolbar > span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px 0;
+}
+
+.canvas-toolbar > div {
+  gap: 3px;
+}
+
+.canvas-toolbar button {
+  margin-left: 0;
+}
+
+.canvas-viewport.is-panning {
+  cursor: grabbing;
+}
+
+.trace-source-list .source {
+  margin-bottom: 6px;
+  padding: 9px;
+  border: 1px solid #dedfd6;
+  border-radius: 7px;
+}
+
+.trace-source-list .source:hover {
+  border-color: #c2cc87;
+  background: #f3f5dc;
+}
+
+.modal-detail-notice,
+.document-source-banner {
+  border: 1px solid #d9dfd5;
+  border-radius: 7px;
+  background: #f2f5f1;
+  color: #5f6962;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.modal-detail-notice {
+  margin: 12px 0;
+  padding: 10px 12px;
+}
+
+.document-source-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 18px 0;
+  padding: 9px 11px;
+}
+
+.document-source-banner b {
+  flex: none;
+  color: #405a4d;
+  font-size: 11px;
+}
+
+.document-source-banner.demo-seed {
+  border-color: #dfe2a8;
+  background: #f7f8dd;
+}
+
+.document-preview {
+  width: min(820px, calc(100vw - 40px));
+  max-height: calc(100dvh - 40px);
+  border-radius: 8px;
+}
+
+.document-preview > header {
+  padding: 14px 18px;
+}
+
+.document-preview h2 {
+  max-width: min(650px, calc(100vw - 150px));
+  margin-top: 3px;
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.document-actions {
+  padding: 12px 18px;
+}
+
+.document-section pre {
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.document-footer code {
+  min-width: 0;
+  overflow: hidden;
+  color: #69726b;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1180px) {
+  .canvas-toolbar em {
+    display: none;
+  }
+
+  .canvas-toolbar {
+    align-items: flex-start;
+    padding: 9px 10px;
+  }
+
+  .canvas-toolbar > span {
+    display: block;
+    max-width: 46%;
+    line-height: 1.45;
+  }
+
+  .layout-save-state {
+    display: block;
+    margin: 2px 0 0;
+  }
+
+  .plan-preview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .dialogue-thread {
+    padding: 12px;
+  }
+
+  .dialogue-thread .user-message,
+  .conversation .sent-message,
+  .dialogue-thread .agent-message,
+  .conversation .reply-message {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .plan-preview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .canvas-toolbar > span {
+    max-width: 42%;
+    font-size: 9px;
+  }
+
+  .canvas-toolbar .layout-version-button {
+    font-size: 0;
+    min-width: 30px;
+  }
+
+  .canvas-toolbar .layout-version-button::after {
+    content: "存";
+    font-size: 10px;
+  }
+
+  .ui-modal-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .ui-modal,
+  .document-preview {
+    width: 100%;
+    max-height: calc(100dvh - 12px);
+    border-radius: 10px 10px 0 0;
+  }
+
+  .document-source-banner {
+    align-items: flex-start;
+    flex-direction: column;
+    margin: 10px 12px 0;
+  }
+
+  .document-preview h2 {
+    max-width: calc(100vw - 86px);
+    font-size: 15px;
+  }
+
+  .document-section pre {
+    font-size: 11px;
+  }
+}
+
 /* 统一截断规则，避免中英文长标题在 hover 时把父容器撑开。 */
 .rag-source > span:last-child,
 .rag-stage > button > span:nth-child(2),

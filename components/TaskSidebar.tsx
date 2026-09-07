@@ -26,7 +26,7 @@ type TaskSidebarProps = {
   onCreateTask: () => void;
   onSelectTask: (taskId: string, taskLabel: string, panel?: SidebarPanel) => void;
   onUploadFile: () => void;
-  onOpenFile: (fileName: string, detail: string) => void;
+  onOpenFile: (fileName: string, detail: string, fileId?: string) => void;
   onResizeStart: (event: PointerEvent<HTMLDivElement>) => void;
 };
 
@@ -211,7 +211,7 @@ export function TaskSidebar({
         {(task.executionMode !== "real" || countMatrixProfile) && (
           <button
             className="dataset dataset-button"
-            onClick={() => onOpenFile("counts.csv", countMatrixDetail)}
+            onClick={() => onOpenFile("counts.csv", countMatrixDetail, countMatrixProfile?.id)}
           >
             <span className="file-icon">CSV</span>
             <div>
@@ -229,6 +229,7 @@ export function TaskSidebar({
                 metadataProfile
                   ? `TSV · ${metadataProfile.sampleCount} 个样本 · ${metadataProfile.columnCount} 个字段 · ${metadataProfile.missingCellCount} 个缺失值`
                   : "样本元数据 · 12 KB · schema 已校验 · condition 字段待映射",
+                metadataProfile?.id,
               )
             }
           >
@@ -252,7 +253,7 @@ export function TaskSidebar({
             <button
               className="dataset dataset-button"
               key={fileName}
-              onClick={() => onOpenFile(fileName, fileDetail)}
+              onClick={() => onOpenFile(fileName, fileDetail, dataProfile?.id)}
             >
               <span className="file-icon">{dataProfile?.format ?? "NEW"}</span>
               <div>

@@ -250,14 +250,20 @@ export function WorkspaceModal({
           <div className="modal-detail">
             <div className="detail-icon">{modal.kind === "source" ? "⌁" : "▧"}</div>
             <p>{modal.detail}</p>
+            {modal.kind === "file" && (
+              <div className="modal-detail-notice">
+                这是演示输入模板或文件入口说明。绑定真实文件后会打开正文、表格和索引状态；
+                当前不会用虚构解析结果代替真实内容。
+              </div>
+            )}
             <dl>
               <div>
                 <dt>状态</dt>
-                <dd>可用</dd>
+                <dd>{modal.kind === "source" ? "已绑定" : "仅入口说明"}</dd>
               </div>
               <div>
                 <dt>数据区域</dt>
-                <dd>本地项目空间</dd>
+                <dd>{modal.kind === "source" ? "项目证据索引" : "演示上下文"}</dd>
               </div>
               {modal.kind === "source" && (
                 <div>

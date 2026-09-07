@@ -35,13 +35,13 @@ export function RagTracePanel({
   if (!trace)
     return (
       <section className="rag-trace-empty">
-        <div className="rag-demo-banner">
-          演示模式 · 当前 RAG 使用可替换的确定性 Adapter，接口契约与生产实现一致。
-        </div>
         <span>✦</span>
         <div>
-          <b>等待下一次问题的 RAG Trace</b>
-          <p>在下方输入研究问题后，这里会展示文档解析、召回 Top 20、精排、知识图谱和工具调用。</p>
+          <b>尚未产生可验证的 RAG Trace</b>
+          <p>
+            发送研究问题后，这里才会展示真实返回的文档解析、召回、精排、关系扩展和工具调用；
+            当前不预填演示证据。
+          </p>
         </div>
       </section>
     );

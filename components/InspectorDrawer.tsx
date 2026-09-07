@@ -2,7 +2,6 @@
 
 import { useState, type PointerEvent as ReactPointerEvent } from "react";
 import { clarificationQuestions, type ClarificationAnswers } from "@/components/ClarificationCard";
-import { KnowledgeGraph } from "@/components/KnowledgeGraph";
 import { ResultsPanel } from "@/components/results/ResultsPanel";
 import { ProteinStructureViewer } from "@/components/structure/ProteinStructureViewer";
 import { StreamingCodePanel } from "@/components/code/StreamingCodePanel";
@@ -111,12 +110,13 @@ export function InspectorDrawer({
   const selectedGene = artifacts
     .find((artifact) => artifact.kind === "chart")
     ?.candidateGenes?.find((gene) => gene.symbol === selectedGeneSymbol);
-  const sourceNames = [
-    "项目元数据规范",
-    "DESeq2 技能包 · v2.1",
-    "Bioconductor 设计指南",
-    "质控策略 · 2026-08",
-  ];
+  const traceEvidence = (ragTrace?.rerankedResults ?? [])
+    .filter((result) => result.kept)
+    .map((result) => {
+      const document = ragTrace?.parsedDocuments.find((item) => item.id === result.documentId);
+      const chunk = ragTrace?.chunks.find((item) => item.id === result.chunkId);
+      return { result, document, chunk };
+    });
   const downstreamNodes = selectedNode
     ? workflowEdges
         .filter(([from]) => from === selectedNode.id)
@@ -262,35 +262,34 @@ export function InspectorDrawer({
               </div>
             </div>
           </div>
-          <div className="source-list">
-            <h3>
-              依据来源 <span>4</span>
-            </h3>
-            {sourceNames.map((sourceName, sourceIndex) => (
-              <button
-                className="source"
-                key={sourceName}
-                onClick={() =>
-                  onOpenSource(
-                    sourceName,
-                    `${sourceIndex === 0 ? "直接匹配" : "语义匹配"} · 0.${
-                      91 - sourceIndex
-                    } 相关度 · 已绑定到 ${selectedNode?.label || "当前节点"}`,
-                  )
-                }
-              >
-                <i>{sourceIndex + 1}</i>
-                <span>
-                  <b>{sourceName}</b>
-                  <small>
-                    {sourceIndex === 0 ? "直接匹配" : "语义匹配"} · 0.{91 - sourceIndex} 相关度
-                  </small>
-                </span>
-                <em>↗</em>
-              </button>
-            ))}
-          </div>
-          <KnowledgeGraph nodeLabel={selectedNode?.label || "当前节点"} />
+          {traceEvidence.length > 0 && (
+            <div className="source-list trace-source-list">
+              <h3>
+                本次检索保留证据 <span>{traceEvidence.length}</span>
+              </h3>
+              {traceEvidence.map(({ result, document, chunk }, sourceIndex) => (
+                <button
+                  className="source"
+                  key={result.chunkId}
+                  onClick={() =>
+                    onOpenSource(
+                      document?.name || result.documentId,
+                      `${chunk?.text || "未返回片段正文"}\n\n精排分数 ${result.rerankScore.toFixed(3)} · ${result.rationale}`,
+                    )
+                  }
+                >
+                  <i>{sourceIndex + 1}</i>
+                  <span>
+                    <b>{document?.name || result.documentId}</b>
+                    <small>
+                      {result.retrievalMethod} · 精排 {result.rerankScore.toFixed(3)}
+                    </small>
+                  </span>
+                  <em>↗</em>
+                </button>
+              ))}
+            </div>
+          )}
           {selectedNode?.status === "failed" && (
             <div className="error-card">
               <b>⚠ 校验未通过</b>

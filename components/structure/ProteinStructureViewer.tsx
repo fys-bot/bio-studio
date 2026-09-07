@@ -95,10 +95,16 @@ export function ProteinStructureViewer({
           <b>{gene?.symbol || "E2F1"} 三维结构</b>
         </div>
         <div>
-          <button onClick={() => setAutoRotate((current) => !current)}>
+          <button
+            type="button"
+            className="structure-rotate-toggle"
+            onClick={() => setAutoRotate((current) => !current)}
+          >
             {autoRotate ? "暂停旋转" : "自动旋转"}
           </button>
-          <button onClick={renderer.resetView}>复位</button>
+          <button type="button" onClick={renderer.resetView}>
+            复位
+          </button>
         </div>
       </div>
 
@@ -114,7 +120,7 @@ export function ProteinStructureViewer({
           onWheel={renderer.handleWheel}
         />
         <span className="structure-interaction-hint">
-          Canvas 轻量降级 · 拖拽旋转 · 滚轮缩放 · 点击残基
+          Canvas 轻量降级 · 拖拽旋转 · Ctrl/⌘ + 滚轮缩放 · 点击残基
         </span>
         <span className={`structure-load-state ${adapterState.status}`}>
           {adapterState.status === "loading"

@@ -71,10 +71,18 @@ export function FilePreview({ fileId, onClose }: { fileId: string; onClose: () =
         {!document && !error && <p className="document-loading">正在加载正文…</p>}
         {document && (
           <>
+            <div className={`document-source-banner ${document.source || "user-upload"}`}>
+              <b>{document.source === "demo-seed" ? "示例资料" : "用户上传文件"}</b>
+              <span>
+                {document.source === "demo-seed"
+                  ? "仅用于演示解析和检索链路，不代表用户真实研究数据。"
+                  : "以下正文、表格与索引状态均来自当前文件的实际解析结果。"}
+              </span>
+            </div>
             <div className="document-actions">
               <span>
-                {labels[document.indexStatus]} · {document.characterCount} 字符 ·{" "}
-                {document.chunkCount ?? 0} 块
+                <b>{labels[document.indexStatus]}</b>
+                {document.characterCount} 字符 · {document.chunkCount ?? 0} 个检索块
               </span>
               <a href={`/api/files/${fileId}/original`}>下载原文件</a>
               <button
@@ -139,7 +147,9 @@ export function FilePreview({ fileId, onClose }: { fileId: string; onClose: () =
               )}
             </div>
             <footer className="document-footer">
-              <code>SHA-256 {document.sha256}</code>
+              <code title={`SHA-256 ${document.sha256}`}>
+                SHA-256 {document.sha256.slice(0, 16)}…
+              </code>
               <button
                 disabled={busy}
                 onClick={async () => {

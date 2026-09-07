@@ -178,6 +178,7 @@ export function useProteinStructureRenderer({
   };
 
   const handleWheel = (event: ReactWheelEvent<HTMLCanvasElement>) => {
+    if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
     zoomRef.current = Math.max(
       0.65,

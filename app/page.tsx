@@ -17,6 +17,7 @@ import { ProductGuide } from "@/components/ProductGuide";
 import { DocumentationDrawer } from "@/components/DocumentationDrawer";
 import { RealAnalysisPanel } from "@/components/RealAnalysisPanel";
 import { ContentLoading } from "@/components/ContentLoading";
+import { FilePreview } from "@/components/FilePreview";
 import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
 import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
 import type {
@@ -150,6 +151,7 @@ export default function Home() {
   const [activeTask, setActiveTask] = useState(routeTaskId);
   const [projectName, setProjectName] = useState("BioFlow 生命科学实验室");
   const [modal, setModal] = useState<WorkspaceModalState | null>(null);
+  const [previewFileId, setPreviewFileId] = useState("");
   const [toast, setToast] = useState("");
   const [agentMode, setAgentMode] = useState<"标准模式" | "严谨模式" | "快速模式">("标准模式");
   const [taskList, setTaskList] = useState<TaskListItem[]>([]);
@@ -1029,9 +1031,14 @@ ${task?.goal || config.goal}
           setUploadError("");
           setModal({ kind: "upload", title: "上传项目文件" });
         }}
-        onOpenFile={(fileName, fileDetail) =>
-          setModal({ kind: "file", title: fileName, detail: fileDetail })
-        }
+        onOpenFile={(fileName, fileDetail, fileId) => {
+          if (fileId) {
+            setModal(null);
+            setPreviewFileId(fileId);
+            return;
+          }
+          setModal({ kind: "file", title: fileName, detail: fileDetail });
+        }}
         onResizeStart={(event) => startResize("sidebar", event)}
       />
       <section className={`workspace ${taskLoading || taskIsStale ? "is-task-loading" : ""}`}>
@@ -1451,6 +1458,7 @@ ${task?.goal || config.goal}
           }}
         />
       )}
+      {previewFileId && <FilePreview fileId={previewFileId} onClose={() => setPreviewFileId("")} />}
       {toast && (
         <div className="ui-toast" role="status">
           <span>✓</span>

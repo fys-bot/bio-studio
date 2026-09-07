@@ -1,6 +1,17 @@
 "use client";
 
-import { ChevronRight, Database, ExternalLink, Upload } from "lucide-react";
+import ChevronRightRounded from "@mui/icons-material/ChevronRightRounded";
+import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
+import DatabaseOutlined from "@mui/icons-material/StorageOutlined";
+import OpenInNewRounded from "@mui/icons-material/OpenInNewRounded";
+import {
+  Button,
+  CircularProgress,
+  Menu,
+  MenuItem,
+  ToggleButton,
+  ToggleButtonGroup,
+} from "@mui/material";
 import { useSearchParams } from "next/navigation";
 import {
   useCallback,
@@ -8,11 +19,13 @@ import {
   useMemo,
   useState,
   type CSSProperties,
+  type MouseEvent,
   type PointerEvent,
 } from "react";
 import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
 import type { ProjectFileRecord } from "@/lib/domain";
 import { FilePreview } from "./FilePreview";
+import { CatalogPagination } from "./ui/CatalogPagination";
 import { CatalogSearch } from "./ui/CatalogSearch";
 
 const filterOptions: Array<{ label: string; value?: ProjectFileRecord["status"] }> = [
@@ -20,6 +33,7 @@ const filterOptions: Array<{ label: string; value?: ProjectFileRecord["status"] 
   { label: "结构已就绪", value: "ready" },
   { label: "待解析", value: "pending" },
   { label: "已索引", value: "indexed" },
+  { label: "解析失败", value: "failed" },
 ];
 
 const statusLabels: Record<ProjectFileRecord["status"], string> = {
@@ -46,12 +60,12 @@ export function FileCatalog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [browserWidth, setBrowserWidth] = useState(400);
+  const [sourceMenuAnchor, setSourceMenuAnchor] = useState<HTMLElement | null>(null);
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      await bioflowApi.login();
       const items = (await bioflowApi.listProjectFiles()).items;
       setFiles(items);
       setSelected((current) => {
@@ -107,6 +121,10 @@ export function FileCatalog() {
     }
   };
 
+  const openSourceMenu = (event: MouseEvent<HTMLElement>) => {
+    setSourceMenuAnchor(event.currentTarget);
+  };
+
   const startResize = (event: PointerEvent<HTMLDivElement>) => {
     const workspace = event.currentTarget.parentElement;
     if (!workspace) return;
@@ -128,8 +146,12 @@ export function FileCatalog() {
       <div className="catalog-sticky">
         <header className="catalog-header">
           <h1>文件中心</h1>
-          <label className="primary upload-button">
-            <Upload size={14} />
+          <Button
+            component="label"
+            variant="contained"
+            className="primary upload-button"
+            startIcon={<CloudUploadOutlined />}
+          >
             上传文件
             <input
               type="file"
@@ -140,7 +162,7 @@ export function FileCatalog() {
                 event.currentTarget.value = "";
               }}
             />
-          </label>
+          </Button>
         </header>
         <section className="catalog-toolbar file-toolbar">
           <CatalogSearch
@@ -153,53 +175,70 @@ export function FileCatalog() {
             ariaLabel="文件"
           />
           <div className="file-filter-line">
-            <div className="filter-row">
+            <ToggleButtonGroup
+              exclusive
+              value={filter ?? "all"}
+              onChange={(_, value) => {
+                if (!value) return;
+                setFilter(value === "all" ? undefined : value);
+                setPage(1);
+              }}
+              size="small"
+              className="filter-row catalog-toggle-group file-status-filters"
+              aria-label="文件解析状态"
+            >
               {filterOptions.map((option) => (
-                <button
-                  key={option.label}
-                  className={filter === option.value ? "active" : ""}
-                  onClick={() => {
-                    setFilter(option.value);
-                    setPage(1);
-                  }}
-                >
+                <ToggleButton key={option.label} value={option.value ?? "all"}>
                   {option.label}
-                </button>
+                </ToggleButton>
               ))}
-            </div>
+            </ToggleButtonGroup>
             <div className="file-filter-aside">
               <span className="catalog-meta-inline">
                 {matchedFiles.length} 个文件 · 实时解析目录
               </span>
-              <details className="file-source-menu">
-                <summary>
-                  <Database size={13} />
-                  专业公开库
-                </summary>
-                <nav aria-label="专业生命科学资料来源">
-                  <a href="https://www.ncbi.nlm.nih.gov/geo/" target="_blank" rel="noreferrer">
+              <Button
+                className="file-source-button"
+                variant="outlined"
+                size="small"
+                startIcon={<DatabaseOutlined />}
+                onClick={openSourceMenu}
+                aria-haspopup="menu"
+                aria-expanded={Boolean(sourceMenuAnchor)}
+              >
+                专业公开库
+              </Button>
+              <Menu
+                anchorEl={sourceMenuAnchor}
+                open={Boolean(sourceMenuAnchor)}
+                onClose={() => setSourceMenuAnchor(null)}
+                className="file-source-mui-menu"
+              >
+                {[
+                  [
+                    "NCBI GEO",
+                    "转录组实验、Series 与补充文件",
+                    "https://www.ncbi.nlm.nih.gov/geo/",
+                  ],
+                  ["ENCODE", "功能基因组实验与分析产物", "https://www.encodeproject.org/data/"],
+                  ["UniProt", "蛋白序列、功能注释与参考蛋白组", "https://www.uniprot.org/"],
+                ].map(([name, detail, href]) => (
+                  <MenuItem
+                    key={name}
+                    component="a"
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => setSourceMenuAnchor(null)}
+                  >
                     <span>
-                      <b>NCBI GEO</b>
-                      <small>转录组实验、Series 与补充文件</small>
+                      <b>{name}</b>
+                      <small>{detail}</small>
                     </span>
-                    <ExternalLink size={13} />
-                  </a>
-                  <a href="https://www.encodeproject.org/data/" target="_blank" rel="noreferrer">
-                    <span>
-                      <b>ENCODE</b>
-                      <small>功能基因组实验与分析产物</small>
-                    </span>
-                    <ExternalLink size={13} />
-                  </a>
-                  <a href="https://www.uniprot.org/" target="_blank" rel="noreferrer">
-                    <span>
-                      <b>UniProt</b>
-                      <small>蛋白序列、功能注释与参考蛋白组</small>
-                    </span>
-                    <ExternalLink size={13} />
-                  </a>
-                </nav>
-              </details>
+                    <OpenInNewRounded sx={{ fontSize: 16 }} />
+                  </MenuItem>
+                ))}
+              </Menu>
             </div>
           </div>
         </section>
@@ -225,7 +264,12 @@ export function FileCatalog() {
             <span>状态 / 更新</span>
           </header>
           <div className="file-list" aria-busy={loading}>
-            {loading && <div className="catalog-state">正在读取文件目录…</div>}
+            {loading && (
+              <div className="catalog-state catalog-loading">
+                <CircularProgress size={18} />
+                <span>正在读取文件目录…</span>
+              </div>
+            )}
             {!loading &&
               visibleFiles.map((file) => (
                 <button
@@ -252,32 +296,20 @@ export function FileCatalog() {
                     {formatBytes(file.sizeBytes)}
                     <small>{new Date(file.updatedAt).toLocaleDateString("zh-CN")}</small>
                   </span>
-                  <ChevronRight size={15} />
+                  <ChevronRightRounded sx={{ fontSize: 17 }} />
                 </button>
               ))}
             {!loading && visibleFiles.length === 0 && (
               <div className="catalog-state">当前筛选没有文件。</div>
             )}
           </div>
-          {!loading && matchedFiles.length > pageSize && (
-            <nav className="catalog-pagination file-pagination" aria-label="文件目录分页">
-              <button disabled={page === 1} onClick={() => setPage(page - 1)}>
-                上一页
-              </button>
-              {Array.from({ length: pageCount }, (_, index) => index + 1).map((pageNumber) => (
-                <button
-                  className={page === pageNumber ? "current" : ""}
-                  aria-current={page === pageNumber ? "page" : undefined}
-                  key={pageNumber}
-                  onClick={() => setPage(pageNumber)}
-                >
-                  {pageNumber}
-                </button>
-              ))}
-              <button disabled={page === pageCount} onClick={() => setPage(page + 1)}>
-                下一页
-              </button>
-            </nav>
+          {!loading && (
+            <CatalogPagination
+              page={page}
+              count={pageCount}
+              label="文件目录分页"
+              onChange={setPage}
+            />
           )}
         </div>
 

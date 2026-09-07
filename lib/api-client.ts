@@ -76,8 +76,6 @@ export type SkillResponse = { skill: SkillRecord };
 export type ProjectFileResponse = { file: ProjectFileRecord };
 export type DeleteTaskResponse = { deletedTaskId: string; tasks: TaskResponse["tasks"] };
 
-const SKILL_CATALOG_PAGE_SIZE = 12;
-
 /**
  * 前端 API 适配层：统一错误转换、JSON 解析和请求方法，页面不再直接拼接接口细节。
  */
@@ -307,11 +305,20 @@ export const bioflowApi = {
     }),
 
   listSkills: (
-    query: { search?: string; source?: string; category?: string; page?: string } = {},
+    query: {
+      search?: string;
+      source?: string;
+      category?: string;
+      availability?: string;
+      page?: string;
+      pageSize?: number;
+    } = {},
   ) => {
     const searchParams = new URLSearchParams();
-    searchParams.set("pageSize", String(SKILL_CATALOG_PAGE_SIZE));
-    Object.entries(query).forEach(([key, value]) => value && searchParams.set(key, value));
+    searchParams.set("pageSize", String(query.pageSize || 6));
+    Object.entries(query).forEach(([key, value]) => {
+      if (key !== "pageSize" && value) searchParams.set(key, String(value));
+    });
     const queryString = searchParams.toString();
     return requestJson<CatalogPage<SkillRecord>>(
       `/api/skills${queryString ? `?${queryString}` : ""}`,

@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertTriangle, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import WarningAmberRounded from "@mui/icons-material/WarningAmberRounded";
+import { Button, CircularProgress } from "@mui/material";
+import { ResponsiveDialog } from "./ResponsiveDialog";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -24,56 +25,37 @@ export function ConfirmDialog({
   onClose,
   onConfirm,
 }: ConfirmDialogProps) {
-  const cancelRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    cancelRef.current?.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !busy) onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [busy, onClose, open]);
-
-  if (!open) return null;
   return (
-    <div className="ui-modal-backdrop confirm-backdrop" onMouseDown={() => !busy && onClose()}>
-      <section
-        className="ui-modal confirm-dialog"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="confirm-dialog-title"
-        aria-describedby="confirm-dialog-description"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header>
-          <span className="confirm-dialog-icon" aria-hidden="true">
-            <AlertTriangle size={18} />
-          </span>
-          <div>
-            <small>不可逆操作</small>
-            <h2 id="confirm-dialog-title">{title}</h2>
-          </div>
-          <button disabled={busy} onClick={onClose} aria-label="关闭确认弹窗">
-            <X size={16} />
-          </button>
-        </header>
+    <ResponsiveDialog
+      open={open}
+      title={title}
+      eyebrow="不可逆操作"
+      busy={busy}
+      onClose={onClose}
+      className="confirm-dialog"
+      actions={
+        <>
+          <Button color="inherit" disabled={busy} onClick={onClose}>
+            取消
+          </Button>
+          <Button color="error" variant="contained" disabled={busy} onClick={onConfirm}>
+            {busy && <CircularProgress size={14} color="inherit" sx={{ mr: 0.8 }} />}
+            {busy ? "处理中…" : confirmLabel}
+          </Button>
+        </>
+      }
+    >
+      <div className="confirm-dialog-body">
+        <span className="confirm-dialog-icon" aria-hidden="true">
+          <WarningAmberRounded fontSize="small" />
+        </span>
         <p id="confirm-dialog-description">{description}</p>
         {error && (
           <p className="confirm-dialog-error" role="alert">
             {error}
           </p>
         )}
-        <footer>
-          <button ref={cancelRef} className="secondary" disabled={busy} onClick={onClose}>
-            取消
-          </button>
-          <button className="danger-button" disabled={busy} onClick={onConfirm}>
-            {busy ? "处理中…" : confirmLabel}
-          </button>
-        </footer>
-      </section>
-    </div>
+      </div>
+    </ResponsiveDialog>
   );
 }

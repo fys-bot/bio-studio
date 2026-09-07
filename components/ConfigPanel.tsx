@@ -1,6 +1,8 @@
 "use client";
 
+import { Button, CircularProgress } from "@mui/material";
 import { DemoConfig } from "@/lib/demo-config";
+import { ResponsiveDialog } from "./ui/ResponsiveDialog";
 import { SelectControl } from "./ui/SelectControl";
 
 type Props = {
@@ -15,23 +17,26 @@ export function ConfigPanel({ config, onChange, onSave, onClose, saving = false 
   const update = <K extends keyof DemoConfig>(key: K, value: DemoConfig[K]) =>
     onChange({ ...config, [key]: value });
   return (
-    <div className="config-overlay" role="presentation" onMouseDown={onClose}>
-      <section
-        className="config-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-label="演示配置"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header className="config-panel-head">
-          <div>
-            <small>可配置演示引擎</small>
-            <h2>工作流参数</h2>
-          </div>
-          <button onClick={onClose} aria-label="关闭配置">
-            ×
-          </button>
-        </header>
+    <ResponsiveDialog
+      open
+      title="工作流参数"
+      eyebrow="可配置演示引擎"
+      busy={saving}
+      onClose={onClose}
+      className="config-responsive-dialog"
+      actions={
+        <>
+          <Button color="inherit" disabled={saving} onClick={onClose}>
+            取消
+          </Button>
+          <Button variant="contained" disabled={saving} onClick={onSave}>
+            {saving && <CircularProgress size={14} color="inherit" sx={{ mr: 0.8 }} />}
+            {saving ? "保存中…" : "保存并应用"}
+          </Button>
+        </>
+      }
+    >
+      <div className="config-panel">
         <p className="config-lead">
           修改配置后重新运行，页面会通过真实 API
           读取同一份服务端配置，方便面试现场演示不同业务分支。
@@ -88,15 +93,7 @@ export function ConfigPanel({ config, onChange, onSave, onClose, saving = false 
         <div className="config-note">
           <span>●</span> 当前配置只影响演示数据，不会向外部传输研究文件。
         </div>
-        <footer className="config-actions">
-          <button className="secondary" onClick={onClose}>
-            取消
-          </button>
-          <button className="primary" onClick={onSave} disabled={saving}>
-            {saving ? "保存中…" : "保存并应用"}
-          </button>
-        </footer>
-      </section>
-    </div>
+      </div>
+    </ResponsiveDialog>
   );
 }

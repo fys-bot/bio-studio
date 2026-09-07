@@ -10,6 +10,7 @@ export async function GET(request: Request) {
       search: url.searchParams.get("search") ?? undefined,
       source: url.searchParams.get("source") ?? undefined,
       category: url.searchParams.get("category") ?? undefined,
+      availability: url.searchParams.get("availability") ?? undefined,
       page: Number(url.searchParams.get("page") || 1),
       pageSize: Number(url.searchParams.get("pageSize") || 6),
     }),

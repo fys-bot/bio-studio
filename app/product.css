@@ -488,6 +488,459 @@
   }
 }
 
+/* MUI 交互基础层：统一吸顶、筛选、分页、任务操作和弹窗密度。 */
+.workspace {
+  position: relative;
+}
+
+.app-shell .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex: none;
+  background: color-mix(in srgb, #f7f9f7 96%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 1px 0 #d8ded9;
+}
+
+.module-shell .module-content {
+  height: 100dvh;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.module-shell .catalog-page {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+}
+
+.file-catalog-page .catalog-sticky,
+.catalog-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 18;
+}
+
+.catalog-toggle-group {
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.catalog-toggle-group::-webkit-scrollbar {
+  display: none;
+}
+
+.module-shell .catalog-toggle-group .MuiToggleButton-root {
+  min-height: 32px;
+  flex: none;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 6px !important;
+  color: #66746c;
+  font: 600 10px/1.2 inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.module-shell .catalog-toggle-group .MuiToggleButton-root.Mui-selected {
+  background: #eef2cc;
+  color: #586711;
+}
+
+.module-shell .catalog-toggle-group .MuiToggleButton-root:hover {
+  background: #f0f4f1;
+}
+
+.module-shell .catalog-toggle-group .MuiToggleButton-root.Mui-selected:hover {
+  background: #e8edbd;
+}
+
+.mui-filter-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.catalog-selects {
+  display: flex;
+  flex: none;
+  gap: 7px;
+}
+
+.module-shell .select-control {
+  margin-left: 0;
+}
+
+.catalog-loading {
+  display: flex;
+  min-height: 82px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.module-shell .skill-state.MuiChip-root {
+  height: 24px;
+  flex: none;
+  border-color: #d3ddd7;
+  background: #fff;
+  color: #6f7b74;
+  font-size: 9px;
+}
+
+.module-shell .skill-state.enabled.MuiChip-root {
+  border-color: #dce4a6;
+  background: #f0f3d4;
+  color: #59670e;
+}
+
+.module-shell .skill-open-button.MuiIconButton-root {
+  width: 30px;
+  height: 30px;
+  color: #5f7211;
+}
+
+.module-shell .skill-card-actions .MuiButton-root {
+  min-width: 44px;
+  padding-inline: 6px;
+  color: #5f7211;
+  font-size: 10px;
+}
+
+.module-shell .mui-pagination {
+  position: sticky;
+  z-index: 14;
+  bottom: 10px;
+  width: fit-content;
+  margin: 12px auto 0;
+  padding: 7px;
+  border: 1px solid #d6ded9;
+  border-radius: 8px;
+  background: color-mix(in srgb, #ffffff 96%, transparent);
+  box-shadow: 0 10px 28px #33463c1a;
+  backdrop-filter: blur(8px);
+}
+
+.file-browser-pane > .mui-pagination {
+  flex: none;
+  margin-block: 7px;
+}
+
+.file-source-button.MuiButton-root {
+  min-height: 32px;
+  border-color: #ccd7d1;
+  color: #40584c;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.file-source-mui-menu .MuiPaper-root {
+  width: min(340px, calc(100vw - 24px));
+  padding: 5px;
+  border: 1px solid #d5ddd8;
+  border-radius: 8px;
+}
+
+.file-source-mui-menu .MuiMenuItem-root {
+  display: flex;
+  min-height: 54px;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 6px;
+  color: #405047;
+}
+
+.file-source-mui-menu .MuiMenuItem-root span {
+  display: grid;
+  gap: 3px;
+}
+
+.file-source-mui-menu .MuiMenuItem-root b {
+  font-size: 11px;
+}
+
+.file-source-mui-menu .MuiMenuItem-root small {
+  color: #78847d;
+  font-size: 9px;
+}
+
+.task-group-dot {
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+  opacity: 1 !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 13%, transparent);
+}
+
+.task-group-dot.rnaseq {
+  background: #b6cf19;
+  color: #b6cf19;
+}
+
+.task-group-dot.evidence {
+  background: #4f78b9;
+  color: #4f78b9;
+}
+
+.task-group-dot.structure {
+  background: #3b8a72;
+  color: #3b8a72;
+}
+
+.task-group-dot.custom {
+  background: #8a6ba8;
+  color: #8a6ba8;
+}
+
+.task-item-row.selected {
+  box-shadow: inset 3px 0 #a0b51e;
+}
+
+.task-item-row .task-row-actions {
+  position: relative;
+  width: 34px;
+  min-width: 34px;
+  align-self: stretch;
+}
+
+.task-item-row .task-favorite.MuiIconButton-root,
+.task-item-row .task-delete.MuiIconButton-root {
+  position: absolute;
+  inset: 0;
+  width: 34px;
+  height: 100%;
+  min-height: 34px;
+  border-left: 1px solid transparent;
+  border-radius: 0 6px 6px 0;
+}
+
+.task-item-row.has-delete .task-delete {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.task-item-row.has-delete:hover .task-favorite,
+.task-item-row.has-delete:focus-within .task-favorite {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.task-item-row.has-delete:hover .task-delete,
+.task-item-row.has-delete:focus-within .task-delete {
+  pointer-events: auto;
+  border-left-color: #d5ded8;
+  opacity: 1;
+}
+
+.task-item-row .task-favorite.MuiIconButton-root {
+  color: #89968f;
+}
+
+.task-item-row.is-favorite .task-favorite.MuiIconButton-root {
+  color: #849612;
+}
+
+.task-item-row .task-delete.MuiIconButton-root {
+  color: #aa4338;
+}
+
+.task-sidebar .task-search {
+  margin: 0 3px 7px;
+  width: calc(100% - 6px);
+}
+
+.task-sidebar .task-search .MuiOutlinedInput-root {
+  height: 34px;
+  border-radius: 6px;
+  background: #fff;
+  color: #34443b;
+  font-size: 10px;
+}
+
+.task-sidebar .task-search .MuiOutlinedInput-notchedOutline {
+  border-color: #d4ddd7;
+}
+
+.task-sidebar .task-search input {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.task-sidebar .side-title .MuiButton-root {
+  min-width: 0;
+  padding: 3px 5px;
+  color: #84960f;
+  font-size: 10px;
+}
+
+.responsive-dialog-title.MuiDialogTitle-root {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 17px 13px;
+}
+
+.responsive-dialog-title > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.responsive-dialog-title small {
+  color: #7d8982;
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.responsive-dialog-title b {
+  color: #28372f;
+  font-size: clamp(15px, 1.5vw, 19px);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.responsive-dialog-content.MuiDialogContent-root {
+  padding: 15px 17px;
+  border-color: #e0e6e2;
+  color: #4e5e55;
+  font-size: 12px;
+}
+
+.responsive-dialog-actions.MuiDialogActions-root {
+  gap: 7px;
+  padding: 10px 15px 13px;
+}
+
+.workspace-modal-body,
+.config-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.workspace-modal-body .modal-form,
+.workspace-modal-body .modal-list,
+.workspace-modal-body .modal-detail {
+  padding: 0;
+}
+
+.confirm-dialog-body {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.confirm-dialog-body > p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.confirm-dialog-body .confirm-dialog-error {
+  grid-column: 2;
+}
+
+@media (max-width: 1180px) {
+  .module-shell .catalog-header {
+    min-height: 48px;
+  }
+
+  .module-shell .catalog-header h1 {
+    font-size: 21px;
+  }
+
+  .module-shell .skill-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .module-shell .skill-card {
+    min-height: 154px;
+  }
+}
+
+@media (max-width: 900px) {
+  .mui-filter-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .catalog-selects {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .catalog-selects .select-control {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .module-shell .skill-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .module-shell .module-content {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .catalog-sticky,
+  .file-catalog-page .catalog-sticky {
+    top: 0;
+  }
+
+  .module-shell .filter-row {
+    display: flex;
+  }
+
+  .module-shell .filter-row .MuiToggleButton-root:nth-of-type(n + 4) {
+    display: inline-flex;
+  }
+
+  .module-shell .skill-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .module-shell .mui-pagination {
+    bottom: 64px;
+  }
+
+  .responsive-dialog-title.MuiDialogTitle-root {
+    padding: 13px 14px 11px;
+  }
+
+  .responsive-dialog-title b {
+    font-size: 16px;
+  }
+
+  .responsive-dialog-content.MuiDialogContent-root {
+    padding: 13px 14px;
+  }
+
+  .file-source-button.MuiButton-root {
+    min-width: 34px;
+    width: 34px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .file-source-button .MuiButton-startIcon {
+    margin: 0;
+  }
+}
+
 /* 任务首页的垂直流程：计划审批、工作流、真实计算和对话各自占据独立区块。 */
 .workflow-guide-target {
   order: 5;

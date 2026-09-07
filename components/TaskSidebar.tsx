@@ -1,6 +1,14 @@
 "use client";
 
-import { Search, Star, Trash2, X } from "lucide-react";
+import AddRounded from "@mui/icons-material/AddRounded";
+import CloseRounded from "@mui/icons-material/CloseRounded";
+import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
+import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
+import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
+import SearchRounded from "@mui/icons-material/SearchRounded";
+import StarBorderRounded from "@mui/icons-material/StarBorderRounded";
+import StarRounded from "@mui/icons-material/StarRounded";
+import { Button, IconButton, InputAdornment, TextField, Tooltip } from "@mui/material";
 import { useEffect, useMemo, useState, type PointerEvent } from "react";
 import type { DataFileProfile, TaskListItem } from "@/lib/domain";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
@@ -15,6 +23,13 @@ type SidebarTask = {
 };
 
 type SidebarPanel = "evidence" | "structure";
+
+function taskGroupTone(task: TaskListItem) {
+  if (task.id.includes("literature") || task.title.includes("文献")) return "evidence";
+  if (task.id.includes("structure") || task.title.includes("蛋白")) return "structure";
+  if (task.title.toLowerCase().includes("rna") || task.title.includes("差异表达")) return "rnaseq";
+  return "custom";
+}
 
 type TaskSidebarProps = {
   task: SidebarTask;
@@ -144,29 +159,46 @@ export function TaskSidebar({
           <small>项目</small>
           <strong>{projectName}</strong>
         </div>
-        <span>⌄</span>
+        <ExpandMoreRounded sx={{ fontSize: 18 }} />
       </button>
       <div className="side-title">
         <span>
           任务 <em>{taskCards.length}</em>
         </span>
-        <button onClick={onCreateTask}>＋ 新建任务</button>
+        <Button size="small" startIcon={<AddRounded />} onClick={onCreateTask}>
+          新建任务
+        </Button>
       </div>
       {hasTaskSearch && (
-        <label className="task-search">
-          <Search size={14} aria-hidden="true" />
-          <input
-            value={taskQuery}
-            onChange={(event) => setTaskQuery(event.target.value)}
-            placeholder="搜索任务名称或状态"
-            aria-label="搜索任务名称或状态"
-          />
-          {taskQuery && (
-            <button type="button" onClick={() => setTaskQuery("")} aria-label="清除任务搜索">
-              <X size={14} />
-            </button>
-          )}
-        </label>
+        <TextField
+          className="task-search"
+          fullWidth
+          size="small"
+          value={taskQuery}
+          onChange={(event) => setTaskQuery(event.target.value)}
+          placeholder="搜索任务名称或状态"
+          slotProps={{
+            htmlInput: { "aria-label": "搜索任务名称或状态" },
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRounded sx={{ fontSize: 16 }} />
+                </InputAdornment>
+              ),
+              endAdornment: taskQuery ? (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setTaskQuery("")}
+                    aria-label="清除任务搜索"
+                  >
+                    <CloseRounded sx={{ fontSize: 15 }} />
+                  </IconButton>
+                </InputAdornment>
+              ) : undefined,
+            },
+          }}
+        />
       )}
       <div className="task-list" aria-label="任务列表">
         {visibleTaskCards.length ? (
@@ -197,7 +229,8 @@ export function TaskSidebar({
                       }
                     >
                       <i
-                        className={`dot ${activeTaskId === taskCard.id ? "yellow" : taskCard.status === "succeeded" ? "blue" : "gray"}`}
+                        className={`dot task-group-dot ${taskGroupTone(taskCard)}`}
+                        title={`${taskCard.title}分组`}
                       />
                       <div>
                         <b>{taskCard.title}</b>
@@ -208,31 +241,37 @@ export function TaskSidebar({
                       </div>
                     </button>
                     <div className="task-row-actions">
-                      <button
-                        type="button"
-                        className="task-favorite"
-                        aria-label={
-                          favorite ? `取消收藏${taskCard.title}` : `收藏${taskCard.title}`
-                        }
-                        aria-pressed={favorite}
-                        title={favorite ? "取消收藏" : "收藏任务"}
-                        onClick={() => toggleFavorite(taskCard.id)}
-                      >
-                        <Star size={14} fill={favorite ? "currentColor" : "none"} />
-                      </button>
-                      {!protectedTask && (
-                        <button
-                          type="button"
-                          className="task-delete"
-                          aria-label={`删除${taskCard.title}`}
-                          title="删除任务"
-                          onClick={() => {
-                            setDeleteError("");
-                            setPendingDelete(taskCard);
-                          }}
+                      <Tooltip title={favorite ? "取消收藏" : "收藏任务"}>
+                        <IconButton
+                          size="small"
+                          className="task-favorite"
+                          aria-label={
+                            favorite ? `取消收藏${taskCard.title}` : `收藏${taskCard.title}`
+                          }
+                          aria-pressed={favorite}
+                          onClick={() => toggleFavorite(taskCard.id)}
                         >
-                          <Trash2 size={14} />
-                        </button>
+                          {favorite ? (
+                            <StarRounded sx={{ fontSize: 17 }} />
+                          ) : (
+                            <StarBorderRounded sx={{ fontSize: 17 }} />
+                          )}
+                        </IconButton>
+                      </Tooltip>
+                      {!protectedTask && (
+                        <Tooltip title="删除任务">
+                          <IconButton
+                            size="small"
+                            className="task-delete"
+                            aria-label={`删除${taskCard.title}`}
+                            onClick={() => {
+                              setDeleteError("");
+                              setPendingDelete(taskCard);
+                            }}
+                          >
+                            <DeleteOutlineRounded sx={{ fontSize: 17 }} />
+                          </IconButton>
+                        </Tooltip>
                       )}
                     </div>
                   </div>
@@ -247,9 +286,14 @@ export function TaskSidebar({
       <div className="side-divider" />
       <div className="side-title">
         <span>数据集</span>
-        <button data-guide="upload" onClick={onUploadFile}>
-          ＋ 上传
-        </button>
+        <Button
+          size="small"
+          data-guide="upload"
+          startIcon={<CloudUploadOutlined />}
+          onClick={onUploadFile}
+        >
+          上传
+        </Button>
       </div>
       <div className="dataset-list" aria-label="数据集列表">
         {(task.executionMode !== "real" || countMatrixProfile) && (

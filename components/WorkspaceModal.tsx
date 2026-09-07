@@ -2,6 +2,7 @@
 
 import type { ChangeEvent, KeyboardEvent } from "react";
 import type { DataFileProfile, TabularColumnProfile } from "@/lib/domain";
+import { ResponsiveDialog } from "./ui/ResponsiveDialog";
 
 const columnTypeLabels: Record<TabularColumnProfile["inferredType"], string> = {
   number: "数值",
@@ -69,23 +70,15 @@ export function WorkspaceModal({
   };
 
   return (
-    <div className="ui-modal-backdrop" onMouseDown={onClose}>
-      <section
-        className="ui-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={modal.title}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header>
-          <div>
-            <small>BioFlow 工作区</small>
-            <h2>{modal.title}</h2>
-          </div>
-          <button onClick={onClose} aria-label="关闭弹窗">
-            ×
-          </button>
-        </header>
+    <ResponsiveDialog
+      open
+      title={modal.title}
+      eyebrow="BioFlow 工作区"
+      maxWidth={modal.kind === "upload" ? "md" : "sm"}
+      onClose={onClose}
+      className="workspace-responsive-dialog"
+    >
+      <div className="workspace-modal-body">
         {modal.kind === "projects" && (
           <div className="modal-list">
             {["BioFlow 生命科学实验室", "肿瘤基因组项目", "蛋白质工程项目"].map(
@@ -280,7 +273,7 @@ export function WorkspaceModal({
             </button>
           </div>
         )}
-      </section>
-    </div>
+      </div>
+    </ResponsiveDialog>
   );
 }

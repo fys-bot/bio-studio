@@ -1,33 +1,50 @@
 "use client";
 
-import { ArrowUpRight } from "lucide-react";
+import AddRounded from "@mui/icons-material/AddRounded";
+import ArrowOutwardRounded from "@mui/icons-material/ArrowOutwardRounded";
+import ScienceOutlined from "@mui/icons-material/ScienceOutlined";
+import {
+  Button,
+  Chip,
+  CircularProgress,
+  IconButton,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+} from "@mui/material";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
 import type { SkillRecord } from "@/lib/domain";
+import { CatalogPagination } from "./ui/CatalogPagination";
 import { CatalogSearch } from "./ui/CatalogSearch";
+import { ResponsiveDialog } from "./ui/ResponsiveDialog";
 import { SelectControl } from "./ui/SelectControl";
 
 const sources = ["全部来源", "BioFlow Lab", "Team", "Community", "Mine"];
-const pageSize = 12;
+const availabilityOptions = ["全部状态", "已启用", "可用"];
 
 function SkillFilters({
   query,
   source,
   category,
+  availability,
   categories,
   onQueryChange,
   onSourceChange,
   onCategoryChange,
+  onAvailabilityChange,
 }: {
   query: string;
   source: string;
   category: string;
+  availability: string;
   categories: string[];
   onQueryChange: (value: string) => void;
   onSourceChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
+  onAvailabilityChange: (value: string) => void;
 }) {
   return (
     <section className="catalog-toolbar">
@@ -37,25 +54,41 @@ function SkillFilters({
         placeholder="搜索技能名称、用途或输入…"
         ariaLabel="技能"
       />
-      <div className="filter-row">
-        {sources.map((item) => (
-          <button
-            key={item}
-            className={source === item ? "active" : ""}
-            onClick={() => onSourceChange(item)}
-          >
-            {item}
-          </button>
-        ))}
-        <SelectControl
-          value={category}
-          onChange={(event) => onCategoryChange(event.target.value)}
-          aria-label="技能分类"
+      <div className="filter-row mui-filter-row">
+        <ToggleButtonGroup
+          exclusive
+          value={source}
+          onChange={(_, value) => value && onSourceChange(value)}
+          size="small"
+          aria-label="技能来源"
+          className="catalog-toggle-group"
         >
-          {categories.map((item) => (
-            <option key={item}>{item}</option>
+          {sources.map((item) => (
+            <ToggleButton key={item} value={item} aria-label={item}>
+              {item}
+            </ToggleButton>
           ))}
-        </SelectControl>
+        </ToggleButtonGroup>
+        <div className="catalog-selects">
+          <SelectControl
+            value={availability}
+            onChange={(event) => onAvailabilityChange(event.target.value)}
+            aria-label="技能状态"
+          >
+            {availabilityOptions.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </SelectControl>
+          <SelectControl
+            value={category}
+            onChange={(event) => onCategoryChange(event.target.value)}
+            aria-label="技能分类"
+          >
+            {categories.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </SelectControl>
+        </div>
       </div>
     </section>
   );
@@ -74,7 +107,9 @@ function SkillCard({
     <article className="skill-card">
       <header className="skill-card-top">
         <div className="skill-card-heading">
-          <span className="skill-glyph">◇</span>
+          <span className="skill-glyph">
+            <ScienceOutlined sx={{ fontSize: 18 }} />
+          </span>
           <div>
             <span className="skill-category">{skill.category}</span>
             <h2>
@@ -84,9 +119,12 @@ function SkillCard({
             </h2>
           </div>
         </div>
-        <span className={`skill-state ${skill.enabled ? "enabled" : ""}`}>
-          {skill.enabled ? "已启用" : "可用"}
-        </span>
+        <Chip
+          className={`skill-state ${skill.enabled ? "enabled" : ""}`}
+          size="small"
+          label={skill.enabled ? "已启用" : "可用"}
+          variant={skill.enabled ? "filled" : "outlined"}
+        />
       </header>
       <div className="skill-card-body">
         <p>{skill.description}</p>
@@ -106,17 +144,21 @@ function SkillCard({
           {skill.source} · v{skill.version}
         </small>
         <div className="skill-card-actions">
-          <button className="text-button" disabled={busy} onClick={onToggle}>
-            {busy ? "保存中…" : skill.enabled ? "停用" : "启用"}
-          </button>
-          <Link
-            className="skill-open-button"
-            href={`/skills/${skill.id}`}
-            aria-label={`查看${skill.name}详情`}
-            title="查看技能详情"
-          >
-            <ArrowUpRight size={15} />
-          </Link>
+          <Button className="text-button" size="small" disabled={busy} onClick={onToggle}>
+            {busy && <CircularProgress size={12} sx={{ mr: 0.6 }} />}
+            {busy ? "保存中" : skill.enabled ? "停用" : "启用"}
+          </Button>
+          <Tooltip title="查看技能详情">
+            <IconButton
+              className="skill-open-button"
+              component={Link}
+              href={`/skills/${skill.id}`}
+              size="small"
+              aria-label={`查看${skill.name}详情`}
+            >
+              <ArrowOutwardRounded sx={{ fontSize: 17 }} />
+            </IconButton>
+          </Tooltip>
         </div>
       </footer>
     </article>
@@ -139,8 +181,10 @@ export function SkillCatalog() {
   const [query, setQuery] = useState("");
   const [source, setSource] = useState("全部来源");
   const [category, setCategory] = useState("全部分类");
+  const [availability, setAvailability] = useState("全部状态");
   const [skills, setSkills] = useState<SkillRecord[]>([]);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -150,12 +194,13 @@ export function SkillCatalog() {
     setLoading(true);
     setError("");
     try {
-      await bioflowApi.login();
       const response = await bioflowApi.listSkills({
         search: query,
         source,
         category,
+        availability,
         page: String(page),
+        pageSize,
       });
       setSkills(response.items);
       setTotal(response.total);
@@ -164,7 +209,20 @@ export function SkillCatalog() {
     } finally {
       setLoading(false);
     }
-  }, [category, query, source, page]);
+  }, [availability, category, page, pageSize, query, source]);
+
+  useEffect(() => {
+    const updatePageSize = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const next = width >= 1700 && height >= 920 ? 12 : width >= 1180 ? 6 : width >= 760 ? 6 : 4;
+      setPageSize(next);
+      setPage(1);
+    };
+    updatePageSize();
+    window.addEventListener("resize", updatePageSize);
+    return () => window.removeEventListener("resize", updatePageSize);
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadSkills(), 180);
@@ -193,20 +251,23 @@ export function SkillCatalog() {
       <div className="catalog-sticky">
         <header className="catalog-header">
           <h1>能力中心</h1>
-          <button
+          <Button
+            variant="contained"
+            startIcon={<AddRounded />}
             className="primary"
             onClick={() => {
               setCreateError("");
               setCreating(true);
             }}
           >
-            ＋ 新建技能
-          </button>
+            新建技能
+          </Button>
         </header>
         <SkillFilters
           query={query}
           source={source}
           category={category}
+          availability={availability}
           categories={categories}
           onQueryChange={(value) => {
             setQuery(value);
@@ -220,13 +281,22 @@ export function SkillCatalog() {
             setCategory(value);
             setPage(1);
           }}
+          onAvailabilityChange={(value) => {
+            setAvailability(value);
+            setPage(1);
+          }}
         />
       </div>
       <section className="catalog-meta">
         <span>{total} 个技能</span>
         <small>服务端目录快照 · 状态跨刷新持久化 · 运行前可审计版本</small>
       </section>
-      {loading && <section className="catalog-state">正在读取能力目录…</section>}
+      {loading && (
+        <section className="catalog-state catalog-loading">
+          <CircularProgress size={18} />
+          <span>正在读取能力目录…</span>
+        </section>
+      )}
       {error && (
         <section className="catalog-state error">
           <span>{error}</span>
@@ -248,100 +318,71 @@ export function SkillCatalog() {
           ))}
         </section>
       )}
-      {total > pageSize && (
-        <nav className="catalog-pagination" aria-label="能力目录分页">
-          <button disabled={page === 1} onClick={() => setPage(page - 1)}>
-            上一页
-          </button>
-          {Array.from({ length: Math.ceil(total / pageSize) }, (_, index) => index + 1).map(
-            (pageNumber) => (
-              <button
-                className={page === pageNumber ? "current" : ""}
-                aria-current={page === pageNumber ? "page" : undefined}
-                key={pageNumber}
-                onClick={() => setPage(pageNumber)}
-              >
-                {pageNumber}
-              </button>
-            ),
-          )}
-          <button disabled={page * pageSize >= total} onClick={() => setPage(page + 1)}>
-            下一页
-          </button>
-        </nav>
-      )}
-      {creating && (
-        <div className="ui-modal-backdrop" onMouseDown={() => !saving && setCreating(false)}>
-          <section
-            className="ui-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="新建技能"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <header>
-              <h2>新建技能</h2>
-              <button
-                aria-label="关闭新建技能"
-                disabled={saving}
-                onClick={() => setCreating(false)}
-              >
-                ×
-              </button>
-            </header>
-            <form
-              className="skill-create-form"
-              onSubmit={async (event) => {
-                event.preventDefault();
-                setSaving(true);
-                setCreateError("");
-                try {
-                  const response = await bioflowApi.createSkill(draft);
-                  router.push(`/skills/${response.skill.id}`);
-                } catch (error) {
-                  setCreateError(getApiErrorMessage(error, "创建失败"));
-                } finally {
-                  setSaving(false);
-                }
-              }}
-            >
-              {(
-                [
-                  ["name", "技能名称"],
-                  ["category", "分类"],
-                  ["description", "用途"],
-                  ["inputs", "输入（逗号分隔）"],
-                  ["outputs", "输出（逗号分隔）"],
-                  ["instructions", "执行说明"],
-                ] as const
-              ).map(([key, label]) => (
-                <label key={key}>
-                  {label}
-                  {key === "instructions" ? (
-                    <textarea
-                      required
-                      maxLength={8000}
-                      value={draft[key]}
-                      onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
-                    />
-                  ) : (
-                    <input
-                      required
-                      maxLength={key === "name" ? 80 : key === "category" ? 40 : 1000}
-                      value={draft[key]}
-                      onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
-                    />
-                  )}
-                </label>
-              ))}
-              {createError && <p role="alert">{createError}</p>}
-              <button className="primary" disabled={saving}>
-                {saving ? "创建中…" : "保存技能"}
-              </button>
-            </form>
-          </section>
-        </div>
-      )}
+      <CatalogPagination
+        page={page}
+        count={Math.max(1, Math.ceil(total / pageSize))}
+        label="能力目录分页"
+        onChange={setPage}
+      />
+      <ResponsiveDialog
+        open={creating}
+        title="新建技能"
+        eyebrow="能力配置"
+        busy={saving}
+        onClose={() => setCreating(false)}
+      >
+        <form
+          className="skill-create-form"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setSaving(true);
+            setCreateError("");
+            try {
+              const response = await bioflowApi.createSkill(draft);
+              router.push(`/skills/${response.skill.id}`);
+            } catch (error) {
+              setCreateError(getApiErrorMessage(error, "创建失败"));
+            } finally {
+              setSaving(false);
+            }
+          }}
+        >
+          {(
+            [
+              ["name", "技能名称"],
+              ["category", "分类"],
+              ["description", "用途"],
+              ["inputs", "输入（逗号分隔）"],
+              ["outputs", "输出（逗号分隔）"],
+              ["instructions", "执行说明"],
+            ] as const
+          ).map(([key, label]) => (
+            <label key={key}>
+              {label}
+              {key === "instructions" ? (
+                <textarea
+                  required
+                  maxLength={8000}
+                  value={draft[key]}
+                  onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+                />
+              ) : (
+                <input
+                  required
+                  maxLength={key === "name" ? 80 : key === "category" ? 40 : 1000}
+                  value={draft[key]}
+                  onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+                />
+              )}
+            </label>
+          ))}
+          {createError && <p role="alert">{createError}</p>}
+          <Button type="submit" variant="contained" disabled={saving}>
+            {saving && <CircularProgress size={14} color="inherit" sx={{ mr: 0.8 }} />}
+            {saving ? "创建中…" : "保存技能"}
+          </Button>
+        </form>
+      </ResponsiveDialog>
     </main>
   );
 }
@@ -356,7 +397,6 @@ export function SkillDetail({ skillId }: { skillId: string }) {
   useEffect(() => {
     void (async () => {
       try {
-        await bioflowApi.login();
         setSkill((await bioflowApi.getSkill(skillId)).skill);
       } catch (loadError) {
         setError(getApiErrorMessage(loadError, "技能详情加载失败"));

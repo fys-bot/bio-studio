@@ -1,7 +1,8 @@
 "use client";
 
+import CloseRounded from "@mui/icons-material/CloseRounded";
+import SearchRounded from "@mui/icons-material/SearchRounded";
 import { IconButton, InputAdornment, TextField } from "@mui/material";
-import { Search, X } from "lucide-react";
 
 type CatalogSearchProps = {
   value: string;
@@ -26,7 +27,7 @@ export function CatalogSearch({ value, placeholder, ariaLabel, onChange }: Catal
         input: {
           startAdornment: (
             <InputAdornment position="start">
-              <Search size={16} aria-hidden="true" />
+              <SearchRounded sx={{ fontSize: 18 }} aria-hidden="true" />
             </InputAdornment>
           ),
           endAdornment: value ? (
@@ -39,7 +40,7 @@ export function CatalogSearch({ value, placeholder, ariaLabel, onChange }: Catal
                 aria-label={`清除${ariaLabel}搜索`}
                 title="清除搜索"
               >
-                <X size={15} />
+                <CloseRounded sx={{ fontSize: 17 }} />
               </IconButton>
             </InputAdornment>
           ) : undefined,

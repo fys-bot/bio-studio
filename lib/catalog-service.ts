@@ -196,6 +196,7 @@ export function listSkills(query: {
   search?: string;
   source?: string;
   category?: string;
+  availability?: string;
   page?: number;
   pageSize?: number;
 }): CatalogPage<SkillRecord> {
@@ -213,7 +214,10 @@ export function listSkills(query: {
             .toLowerCase()
             .includes(search)) &&
         (!query.source || query.source === "全部来源" || skill.source === query.source) &&
-        (!query.category || query.category === "全部分类" || skill.category === query.category),
+        (!query.category || query.category === "全部分类" || skill.category === query.category) &&
+        (!query.availability ||
+          query.availability === "全部状态" ||
+          (query.availability === "已启用" ? skill.enabled : !skill.enabled)),
     );
   const pageSize = Math.min(20, Math.max(1, query.pageSize ?? 6));
   const page = Math.max(1, query.page ?? 1);

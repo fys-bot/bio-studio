@@ -1,5 +1,12 @@
 "use client";
-import { AlertCircle, ChevronDown, FileInput } from "lucide-react";
+import {
+  AlertCircle,
+  BookOpen,
+  ChevronDown,
+  CircleHelp,
+  FileInput,
+  LayoutPanelTop,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { ParticleLoader } from "@/components/ParticleLoader";
@@ -19,6 +26,7 @@ import { DocumentationDrawer } from "@/components/DocumentationDrawer";
 import { RealAnalysisPanel } from "@/components/RealAnalysisPanel";
 import { ContentLoading } from "@/components/ContentLoading";
 import { FilePreview } from "@/components/FilePreview";
+import { RunStreamTrace, type RunStreamEvent } from "@/components/RunStreamTrace";
 import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
 import { ApiClientError, bioflowApi, getApiErrorMessage } from "@/lib/api-client";
 import type {
@@ -29,57 +37,6 @@ import type {
   TaskListItem,
   WorkflowNodeState,
 } from "@/lib/domain";
-type TimelineEvent = {
-  id: number;
-  phase: string;
-  title: string;
-  detail: string;
-  state: "done" | "active" | "idle" | "error";
-  time: string;
-};
-
-type RunStreamEvent = {
-  type: string;
-  createdAt: string;
-  nodeId?: string;
-  payload?: Record<string, unknown>;
-};
-
-const seedEvents: TimelineEvent[] = [
-  {
-    id: 1,
-    phase: "01",
-    title: "识别研究意图",
-    detail: "bulk RNA-seq · 处理组 vs 对照组 · 候选基因",
-    state: "done",
-    time: "0.3s",
-  },
-  {
-    id: 2,
-    phase: "02",
-    title: "重写分析问题",
-    detail: "物种=人类 · 交付物=可发表结果",
-    state: "done",
-    time: "0.5s",
-  },
-  {
-    id: 3,
-    phase: "03",
-    title: "检索与证据重排",
-    detail: "项目文件 2 · 技能包 3 · 文献 12",
-    state: "active",
-    time: "1.2s",
-  },
-  {
-    id: 4,
-    phase: "04",
-    title: "绑定分析依据",
-    detail: "DESeq2 参数已绑定 4 条证据",
-    state: "idle",
-    time: "—",
-  },
-];
-
 type WarmWorkspaceSnapshot = {
   task: ResearchTask;
   taskList: TaskListItem[];
@@ -102,6 +59,27 @@ const statusLabel: Record<string, string> = {
 };
 
 const clampCanvasZoom = (value: number) => Math.min(1.6, Math.max(0.5, value));
+
+function appendStreamEvent(current: RunStreamEvent[], next: RunStreamEvent) {
+  if (next.type !== "code.delta") return [...current, next].slice(-160);
+  const existingIndex = current.findIndex(
+    (event) => event.runId === next.runId && event.type === "code.delta",
+  );
+  if (existingIndex < 0) return [...current, next].slice(-160);
+  const existing = current[existingIndex];
+  const updated = [...current];
+  updated[existingIndex] = {
+    ...existing,
+    id: next.id,
+    createdAt: next.createdAt,
+    payload: {
+      ...existing.payload,
+      ...next.payload,
+      text: `${typeof existing.payload.text === "string" ? existing.payload.text : ""}${typeof next.payload.text === "string" ? next.payload.text : ""}`,
+    },
+  };
+  return updated;
+}
 
 function getCanvasViewportSize(viewportWidth: number, sidebarWidth: number) {
   if (viewportWidth <= 760) {
@@ -196,7 +174,7 @@ export default function Home() {
   const routeTaskId = params?.taskId || "task_demo_rnaseq";
   const [authed, setAuthed] = useState(() => Boolean(warmWorkspaceSnapshot));
   const [task, setTask] = useState<ResearchTask | null>(() => warmWorkspaceSnapshot?.task ?? null);
-  const [events, setEvents] = useState(seedEvents);
+  const [streamEvents, setStreamEvents] = useState<RunStreamEvent[]>([]);
   const [liveLogs, setLiveLogs] = useState<string[]>([]);
   const [selected, setSelected] = useState("design");
   const [tab, setTab] = useState<InspectorTab>("todo");
@@ -223,8 +201,7 @@ export default function Home() {
   const [codeStreaming, setCodeStreaming] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(260);
   const [inspectorWidth, setInspectorWidth] = useState(320);
-  const [evidenceHeight, setEvidenceHeight] = useState(92);
-  const [resizing, setResizing] = useState<"sidebar" | "inspector" | "evidence" | null>(null);
+  const [resizing, setResizing] = useState<"sidebar" | "inspector" | null>(null);
   const [selectedResidue, setSelectedResidue] = useState<number | null>(null);
   const [viewportWidth, setViewportWidth] = useState(1440);
   const [planOpen, setPlanOpen] = useState(false);
@@ -265,6 +242,7 @@ export default function Home() {
   const [configSaving, setConfigSaving] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [skipBoot, setSkipBoot] = useState(false);
   const [bootAttempt, setBootAttempt] = useState(0);
   const [initializationError, setInitializationError] = useState("");
@@ -272,6 +250,8 @@ export default function Home() {
   const [taskLoadError, setTaskLoadError] = useState("");
   const [ragTrace, setRagTrace] = useState<RagTrace | null>(null);
   const guideInitializedRef = useRef(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const receivedStreamEventIdsRef = useRef<Set<number>>(new Set());
   const uploadedFiles = useMemo(
     () => dataProfiles.map((profile) => profile.fileName),
     [dataProfiles],
@@ -298,7 +278,8 @@ export default function Home() {
     setAnswers({ format: "", comparison: "", organism: "", deliverable: "" });
     conversationHydratedRef.current = false;
     notesHydratedRef.current = false;
-    setEvents(seedEvents);
+    setStreamEvents([]);
+    receivedStreamEventIdsRef.current.clear();
     setRagTrace(null);
     setSelectedEvidenceId(null);
     setRunning(false);
@@ -306,6 +287,7 @@ export default function Home() {
     setCodeStreaming(false);
     setLiveLogs([]);
     setStreamStatus("disconnected");
+    setProfileMenuOpen(false);
     setLayoutReady(false);
     setLayoutSaveState("loading");
     lastSavedLayoutRef.current = "";
@@ -327,11 +309,20 @@ export default function Home() {
         setMobilePanel(false);
         setModal(null);
         setGuideOpen(false);
+        setProfileMenuOpen(false);
       }
     };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
   }, []);
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const closeAccountMenu = (event: PointerEvent) => {
+      if (!profileMenuRef.current?.contains(event.target as Node)) setProfileMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", closeAccountMenu);
+    return () => document.removeEventListener("pointerdown", closeAccountMenu);
+  }, [profileMenuOpen]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 2200);
@@ -457,25 +448,6 @@ export default function Home() {
     };
   }, [activeTask, authed, layoutReady, serializedWorkflowLayout, workflowLayoutInput]);
   useEffect(() => {
-    if (!authed || !running) return;
-    const sync = () =>
-      bioflowApi
-        .getTask(activeTask)
-        .then((response) => {
-          if (response.task) {
-            setTask(response.task);
-            if (response.tasks) setTaskList(response.tasks);
-            if (["failed", "succeeded", "cancelled"].includes(response.task.status)) {
-              setRunning(false);
-            }
-          }
-        })
-        .catch(() => undefined);
-    sync();
-    const timer = setInterval(sync, 300);
-    return () => clearInterval(timer);
-  }, [activeTask, authed, running]);
-  useEffect(() => {
     if (!authed || !task?.runId) {
       setStreamStatus("disconnected");
       return;
@@ -493,6 +465,9 @@ export default function Home() {
     es.onmessage = (message) => {
       try {
         const runEvent = JSON.parse(message.data) as RunStreamEvent;
+        if (receivedStreamEventIdsRef.current.has(runEvent.id)) return;
+        receivedStreamEventIdsRef.current.add(runEvent.id);
+        setStreamEvents((events) => appendStreamEvent(events, runEvent));
         setLiveLogs((logs) =>
           [
             ...logs,
@@ -501,65 +476,30 @@ export default function Home() {
             }`,
           ].slice(-100),
         );
-        if (runEvent.type === "code.delta" && typeof runEvent.payload?.text === "string") {
+        if (runEvent.type === "code.delta" && typeof runEvent.payload.text === "string") {
           const codeDelta = runEvent.payload.text;
           setCodeStreaming(true);
           setCodeText((currentCode) => currentCode + codeDelta);
         }
-        if (
-          runEvent.type === "rag.trace.created" &&
-          typeof runEvent.payload?.traceId === "string"
-        ) {
+        if (runEvent.type === "rag.trace.created" && typeof runEvent.payload.traceId === "string") {
           void bioflowApi
             .getRagTrace(runEvent.payload.traceId)
             .then((response) => setRagTrace(response.trace))
             .catch(() => undefined);
         }
         if (runEvent.type === "code.completed") setCodeStreaming(false);
-        const timelineUpdates: Record<string, Partial<TimelineEvent> & { id: number }> = {
-          "intent.detected": {
-            id: 1,
-            state: "done",
-            detail: "bulk RNA-seq · 处理组 vs 对照组",
-            time: "0.3s",
-          },
-          "retrieval.started": {
-            id: 3,
-            state: "active",
-            detail: "正在检索项目文件、技能包与文献",
-            time: "…",
-          },
-          "retrieval.hit": {
-            id: 3,
-            state: "active",
-            detail: `项目文件 ${runEvent.payload?.projectFiles || 2} · 技能包 ${
-              runEvent.payload?.skills || 3
-            } · 文献 ${runEvent.payload?.literature || 12}`,
-            time: "1.2s",
-          },
-          "evidence.reranked": {
-            id: 3,
-            state: "done",
-            detail: `保留 ${runEvent.payload?.kept || 4} 条高相关证据`,
-            time: "1.8s",
-          },
-          "grounding.bound": {
-            id: 4,
-            state: "done",
-            detail: "参数已绑定证据，可进入执行",
-            time: "2.1s",
-          },
-        };
-        const timelineUpdate = timelineUpdates[runEvent.type];
-        if (timelineUpdate) {
-          setEvents((items) =>
-            items.map((item) =>
-              item.id === timelineUpdate.id ? { ...item, ...timelineUpdate } : item,
-            ),
-          );
+        if (
+          ["run.started", "node.updated", "run.completed", "run.cancelled"].includes(runEvent.type)
+        ) {
+          void sync();
+        }
+        if (
+          ["run.completed", "run.cancelled"].includes(runEvent.type) ||
+          (runEvent.type === "node.updated" && runEvent.payload.status === "failed")
+        ) {
+          setRunning(false);
         }
       } catch {}
-      sync();
     };
     es.onerror = () => setStreamStatus("reconnecting");
     return () => {
@@ -819,11 +759,18 @@ ${task?.goal || config.goal}
       return;
     }
     setRunning(true);
+    setTraceOpen(true);
+    setStreamEvents([]);
+    receivedStreamEventIdsRef.current.clear();
+    setLiveLogs([]);
     setCodeText("");
     setCodeStreaming(false);
     notify("工作流已开始运行");
     try {
-      await bioflowApi.startRun(activeTask);
+      const response = await bioflowApi.startRun(activeTask);
+      setTask((current) =>
+        current ? { ...current, runId: response.runId, status: "running" } : current,
+      );
     } catch (error) {
       setRunning(false);
       notify(getApiErrorMessage(error, "启动失败，请检查服务状态"));
@@ -963,23 +910,18 @@ ${task?.goal || config.goal}
       setCancellingRun(false);
     }
   };
-  const startResize = (kind: "sidebar" | "inspector" | "evidence", event: React.PointerEvent) => {
+  const startResize = (kind: "sidebar" | "inspector", event: React.PointerEvent) => {
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     setResizing(kind);
     const startX = event.clientX,
-      startY = event.clientY,
-      base =
-        kind === "sidebar" ? sidebarWidth : kind === "inspector" ? inspectorWidth : evidenceHeight;
+      base = kind === "sidebar" ? sidebarWidth : inspectorWidth;
     const move = (e: PointerEvent) => {
       if (kind === "sidebar") {
         setSidebarWidth(Math.min(390, Math.max(210, base + e.clientX - startX)));
       }
       if (kind === "inspector") {
         setInspectorWidth(Math.min(520, Math.max(260, base + startX - e.clientX)));
-      }
-      if (kind === "evidence") {
-        setEvidenceHeight(Math.min(220, Math.max(70, base + e.clientY - startY)));
       }
     };
     const up = () => {
@@ -1143,13 +1085,66 @@ ${task?.goal || config.goal}
           ◈<span>文件</span>
         </button>
         <div className="rail-spacer" />
-        <button
-          className="avatar"
-          onClick={() => notify("当前登录：DF · 研究员")}
-          aria-label="查看当前账户"
-        >
-          DF
-        </button>
+        <div className="rail-account" ref={profileMenuRef}>
+          <button
+            className="avatar"
+            onClick={() => setProfileMenuOpen((current) => !current)}
+            aria-label="打开当前账户菜单"
+            aria-expanded={profileMenuOpen}
+          >
+            DF
+          </button>
+          {profileMenuOpen && (
+            <div className="account-menu" role="menu">
+              <div className="account-menu-profile">
+                <b>DF 研究员</b>
+                <small>BioFlow 生命科学实验室</small>
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setProfileMenuOpen(false);
+                  setModal({ kind: "layout", title: "工作区布局" });
+                }}
+              >
+                <LayoutPanelTop size={15} />
+                <span>
+                  <b>工作区布局</b>
+                  <small>调整面板与画布</small>
+                </span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setProfileMenuOpen(false);
+                  setDocsOpen(true);
+                }}
+              >
+                <BookOpen size={15} />
+                <span>
+                  <b>开发文档</b>
+                  <small>接口与前端接入说明</small>
+                </span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setProfileMenuOpen(false);
+                  setGuideOpen(true);
+                }}
+              >
+                <CircleHelp size={15} />
+                <span>
+                  <b>使用指引</b>
+                  <small>从零开始完成工作流</small>
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
       </aside>
       <TaskSidebar
         task={task}
@@ -1189,9 +1184,6 @@ ${task?.goal || config.goal}
               <i /> 智能体 · {statusLabel[task.status] || task.status}
             </span>
             <button onClick={shareTask}>分享</button>
-            <button onClick={() => setModal({ kind: "layout", title: "工作区布局" })}>布局</button>
-            <button onClick={() => setDocsOpen(true)}>文档</button>
-            <button onClick={() => setGuideOpen(true)}>使用指引</button>
           </div>
         </header>
         <div className="goal-strip" data-guide="goal">
@@ -1259,45 +1251,17 @@ ${task?.goal || config.goal}
                 可以。我会先检查项目文件，再确认数据格式、实验设计和交付要求，然后生成一份可审批的分析计划。
               </p>
               <button className="trace-chip" onClick={() => setTraceOpen((current) => !current)}>
-                {traceOpen
-                  ? "收起执行轨迹"
-                  : task.executionMode === "real"
-                    ? "查看文件与检索状态"
-                    : "演示执行轨迹"}
+                {traceOpen ? "收起运行过程" : "查看运行过程"}
               </button>
             </div>
           </div>
         </div>
-        <div
-          data-guide="evidence"
-          className={`evidence-strip ${traceOpen ? "" : "trace-collapsed"}`}
-          style={{ height: evidenceHeight }}
-        >
-          <div className="evidence-label">
-            <span>✦</span>
-            <b>证据流水线</b>
-            <small>智能体决策追踪</small>
-          </div>
-          {events.map((timelineEvent) => (
-            <button
-              key={timelineEvent.id}
-              className={`evidence-step ${timelineEvent.state}`}
-              onClick={() => openTool("evidence")}
-            >
-              <span className="phase">{timelineEvent.phase}</span>
-              <span>
-                <b>{timelineEvent.title}</b>
-                <small>{timelineEvent.detail}</small>
-              </span>
-              <em>{timelineEvent.time}</em>
-            </button>
-          ))}
-          <div
-            className="horizontal-splitter"
-            onPointerDown={(pointerEvent) => startResize("evidence", pointerEvent)}
-            title="拖拽调整证据区高度"
-          />
-        </div>
+        <RunStreamTrace
+          events={streamEvents}
+          open={traceOpen}
+          streamStatus={streamStatus}
+          onToggle={() => setTraceOpen((current) => !current)}
+        />
         {(task?.status === "clarifying" || task?.status === "draft") && (
           <ClarificationCard
             answers={answers}
@@ -1604,7 +1568,6 @@ ${task?.goal || config.goal}
             }
             setSidebarWidth(260);
             setInspectorWidth(320);
-            setEvidenceHeight(92);
             setPlanOpen(false);
             setTraceOpen(false);
             setMobilePanel(false);

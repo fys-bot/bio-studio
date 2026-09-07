@@ -4107,3 +4107,460 @@ html {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* 工作台账户菜单：低频设置统一收进左下角，不占用任务主工具栏。 */
+.app-shell .rail {
+  position: relative;
+  overflow: visible;
+}
+
+.rail-account {
+  position: relative;
+  flex: none;
+}
+
+.account-menu {
+  position: absolute;
+  bottom: 0;
+  left: calc(100% + 10px);
+  z-index: 90;
+  width: 218px;
+  overflow: hidden;
+  border: 1px solid var(--bf-line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 46px #24332b2e;
+}
+
+.account-menu-profile {
+  display: grid;
+  gap: 2px;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--bf-line);
+  background: #f7f9f8;
+}
+
+.account-menu-profile b {
+  color: var(--bf-text);
+  font-size: 10px;
+}
+
+.account-menu-profile small {
+  overflow: hidden;
+  color: var(--bf-text-muted);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu > button {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 48px;
+  padding: 7px 10px;
+  border: 0;
+  border-bottom: 1px solid #edf0ee;
+  background: #fff;
+  color: #53645b;
+  text-align: left;
+}
+
+.account-menu > button:last-child {
+  border-bottom: 0;
+}
+
+.account-menu > button:hover,
+.account-menu > button:focus-visible {
+  background: #f1f5f2;
+  color: #176e64;
+}
+
+.account-menu > button > svg {
+  justify-self: center;
+}
+
+.account-menu > button span,
+.account-menu > button b,
+.account-menu > button small {
+  display: block;
+  min-width: 0;
+}
+
+.account-menu > button b {
+  color: inherit;
+  font-size: 9px;
+}
+
+.account-menu > button small {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #7b867f;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* SSE 运行过程：逐步呈现真实事件，并允许展开审计事件负载。 */
+.app-shell .run-stream-trace {
+  order: 3;
+  flex: none;
+  width: min(calc(100% - 40px), var(--bf-content-max));
+  max-width: var(--bf-content-max);
+  margin: 0 auto 14px;
+  overflow: hidden;
+  border: 1px solid var(--bf-line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 22px #53685d0b;
+}
+
+.run-trace-summary {
+  display: grid;
+  grid-template-columns: 28px 92px minmax(0, 1fr) auto 16px;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 0;
+  background: #fff;
+  color: var(--bf-text-secondary);
+  text-align: left;
+}
+
+.run-trace-summary:hover {
+  background: #f7f9f8;
+}
+
+.run-trace-mark {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border-radius: 6px;
+  background: #eef3d7;
+  color: #71800e;
+}
+
+.run-trace-title,
+.run-trace-current,
+.run-trace-copy {
+  display: block;
+  min-width: 0;
+}
+
+.run-trace-title b,
+.run-trace-title small,
+.run-trace-current b,
+.run-trace-current small,
+.run-trace-copy b,
+.run-trace-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.run-trace-title b {
+  color: var(--bf-text);
+  font-size: 10px;
+}
+
+.run-trace-title small,
+.run-trace-current small,
+.run-trace-copy small {
+  margin-top: 3px;
+  color: var(--bf-text-muted);
+  font-size: 8px;
+}
+
+.run-trace-current b {
+  color: #40564a;
+  font-size: 9px;
+}
+
+.run-trace-connection {
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: #f1f3ef;
+  color: #748078;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.run-trace-connection i {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: #9aa39d;
+}
+
+.run-trace-connection.connected {
+  background: #eaf3ed;
+  color: #28604b;
+}
+
+.run-trace-connection.connected i {
+  background: #34815f;
+  box-shadow: 0 0 0 3px #34815f1c;
+}
+
+.run-trace-connection.reconnecting {
+  background: #fff5df;
+  color: #87631f;
+}
+
+.run-trace-connection.reconnecting i {
+  background: #b08026;
+}
+
+.run-trace-chevron {
+  color: #718077;
+  transition: transform 0.16s ease;
+}
+
+.run-stream-trace.is-open .run-trace-chevron {
+  transform: rotate(180deg);
+}
+
+.run-trace-events {
+  max-height: min(380px, 48dvh);
+  padding: 6px;
+  overflow-y: auto;
+  border-top: 1px solid var(--bf-line);
+  background: #f7f9f8;
+  overscroll-behavior: contain;
+}
+
+.run-trace-empty {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #77837b;
+  font-size: 9px;
+  text-align: center;
+}
+
+.run-trace-event {
+  overflow: hidden;
+  border-bottom: 1px solid #e3e8e5;
+  background: #fff;
+}
+
+.run-trace-event:first-of-type {
+  border-radius: 6px 6px 0 0;
+}
+
+.run-trace-event:last-child {
+  border-bottom: 0;
+  border-radius: 0 0 6px 6px;
+}
+
+.run-trace-event summary {
+  display: grid;
+  grid-template-columns: 24px 20px minmax(0, 1fr) minmax(86px, auto) 16px;
+  align-items: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 6px 9px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.run-trace-event summary::-webkit-details-marker {
+  display: none;
+}
+
+.run-trace-event summary:hover {
+  background: #f2f6f3;
+}
+
+.run-trace-event[open] summary {
+  background: #f1f5e3;
+}
+
+.run-trace-index {
+  color: #8a958e;
+  font:
+    8px "DM Mono",
+    monospace;
+}
+
+.run-trace-tone {
+  display: grid;
+  place-items: center;
+  color: #859088;
+}
+
+.run-trace-event.success .run-trace-tone {
+  color: #438062;
+}
+
+.run-trace-event.error .run-trace-tone {
+  color: #a54236;
+}
+
+.run-trace-event.active .run-trace-tone {
+  color: #89971a;
+}
+
+.run-trace-copy b {
+  color: #35473d;
+  font-size: 9px;
+}
+
+.run-trace-meta {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  color: #849088;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.run-trace-meta b {
+  color: #5d6c63;
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.run-trace-event summary > svg {
+  color: #748178;
+  transition: transform 0.15s ease;
+}
+
+.run-trace-event[open] summary > svg {
+  transform: rotate(180deg);
+}
+
+.run-trace-detail {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.34fr) minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px 10px 10px 60px;
+  border-top: 1px solid #e6ebe8;
+  background: #fbfcfb;
+}
+
+.run-trace-detail dl {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  margin: 0;
+}
+
+.run-trace-detail dl > div {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 5px;
+}
+
+.run-trace-detail dt,
+.run-trace-detail dd {
+  margin: 0;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.run-trace-detail dt {
+  color: #87928b;
+}
+
+.run-trace-detail dd {
+  overflow-wrap: anywhere;
+  color: #4f6057;
+}
+
+.run-trace-detail pre {
+  max-height: 220px;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid #dde5e0;
+  border-radius: 5px;
+  background: #f3f6f4;
+  color: #405248;
+  font:
+    8px/1.55 "DM Mono",
+    monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (min-width: 761px) and (max-width: 1200px) {
+  .app-shell .run-stream-trace {
+    width: calc(100% - 28px);
+  }
+
+  .run-trace-summary {
+    grid-template-columns: 28px 78px minmax(0, 1fr) auto 16px;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell .rail-account,
+  .app-shell .rail-account .avatar {
+    display: grid;
+  }
+
+  .app-shell .rail-account .avatar {
+    width: 29px;
+    height: 29px;
+  }
+
+  .account-menu {
+    position: fixed;
+    right: 8px;
+    bottom: 66px;
+    left: auto;
+  }
+
+  .app-shell .run-stream-trace {
+    width: calc(100% - 20px);
+    margin-bottom: 10px;
+  }
+
+  .run-trace-summary {
+    grid-template-columns: 28px minmax(0, 1fr) auto 16px;
+    min-height: 48px;
+  }
+
+  .run-trace-title {
+    display: none;
+  }
+
+  .run-trace-connection {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    overflow: hidden;
+    font-size: 0;
+  }
+
+  .run-trace-connection i {
+    display: block;
+    width: 8px;
+    height: 8px;
+    margin: 0;
+  }
+
+  .run-trace-event summary {
+    grid-template-columns: 20px 18px minmax(0, 1fr) 16px;
+  }
+
+  .run-trace-meta {
+    display: none;
+  }
+
+  .run-trace-detail {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 10px;
+  }
+}

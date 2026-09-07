@@ -158,6 +158,39 @@ export function FileCatalog() {
           </div>
         </section>
       </div>
+      <details className="file-source-guide">
+        <summary>从专业公开库获取可验证资料</summary>
+        <nav aria-label="专业生命科学资料来源">
+          <a href="https://www.ncbi.nlm.nih.gov/geo/" target="_blank" rel="noreferrer">
+            <b>NCBI GEO</b>
+            <span>转录组实验、Series、样本与补充文件</span>
+          </a>
+          <a href="https://www.encodeproject.org/data/" target="_blank" rel="noreferrer">
+            <b>ENCODE</b>
+            <span>功能基因组实验、元数据与分析产物</span>
+          </a>
+          <a
+            href="https://bioconductor.org/packages/release/bioc/html/DESeq2.html"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <b>Bioconductor / DESeq2</b>
+            <span>官方 vignette、手册与示例数据</span>
+          </a>
+          <a href="https://www.uniprot.org/" target="_blank" rel="noreferrer">
+            <b>UniProt</b>
+            <span>蛋白序列、功能注释与参考蛋白组</span>
+          </a>
+          <a href="https://www.rcsb.org/" target="_blank" rel="noreferrer">
+            <b>RCSB PDB</b>
+            <span>实验测定的生物大分子三维结构</span>
+          </a>
+          <a href="https://reactome.org/" target="_blank" rel="noreferrer">
+            <b>Reactome</b>
+            <span>人工审校通路、反应与关系数据</span>
+          </a>
+        </nav>
+      </details>
       {loading && <section className="catalog-state">正在读取文件目录…</section>}
       {error && (
         <section className="catalog-state error">

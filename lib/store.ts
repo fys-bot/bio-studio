@@ -280,6 +280,37 @@ export function resetDemoState() {
   return fresh.task;
 }
 
+const integrationFixtureTitle = /^(Custom skill|Real RNA-seq|Retrieval|Compute regression) \d{10}$/;
+
+/** 清理集成测试生成的任务，保留默认演示任务和用户命名的真实任务。 */
+export function cleanupIntegrationFixtures() {
+  const runtimeState = state();
+  const removedTaskIds = runtimeState.taskList
+    .filter((task) => integrationFixtureTitle.test(task.title))
+    .map((task) => task.id);
+  const removedSet = new Set(removedTaskIds);
+  const removedRunIds = Object.entries(runtimeState.runTaskIds ?? {})
+    .filter(([, taskId]) => removedSet.has(taskId))
+    .map(([runId]) => runId);
+  const removedRunSet = new Set(removedRunIds);
+
+  runtimeState.taskList = runtimeState.taskList.filter((task) => !removedSet.has(task.id));
+  for (const taskId of removedTaskIds) {
+    delete runtimeState.taskRecords?.[taskId];
+    delete runtimeState.conversations?.[taskId];
+    delete runtimeState.notesByTaskId?.[taskId];
+    delete runtimeState.workflowLayouts?.[taskId];
+  }
+  for (const runId of removedRunIds) {
+    delete runtimeState.runTaskIds?.[runId];
+    delete runtimeState.runningRunIds?.[runId];
+    delete runtimeState.cancelledRuns?.[runId];
+  }
+  runtimeState.events = runtimeState.events.filter((event) => !removedRunSet.has(event.runId));
+  persist(runtimeState);
+  return { removedTaskIds, remainingTaskCount: runtimeState.taskList.length };
+}
+
 export function snapshot() {
   return state().task;
 }

@@ -17,7 +17,8 @@
     "format": "prettier --write \"{app,components,lib,scripts}/**/*.{ts,tsx,mjs,css}\" \"*.{json,mjs}\"",
     "format:check": "prettier --check \"{app,components,lib,scripts}/**/*.{ts,tsx,mjs,css}\" \"*.{json,mjs}\"",
     "smoke": "npm run test:integration",
-    "smoke:legacy": "node scripts/smoke-test.mjs"
+    "smoke:legacy": "node scripts/smoke-test.mjs",
+    "cleanup:test-data": ".venv/bin/python scripts/cleanup_test_documents.py"
   },
   "dependencies": {
     "next": "14.2.5",

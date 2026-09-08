@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 type ProductGuideProps = {
   open: boolean;
   onClose: () => void;
+  onShowcaseMenuChange?: (open: boolean) => void;
 };
 
 type GuideStep = {
@@ -33,7 +34,8 @@ type TargetRect = {
 
 const guideSteps: GuideStep[] = [
   {
-    target: '[data-guide="showcases"]',
+    target: '[data-guide="showcase-menu"]',
+    fallbackTarget: '[data-guide="account-menu-trigger"]',
     eyebrow: "第 1 步 · 选择演示路径",
     title: "先看最能拉开差距的三条主线",
     description:
@@ -145,7 +147,7 @@ function measureTarget(step: GuideStep): TargetRect | null {
  * 首次访问引导：只负责定位和解释真实界面，不替用户执行危险操作。
  * 引导状态由页面控制，便于用户从顶部入口重新打开。
  */
-export function ProductGuide({ open, onClose }: ProductGuideProps) {
+export function ProductGuide({ open, onClose, onShowcaseMenuChange }: ProductGuideProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
   const activeStep = guideSteps[activeIndex];
@@ -163,13 +165,24 @@ export function ProductGuide({ open, onClose }: ProductGuideProps) {
   }, [open]);
 
   useEffect(() => {
+    onShowcaseMenuChange?.(open && activeIndex === 0);
+    return () => {
+      if (open && activeIndex === 0) onShowcaseMenuChange?.(false);
+    };
+  }, [activeIndex, onShowcaseMenuChange, open]);
+
+  useEffect(() => {
     if (!open) return;
     const updateTarget = () => setTargetRect(measureTarget(activeStep));
     const frame = window.requestAnimationFrame(updateTarget);
+    const menuFrame = window.setTimeout(updateTarget, 80);
+    const layoutFrame = window.setTimeout(updateTarget, 220);
     window.addEventListener("resize", updateTarget);
     window.addEventListener("scroll", updateTarget, true);
     return () => {
       window.cancelAnimationFrame(frame);
+      window.clearTimeout(menuFrame);
+      window.clearTimeout(layoutFrame);
       window.removeEventListener("resize", updateTarget);
       window.removeEventListener("scroll", updateTarget, true);
     };

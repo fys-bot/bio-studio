@@ -8645,3 +8645,316 @@ html {
     animation: none;
   }
 }
+
+/* 交付前收口：连续对话、浅色结果、原子 API 契约和目录宽度使用同一视觉合同。 */
+.app-shell .dialogue-thread > .conversation {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 14px 0 0;
+  border-top: 1px solid #e3e8e5;
+}
+
+.app-shell .dialogue-thread > .conversation > .user-message,
+.app-shell .dialogue-thread > .conversation > .agent-message,
+.app-shell .dialogue-thread > .conversation > .failure-message {
+  max-width: min(92%, 760px);
+}
+
+.app-shell .dialogue-thread > .conversation .composer {
+  margin-top: 2px;
+}
+
+.app-shell .inspector .metrics > div {
+  border-color: #d7e0da;
+  background: #f4f7f5;
+  color: #35473d;
+}
+
+.app-shell .inspector .metrics b {
+  color: #35473d;
+}
+
+.app-shell .inspector .metrics small {
+  color: #75837b;
+}
+
+.app-shell .inspector .lineage-card {
+  border-color: #cbd8d0;
+  background: #f7faf8;
+  color: #3e5147;
+  box-shadow: none;
+}
+
+.app-shell .inspector .lineage-card b,
+.app-shell .inspector .lineage-card button {
+  color: #176e64;
+}
+
+.app-shell .inspector .lineage-card p,
+.app-shell .inspector .lineage-card small {
+  color: #66776e;
+}
+
+.app-shell .inspector .lineage-steps {
+  border-top-color: #dbe4df;
+}
+
+.app-shell .inspector .lineage-steps li {
+  border-bottom-color: #e1e8e4;
+}
+
+.account-menu-showcases {
+  display: grid;
+  min-width: 0;
+  background: #fff;
+}
+
+.account-menu-showcases > button {
+  display: grid;
+  width: 100%;
+  min-height: 48px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 0;
+  border-bottom: 1px solid #edf0ee;
+  background: #fff;
+  color: #53645b;
+  text-align: left;
+}
+
+.account-menu-showcases > button:hover,
+.account-menu-showcases > button:focus-visible {
+  background: #f1f5f2;
+  color: #176e64;
+}
+
+.account-menu-showcases > button > svg {
+  justify-self: center;
+}
+
+.account-menu-showcases > button span,
+.account-menu-showcases > button b,
+.account-menu-showcases > button small {
+  display: block;
+  min-width: 0;
+}
+
+.account-menu-showcases > button b {
+  color: inherit;
+  font-size: 9px;
+}
+
+.account-menu-showcases > button small {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #7b867f;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.module-shell .catalog-sticky,
+.module-shell .catalog-sticky > .catalog-header,
+.module-shell .catalog-sticky > .catalog-toolbar,
+.module-shell .skill-grid,
+.module-shell .catalog-meta,
+.module-shell .catalog-page:not(.file-catalog-page) > .catalog-pagination {
+  width: 100%;
+  max-width: none;
+  margin-right: 0;
+  margin-left: 0;
+  box-sizing: border-box;
+}
+
+.module-shell .catalog-sticky {
+  margin-inline: 0 !important;
+}
+
+.documentation-section-head p {
+  margin: 5px 0 0;
+  color: #748179;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.api-group-accordion .MuiAccordionDetails-root {
+  display: grid;
+  gap: 5px;
+  padding: 6px;
+}
+
+.api-endpoint-contract {
+  overflow: hidden;
+  border: 1px solid #dce4df;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.api-endpoint-contract > summary {
+  display: grid;
+  min-height: 46px;
+  grid-template-columns: 52px minmax(150px, 0.7fr) minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  color: #526159;
+  cursor: pointer;
+  list-style: none;
+}
+
+.api-endpoint-contract > summary::-webkit-details-marker {
+  display: none;
+}
+
+.api-endpoint-contract > summary:hover {
+  background: #f4f7f5;
+}
+
+.api-endpoint-contract[open] > summary {
+  border-bottom: 1px solid #dfe6e2;
+  background: #f5f8f6;
+}
+
+.api-method {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #eef2d7;
+  color: #647318;
+  font:
+    700 8px "DM Mono",
+    monospace;
+}
+
+.api-method-get {
+  background: #e5f2ef;
+  color: #176e64;
+}
+
+.api-method-put {
+  background: #e8eff5;
+  color: #35647e;
+}
+
+.api-method-patch {
+  background: #f7efdc;
+  color: #84661e;
+}
+
+.api-method-delete {
+  background: #f8e9e6;
+  color: #a04539;
+}
+
+.api-endpoint-contract code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #34463d;
+  font:
+    9px/1.45 "DM Mono",
+    monospace;
+}
+
+.api-endpoint-summary {
+  min-width: 0;
+  color: #728078;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.api-endpoint-expand {
+  color: #7b8981;
+  transition: transform 0.18s ease;
+}
+
+.api-endpoint-contract[open] .api-endpoint-expand {
+  transform: rotate(180deg);
+}
+
+.api-contract-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+  padding: 7px;
+  background: #f7f9f8;
+}
+
+.api-contract-block,
+.api-request-contract {
+  min-width: 0;
+  margin: 0;
+  padding: 8px 9px;
+  border: 1px solid #e1e7e3;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.api-contract-access,
+.api-request-contract,
+.api-contract-block:last-child {
+  grid-column: 1 / -1;
+}
+
+.api-contract-block > span,
+.api-request-contract dt {
+  color: #75837b;
+  font:
+    700 8px "DM Mono",
+    monospace;
+}
+
+.api-contract-block p,
+.api-request-contract dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  color: #485a50;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.api-request-contract {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+}
+
+.api-request-contract > div {
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .app-shell .dialogue-thread > .conversation {
+    padding-top: 10px;
+  }
+
+  .app-shell .dialogue-thread > .conversation > .user-message,
+  .app-shell .dialogue-thread > .conversation > .agent-message,
+  .app-shell .dialogue-thread > .conversation > .failure-message {
+    max-width: 100%;
+  }
+
+  .api-endpoint-contract > summary {
+    grid-template-columns: 48px minmax(0, 1fr) 18px;
+    gap: 6px;
+  }
+
+  .api-endpoint-summary {
+    display: none;
+  }
+
+  .api-contract-body,
+  .api-request-contract {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .api-contract-block,
+  .api-request-contract {
+    grid-column: 1;
+  }
+}

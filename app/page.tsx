@@ -376,11 +376,12 @@ export default function Home() {
   useEffect(() => {
     if (!profileMenuOpen) return;
     const closeAccountMenu = (event: PointerEvent) => {
+      if (guideOpen) return;
       if (!profileMenuRef.current?.contains(event.target as Node)) setProfileMenuOpen(false);
     };
     document.addEventListener("pointerdown", closeAccountMenu);
     return () => document.removeEventListener("pointerdown", closeAccountMenu);
-  }, [profileMenuOpen]);
+  }, [guideOpen, profileMenuOpen]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 2200);
@@ -1323,7 +1324,7 @@ ${task?.goal || config.goal}
         <div className="rail-account" ref={profileMenuRef}>
           <button
             className="avatar"
-            data-guide="showcases"
+            data-guide="account-menu-trigger"
             onClick={() => setProfileMenuOpen((current) => !current)}
             aria-label="打开当前账户菜单"
             aria-expanded={profileMenuOpen}
@@ -1357,49 +1358,51 @@ ${task?.goal || config.goal}
                   </span>
                 </button>
               )}
-              <div className="account-menu-section-label">亮点实例</div>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                  selectTask("task_demo_rnaseq", "RNA-seq 真实计算");
-                }}
-              >
-                <StreamRounded sx={{ fontSize: 16 }} />
-                <span>
-                  <b>真实计算 + SSE</b>
-                  <small>审批、流式事件、PyDESeq2</small>
-                </span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                  selectTask("task_literature", "文献证据图谱", "evidence");
-                }}
-              >
-                <HubOutlined sx={{ fontSize: 16 }} />
-                <span>
-                  <b>文档 RAG</b>
-                  <small>解析、召回、证据追踪</small>
-                </span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                  selectTask("task_structure", "蛋白质结构预览", "structure");
-                }}
-              >
-                <ViewInArOutlined sx={{ fontSize: 16 }} />
-                <span>
-                  <b>3D 结构</b>
-                  <small>旋转、缩放、残基联动</small>
-                </span>
-              </button>
+              <div className="account-menu-showcases" data-guide="showcase-menu">
+                <div className="account-menu-section-label">亮点实例</div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    selectTask("task_demo_rnaseq", "RNA-seq 真实计算");
+                  }}
+                >
+                  <StreamRounded sx={{ fontSize: 16 }} />
+                  <span>
+                    <b>真实计算 + SSE</b>
+                    <small>审批、流式事件、PyDESeq2</small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    selectTask("task_literature", "文献证据图谱", "evidence");
+                  }}
+                >
+                  <HubOutlined sx={{ fontSize: 16 }} />
+                  <span>
+                    <b>文档 RAG</b>
+                    <small>解析、召回、证据追踪</small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    selectTask("task_structure", "蛋白质结构预览", "structure");
+                  }}
+                >
+                  <ViewInArOutlined sx={{ fontSize: 16 }} />
+                  <span>
+                    <b>3D 结构</b>
+                    <small>旋转、缩放、残基联动</small>
+                  </span>
+                </button>
+              </div>
               <button
                 type="button"
                 role="menuitem"
@@ -1636,6 +1639,40 @@ ${task?.goal || config.goal}
               )}
             </div>
           </div>
+          <ConversationPanel
+            messages={conversationMessages}
+            taskStatus={task.status}
+            messageText={messageText}
+            agentMode={agentMode}
+            onMessageTextChange={setMessageText}
+            onSendMessage={sendMessage}
+            onAddFile={() => setModal({ kind: "upload", title: "添加项目文件" })}
+            onAgentModeChange={(nextMode) => {
+              setAgentMode(nextMode);
+              notify(`已切换为${nextMode}，后续请求会携带对应 reasoning effort`);
+            }}
+            onOpenFailureEvidence={() => {
+              setSelected("design");
+              openTool("evidence");
+            }}
+            onOpenCode={() => openTool("code")}
+            onCopyMessage={(content) => void copyMessage(content)}
+            onRetryMessage={retryMessage}
+            onOpenTrace={openTraceForMessage}
+            onCitationClick={selectCitation}
+            onFeedback={(messageId, feedback) => {
+              setConversationMessages((items) =>
+                items.map((message) =>
+                  message.id === messageId ? { ...message, feedback } : message,
+                ),
+              );
+              notify(feedback === "up" ? "已记录为有帮助" : "已记录改进反馈");
+            }}
+            onFollowUp={(question) => {
+              setMessageText(question);
+              notify("已填入后续问题，请确认后发送");
+            }}
+          />
         </div>
         {task?.status === "awaiting_approval" && (
           <div className="gate-card approval">
@@ -1769,40 +1806,6 @@ ${task?.goal || config.goal}
             onStreamStatus={setStreamStatus}
           />
         )}
-        <ConversationPanel
-          messages={conversationMessages}
-          taskStatus={task.status}
-          messageText={messageText}
-          agentMode={agentMode}
-          onMessageTextChange={setMessageText}
-          onSendMessage={sendMessage}
-          onAddFile={() => setModal({ kind: "upload", title: "添加项目文件" })}
-          onAgentModeChange={(nextMode) => {
-            setAgentMode(nextMode);
-            notify(`已切换为${nextMode}，后续请求会携带对应 reasoning effort`);
-          }}
-          onOpenFailureEvidence={() => {
-            setSelected("design");
-            openTool("evidence");
-          }}
-          onOpenCode={() => openTool("code")}
-          onCopyMessage={(content) => void copyMessage(content)}
-          onRetryMessage={retryMessage}
-          onOpenTrace={openTraceForMessage}
-          onCitationClick={selectCitation}
-          onFeedback={(messageId, feedback) => {
-            setConversationMessages((items) =>
-              items.map((message) =>
-                message.id === messageId ? { ...message, feedback } : message,
-              ),
-            );
-            notify(feedback === "up" ? "已记录为有帮助" : "已记录改进反馈");
-          }}
-          onFollowUp={(question) => {
-            setMessageText(question);
-            notify("已填入后续问题，请确认后发送");
-          }}
-        />
       </section>
       <WorkspaceToolDock
         activeTab={tab}
@@ -1962,7 +1965,11 @@ ${task?.goal || config.goal}
           saving={configSaving}
         />
       )}
-      <ProductGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
+      <ProductGuide
+        open={guideOpen}
+        onClose={() => setGuideOpen(false)}
+        onShowcaseMenuChange={setProfileMenuOpen}
+      />
       <DocumentationDrawer
         open={docsOpen}
         activeTaskId={activeTask}

@@ -1,18 +1,31 @@
 "use client";
 import StorageOutlined from "@mui/icons-material/StorageOutlined";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ProjectFileRecord, ResearchTask } from "@/lib/domain";
 import type { AnalysisJob } from "@/lib/research-service";
-import { authorizedFetch, bioflowApi, downloadAuthorizedFile } from "@/lib/api-client";
+import {
+  authorizedFetch,
+  bioflowApi,
+  downloadAuthorizedFile,
+  readAuthorizedSse,
+  type ApiStreamEvent,
+} from "@/lib/api-client";
+import type { StreamStatus } from "./RunStreamTrace";
 import { FilePreview } from "./FilePreview";
 import { SelectControl } from "./ui/SelectControl";
 
 export function RealAnalysisPanel({
   task,
   onTaskChange,
+  onStreamConnect,
+  onStreamEvent,
+  onStreamStatus,
 }: {
   task: ResearchTask;
   onTaskChange: (task: ResearchTask) => void;
+  onStreamConnect?: (jobId: string) => void;
+  onStreamEvent?: (event: ApiStreamEvent) => void;
+  onStreamStatus?: (status: StreamStatus) => void;
 }) {
   const [files, setFiles] = useState<ProjectFileRecord[]>([]);
   const [job, setJob] = useState<AnalysisJob | null>(null);
@@ -29,6 +42,8 @@ export function RealAnalysisPanel({
     batch: "",
     alpha: 0.05,
   });
+  const streamCallbacksRef = useRef({ onStreamConnect, onStreamEvent, onStreamStatus });
+  streamCallbacksRef.current = { onStreamConnect, onStreamEvent, onStreamStatus };
   const ids = JSON.stringify(task.fileIds ?? []);
   useEffect(() => {
     let alive = true;
@@ -81,6 +96,30 @@ export function RealAnalysisPanel({
       clearTimeout(timer);
     };
   }, [task.id, task.analysisJobId, task.status, onTaskChange]);
+  useEffect(() => {
+    if (!job?.id || !["queued", "running"].includes(job.status)) return;
+    const controller = new AbortController();
+    const callbacks = streamCallbacksRef.current;
+    callbacks.onStreamConnect?.(job.id);
+    callbacks.onStreamStatus?.("connecting");
+    void readAuthorizedSse<ApiStreamEvent>(
+      `/api/tasks/${encodeURIComponent(task.id)}/analysis?stream=1&jobId=${encodeURIComponent(job.id)}`,
+      {
+        signal: controller.signal,
+        onOpen: () => streamCallbacksRef.current.onStreamStatus?.("connected"),
+        onEvent: (event) => {
+          streamCallbacksRef.current.onStreamEvent?.(event);
+          if (event.type === "analysis.completed")
+            streamCallbacksRef.current.onStreamStatus?.("completed");
+          if (["analysis.failed", "analysis.cancelled"].includes(event.type))
+            streamCallbacksRef.current.onStreamStatus?.("failed");
+        },
+      },
+    ).catch(() => {
+      if (!controller.signal.aborted) streamCallbacksRef.current.onStreamStatus?.("reconnecting");
+    });
+    return () => controller.abort();
+  }, [job?.id, task.id]);
   const post = async (action: string) => {
     setBusy(true);
     setError("");

@@ -311,6 +311,7 @@ export function InspectorDrawer({
               {
                 {
                   idle: "等待启动",
+                  blocked: "等待输入",
                   starting: "准备运行",
                   connecting: "连接中",
                   connected: "已连接",

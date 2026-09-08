@@ -781,45 +781,40 @@ ${task?.goal || config.goal}
   const submitClarifications = async () => {
     if (submittingAnswers || Object.values(answers).some((answer) => !answer)) return;
     setSubmittingAnswers(true);
-    if (task?.executionMode === "real") {
-      setTraceOpen(true);
-      setStreamEvents([]);
-      setLiveLogs([]);
-      receivedStreamEventIdsRef.current.clear();
-      setStreamStatus("starting");
-    }
+    setTraceOpen(true);
+    setStreamEvents([]);
+    setLiveLogs([]);
+    receivedStreamEventIdsRef.current.clear();
+    setStreamStatus("starting");
     try {
       const response = await bioflowApi.submitClarifications(activeTask, { answers });
-      if (task?.executionMode === "real") {
-        setStreamStatus("connecting");
-        const planResponse = await bioflowApi.generatePlan(
-          activeTask,
-          task.goal,
-          answers,
-          [],
-          (event) => {
-            setStreamEvents((events) => appendStreamEvent(events, event));
-            if (event.type !== "plan.waiting") {
-              setLiveLogs((logs) =>
-                [
-                  ...logs,
-                  `[${new Date(event.createdAt).toLocaleTimeString()}] ${event.type}`,
-                ].slice(-100),
-              );
-            }
-            if (event.type === "plan.completed") setStreamStatus("completed");
-            else if (event.type === "plan.failed") setStreamStatus("failed");
-            else setStreamStatus("connected");
-          },
-          () => setStreamStatus("connected"),
-        );
-        setTask(planResponse.task || response.task);
-        notify("LLM 已生成分析计划，请检查证据和风险");
-      } else setTask(response.task);
+      setTask(response.task);
+      setStreamStatus("connecting");
+      const planResponse = await bioflowApi.generatePlan(
+        activeTask,
+        task?.goal || response.task.goal,
+        answers,
+        [],
+        (event) => {
+          setStreamEvents((events) => appendStreamEvent(events, event));
+          if (event.type !== "plan.waiting") {
+            setLiveLogs((logs) =>
+              [...logs, `[${new Date(event.createdAt).toLocaleTimeString()}] ${event.type}`].slice(
+                -100,
+              ),
+            );
+          }
+          if (event.type === "plan.completed") setStreamStatus("completed");
+          else if (event.type === "plan.failed") setStreamStatus("failed");
+          else setStreamStatus("connected");
+        },
+        () => setStreamStatus("connected"),
+      );
+      setTask(planResponse.task || response.task);
+      notify("LLM 已生成分析计划，请检查证据和风险");
     } catch (error) {
-      if (task?.executionMode === "real") setStreamStatus("failed");
-      if (task?.executionMode === "real")
-        setTask((current) => (current ? { ...current, status: "awaiting_approval" } : current));
+      setStreamStatus("failed");
+      setTask((current) => (current ? { ...current, status: "awaiting_approval" } : current));
       notify(getApiErrorMessage(error, "澄清信息提交失败，请检查服务状态"));
     } finally {
       setSubmittingAnswers(false);
@@ -852,11 +847,41 @@ ${task?.goal || config.goal}
       return;
     }
     if (task?.status === "draft" || task?.status === "clarifying") {
-      notify("请先完成四项分析信息");
+      setTraceOpen(true);
+      setStreamStatus("blocked");
+      setStreamEvents([
+        createClientStreamEvent(activeTask, "client.run.blocked", {
+          stage: "clarification",
+          progress: Object.values(answers).filter(Boolean).length * 20,
+          detail: `运行实例尚未创建，请先完成 ${4 - Object.values(answers).filter(Boolean).length} 项分析信息`,
+        }),
+      ]);
+      const nextQuestion = clarificationQuestions.findIndex((question) => !answers[question.key]);
+      if (nextQuestion >= 0) setActiveQuestion(nextQuestion);
+      setTimeout(
+        () => document.querySelector(".clarification-card")?.scrollIntoView({ behavior: "smooth" }),
+        0,
+      );
+      notify("运行尚未开始：请先完成四项分析信息");
       return;
     }
     if (task?.status === "awaiting_approval") {
-      notify("请先批准分析计划");
+      setTraceOpen(true);
+      setStreamStatus("blocked");
+      setStreamEvents([
+        createClientStreamEvent(activeTask, "client.approval.required", {
+          stage: "approval",
+          progress: 0,
+          detail: task.plan
+            ? "分析计划已生成，批准后才会创建运行实例"
+            : "等待 LLM 分析计划生成完成",
+        }),
+      ]);
+      setTimeout(
+        () => document.querySelector(".gate-card.approval")?.scrollIntoView({ behavior: "smooth" }),
+        0,
+      );
+      notify("运行尚未开始：请先批准分析计划");
       return;
     }
     setRunning(true);
@@ -917,6 +942,29 @@ ${task?.goal || config.goal}
       return;
     }
   };
+  const triggerPrimaryRun = () => {
+    if (["draft", "clarifying", "awaiting_approval"].includes(task?.status || "")) {
+      void runDemo();
+      return;
+    }
+    if (task?.executionMode === "real") {
+      document.getElementById("real-analysis")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    void runDemo();
+  };
+  const primaryRunLabel =
+    task?.status === "draft" || task?.status === "clarifying"
+      ? `先补充 ${Math.max(0, 4 - Object.values(answers).filter(Boolean).length)} 项`
+      : task?.status === "awaiting_approval"
+        ? "先批准计划"
+        : task?.executionMode === "real"
+          ? task.status === "running"
+            ? "计算运行中"
+            : "配置并运行"
+          : running
+            ? "运行中…"
+            : "运行工作流";
   const retry = async () => {
     setRetrying(true);
     setCodeText("");
@@ -1372,19 +1420,8 @@ ${task?.goal || config.goal}
                 {cancellingRun ? "取消中…" : "取消"}
               </button>
             )}
-            <button
-              className="primary"
-              data-guide="run"
-              onClick={
-                task.executionMode === "real"
-                  ? () =>
-                      document
-                        .getElementById("real-analysis")
-                        ?.scrollIntoView({ behavior: "smooth" })
-                  : runDemo
-              }
-            >
-              {task.executionMode === "real" ? "分析运行" : running ? "运行中…" : "运行工作流"}
+            <button className="primary" data-guide="run" onClick={triggerPrimaryRun}>
+              {primaryRunLabel}
             </button>
           </div>
         </div>
@@ -1525,7 +1562,7 @@ ${task?.goal || config.goal}
               <button
                 className="primary"
                 onClick={approvePlan}
-                disabled={approvingPlan || (task.executionMode === "real" && !task.plan)}
+                disabled={approvingPlan || !task.plan}
               >
                 {approvingPlan ? "审批中…" : "批准计划"}
               </button>
@@ -1561,7 +1598,38 @@ ${task?.goal || config.goal}
           />
         </div>
         {task.executionMode === "real" && (
-          <RealAnalysisPanel key={task.id} task={task} onTaskChange={setTask} />
+          <RealAnalysisPanel
+            key={task.id}
+            task={task}
+            onTaskChange={setTask}
+            onStreamConnect={(jobId) => {
+              setTraceOpen(true);
+              setStreamStatus("connecting");
+              receivedStreamEventIdsRef.current.clear();
+              setStreamEvents([
+                createClientStreamEvent(
+                  activeTask,
+                  "client.sse.connecting",
+                  {
+                    stage: "analysis-event-stream",
+                    progress: 2,
+                    detail: "正在订阅真实 PyDESeq2 作业状态",
+                  },
+                  jobId,
+                ),
+              ]);
+            }}
+            onStreamEvent={(event) => {
+              setStreamEvents((events) => appendStreamEvent(events, event));
+              setLiveLogs((logs) =>
+                [
+                  ...logs,
+                  `[${new Date(event.createdAt).toLocaleTimeString()}] ${event.type}`,
+                ].slice(-100),
+              );
+            }}
+            onStreamStatus={setStreamStatus}
+          />
         )}
         <ConversationPanel
           messages={conversationMessages}

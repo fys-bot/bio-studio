@@ -61,6 +61,19 @@ export type AnalysisJob = {
   };
 };
 
+const researchRuntimeRegistry = globalThis as typeof globalThis & {
+  __bioflowResolvedWorker?: { url: string; checkedAt: number };
+};
+
+function workerHeaders(headers?: HeadersInit) {
+  const nextHeaders = new Headers(headers);
+  nextHeaders.set(
+    "X-Bioflow-Worker-Token",
+    process.env.BIOFLOW_WORKER_TOKEN || "local-development-only",
+  );
+  return nextHeaders;
+}
+
 function localWorkerUrl() {
   if (process.env.BIOFLOW_WORKER_URL) return process.env.BIOFLOW_WORKER_URL;
   if (process.env.NODE_ENV === "production") return "http://127.0.0.1:8000";
@@ -75,21 +88,57 @@ function localWorkerUrl() {
   }
 }
 
+async function resolvedWorkerUrl() {
+  const cached = researchRuntimeRegistry.__bioflowResolvedWorker;
+  if (cached && Date.now() - cached.checkedAt < 30_000) return cached.url;
+  const configured = localWorkerUrl();
+  let parsed: URL;
+  try {
+    parsed = new URL(configured);
+  } catch {
+    return configured;
+  }
+  if (!["127.0.0.1", "localhost"].includes(parsed.hostname)) return configured;
+  const configuredPort = Number(parsed.port || 8000);
+  const candidates = [
+    configuredPort,
+    configuredPort + 1,
+    configuredPort + 2,
+    configuredPort + 3,
+    8000,
+  ]
+    .filter((port, index, ports) => ports.indexOf(port) === index)
+    .map((port) => `${parsed.protocol}//${parsed.hostname}:${port}`);
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(`${candidate}/health`, {
+        headers: workerHeaders(),
+        cache: "no-store",
+        signal: AbortSignal.timeout(900),
+      });
+      if (!response.ok) continue;
+      researchRuntimeRegistry.__bioflowResolvedWorker = { url: candidate, checkedAt: Date.now() };
+      return candidate;
+    } catch {
+      continue;
+    }
+  }
+  return configured;
+}
+
 export async function researchResponse(path: string, init: RequestInit = {}, timeout = 30_000) {
-  const headers = new Headers(init.headers);
-  headers.set(
-    "X-Bioflow-Worker-Token",
-    process.env.BIOFLOW_WORKER_TOKEN || "local-development-only",
-  );
+  const headers = workerHeaders(init.headers);
   let response: Response;
   try {
-    response = await fetch(`${localWorkerUrl()}${path}`, {
+    const workerUrl = await resolvedWorkerUrl();
+    response = await fetch(`${workerUrl}${path}`, {
       ...init,
       headers,
       cache: "no-store",
       signal: AbortSignal.timeout(timeout),
     });
   } catch {
+    researchRuntimeRegistry.__bioflowResolvedWorker = undefined;
     throw new Error("科研服务未连接，请运行 npm run services；页面无需更换 3000 端口");
   }
   if (!response.ok) {

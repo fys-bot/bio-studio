@@ -12,6 +12,7 @@ import type { ApiStreamEvent } from "@/lib/api-client";
 export type RunStreamEvent = ApiStreamEvent;
 export type StreamStatus =
   | "idle"
+  | "blocked"
   | "starting"
   | "connecting"
   | "connected"
@@ -21,6 +22,8 @@ export type StreamStatus =
 
 const eventLabels: Record<string, string> = {
   "client.run.requested": "准备运行上下文",
+  "client.run.blocked": "等待补充运行条件",
+  "client.approval.required": "等待批准分析计划",
   "client.run.created": "创建运行实例",
   "client.sse.connecting": "建立鉴权事件通道",
   "plan.started": "校验研究上下文",
@@ -45,6 +48,13 @@ const eventLabels: Record<string, string> = {
   "node.updated": "更新工作流节点",
   "run.completed": "运行完成",
   "run.cancelled": "运行已取消",
+  "analysis.stream.connected": "连接真实计算事件流",
+  "analysis.queued": "PyDESeq2 已进入队列",
+  "analysis.running": "PyDESeq2 正在计算",
+  "analysis.waiting": "等待真实计算完成",
+  "analysis.completed": "真实计算已完成",
+  "analysis.failed": "真实计算失败",
+  "analysis.cancelled": "真实计算已取消",
 };
 
 const nodeLabels: Record<string, string> = {
@@ -58,6 +68,7 @@ const nodeLabels: Record<string, string> = {
 
 const statusLabels: Record<StreamStatus, string> = {
   idle: "等待启动",
+  blocked: "等待输入",
   starting: "准备运行",
   connecting: "连接事件流",
   connected: "SSE 已连接",
@@ -110,6 +121,9 @@ function eventSummary(event: RunStreamEvent) {
 }
 
 function eventTone(event: RunStreamEvent, latest: boolean) {
+  if (event.type === "client.run.blocked" || event.type === "client.approval.required") {
+    return "idle";
+  }
   if (
     event.type.includes("failed") ||
     event.type.includes("cancelled") ||
@@ -138,6 +152,7 @@ function ToneIcon({ tone }: { tone: ReturnType<typeof eventTone> }) {
 }
 
 function initialStateCopy(status: StreamStatus) {
+  if (status === "blocked") return ["等待运行条件", "请先完成当前高亮的输入或审批步骤"];
   if (status === "starting") return ["准备研究上下文", "正在创建运行实例并校验任务状态"];
   if (status === "connecting") return ["建立事件通道", "正在携带访问令牌连接服务端 SSE"];
   if (status === "connected") return ["等待首个服务端事件", "连接已建立，等待 Worker 输出执行步骤"];

@@ -969,7 +969,7 @@ export function approvePlan(taskId = state().task.id) {
   const runtimeState = state();
   const task = taskReference(taskId, runtimeState);
   if (!task) return undefined;
-  if (task.executionMode === "real" && !task.plan) return undefined;
+  if (!task.plan) return undefined;
   task.status = "queued";
   syncTaskCard(runtimeState, task);
   persist(runtimeState);

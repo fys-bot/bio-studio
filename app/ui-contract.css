@@ -1,0 +1,1113 @@
+/*
+ * Final UI contract loaded after legacy styles.
+ * Keep product-critical dimensions and interaction states here so later pages do not
+ * depend on selector ordering inside the historical style sheets.
+ */
+
+:root {
+  --bio-control-height: 36px;
+  --bio-radius: 7px;
+  --bio-line: #d5ddd8;
+  --bio-line-strong: #a8b9af;
+  --bio-text: #26342c;
+  --bio-muted: #738078;
+  --bio-accent: #dff337;
+  --bio-accent-soft: #eff3d2;
+  --bio-danger: #a94439;
+}
+
+.app-shell .MuiButton-root,
+.module-shell .MuiButton-root,
+.responsive-dialog .MuiButton-root {
+  min-height: var(--bio-control-height);
+  gap: 0;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0;
+  line-height: 1.35;
+  text-transform: none;
+}
+
+.app-shell .MuiButton-startIcon,
+.module-shell .MuiButton-startIcon,
+.responsive-dialog .MuiButton-startIcon {
+  margin-right: 4px !important;
+  margin-left: 0 !important;
+}
+
+.app-shell .MuiButton-endIcon,
+.module-shell .MuiButton-endIcon,
+.responsive-dialog .MuiButton-endIcon {
+  margin-right: 0 !important;
+  margin-left: 4px !important;
+}
+
+.select-control.MuiInputBase-root {
+  min-width: 132px;
+  height: var(--bio-control-height);
+  border: 0 !important;
+  outline: 0 !important;
+  background: #fff;
+  box-shadow: none !important;
+}
+
+.select-control.MuiInputBase-root::before,
+.select-control.MuiInputBase-root::after,
+.select-control .MuiSelect-select::before,
+.select-control .MuiSelect-select::after {
+  display: none !important;
+  content: none !important;
+}
+
+.select-control .MuiOutlinedInput-notchedOutline {
+  border: 1px solid var(--bio-line) !important;
+}
+
+.select-control:hover .MuiOutlinedInput-notchedOutline {
+  border-color: var(--bio-line-strong) !important;
+}
+
+.select-control.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #87994b !important;
+  border-width: 1px !important;
+  box-shadow: 0 0 0 2px #b9c86b29;
+}
+
+.select-control .MuiSelect-select {
+  min-height: 0 !important;
+  padding: 7px 32px 7px 10px !important;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #405047;
+  font-size: 11px;
+  line-height: 20px;
+}
+
+.catalog-header .MuiButton-root,
+.side-title .MuiButton-root,
+.project-create-row .MuiButton-root {
+  white-space: nowrap;
+}
+
+.app-shell .task-sidebar,
+.module-shell .module-sidebar {
+  scrollbar-gutter: stable;
+}
+
+.app-shell .task-sidebar > .project-head,
+.module-shell .module-sidebar > .project-head {
+  position: sticky;
+  z-index: 13;
+  top: 0;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px;
+  overflow: hidden;
+  border: 1px solid #d6ded9;
+  border-radius: var(--bio-radius);
+  background: color-mix(in srgb, #ffffff 96%, transparent);
+  color: var(--bio-text);
+  text-align: left;
+  box-shadow: 0 5px 16px #344a3d0d;
+  backdrop-filter: blur(12px);
+}
+
+.app-shell .task-sidebar > .project-head::before,
+.app-shell .task-sidebar > .project-head::after,
+.module-shell .module-sidebar > .project-head::before,
+.module-shell .module-sidebar > .project-head::after {
+  display: none !important;
+  content: none !important;
+}
+
+.app-shell .project-head > div,
+.module-shell .project-head > div,
+.app-shell .project-head strong,
+.module-shell .project-head strong {
+  min-width: 0;
+}
+
+.app-shell .project-head small,
+.module-shell .project-head small {
+  color: #7b877f;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
+.app-shell .project-head strong,
+.module-shell .project-head strong {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #2d3c34;
+  font-size: 14px;
+  font-weight: 680;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell .task-sidebar > .project-head:hover,
+.module-shell .module-sidebar > .project-head:hover {
+  border-color: #aebfb5;
+  background: #f7faf8;
+}
+
+.project-manager-summary {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 1px;
+}
+
+.project-manager-summary > div,
+.project-manager-summary b,
+.project-manager-summary small {
+  display: block;
+  min-width: 0;
+}
+
+.project-manager-summary b {
+  color: #33443a;
+  font-size: 12px;
+}
+
+.project-manager-summary small {
+  margin-top: 2px;
+  color: #7b8780;
+  font-size: 9px;
+}
+
+.project-manager-summary > span {
+  flex: none;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: #edf3ef;
+  color: #557064;
+  font:
+    8px "DM Mono",
+    monospace;
+}
+
+.project-create-row {
+  padding-block: 0 10px;
+}
+
+.project-option {
+  min-height: 56px;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  border-radius: var(--bio-radius);
+}
+
+.project-option-main {
+  gap: 8px;
+  padding: 8px;
+}
+
+.project-option-main b {
+  font-size: 11px;
+}
+
+.project-option-main small {
+  font-size: 9px;
+}
+
+.project-option > span {
+  border-left: 1px solid #e2e7e4;
+}
+
+.project-option > span .MuiIconButton-root {
+  width: 30px;
+  height: 30px;
+  color: var(--bio-danger);
+}
+
+.layout-option-list {
+  gap: 6px;
+}
+
+.layout-option-list .layout-option.MuiButtonBase-root {
+  display: grid;
+  width: 100%;
+  min-height: 58px;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid #d9e1dc;
+  border-radius: var(--bio-radius);
+  background: #fff;
+  color: #35463d;
+  text-align: left;
+}
+
+.layout-option-list .layout-option.MuiButtonBase-root:hover {
+  border-color: #b4c4ba;
+  background: #f6f9f7;
+}
+
+.layout-option-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 6px;
+  background: #edf2d0;
+  color: #667519;
+}
+
+.layout-option b,
+.layout-option small {
+  display: block;
+  min-width: 0;
+}
+
+.layout-option b {
+  font-size: 11px;
+}
+
+.layout-option small {
+  margin-top: 2px;
+  color: #7a867f;
+  font-size: 9px;
+}
+
+.layout-option em {
+  color: #6d7d19;
+  font-size: 9px;
+  font-style: normal;
+}
+
+.task-item-row {
+  min-height: 50px;
+  grid-template-columns: minmax(0, 1fr) 54px !important;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: var(--bio-radius);
+}
+
+.task-item-row:hover {
+  border-color: #d8e0db;
+  background: #f6f9f7;
+}
+
+.task-item-row.selected {
+  border-color: #bdca68;
+  background: #f1f4d5;
+}
+
+.task-item-row .task-item.task-button {
+  min-width: 0;
+  min-height: 48px;
+  gap: 8px;
+  margin: 0;
+  padding: 8px;
+  border-radius: 0;
+}
+
+.task-item-row .task-item b {
+  font-size: 11px;
+}
+
+.task-item-row .task-item small {
+  margin-top: 2px;
+  font-size: 9px;
+}
+
+.task-item-row .task-row-actions {
+  display: grid !important;
+  width: 54px !important;
+  min-width: 54px !important;
+  grid-template-columns: repeat(2, 27px) !important;
+  align-self: stretch;
+}
+
+.task-item-row .task-favorite.MuiIconButton-root,
+.task-item-row .task-delete.MuiIconButton-root {
+  position: static !important;
+  inset: auto !important;
+  width: 27px !important;
+  height: 100% !important;
+  min-height: 48px;
+  pointer-events: auto !important;
+  border: 0;
+  border-left: 1px solid #e1e7e3;
+  border-radius: 0 !important;
+  opacity: 1 !important;
+}
+
+.task-item-row .task-favorite.MuiIconButton-root {
+  color: #849087;
+}
+
+.task-item-row.is-favorite .task-favorite.MuiIconButton-root,
+.task-item-row .task-favorite.MuiIconButton-root:hover {
+  background: #f2f5d9;
+  color: #7f900e;
+}
+
+.task-item-row .task-delete.MuiIconButton-root {
+  color: #a84a40;
+}
+
+.task-item-row .task-delete.MuiIconButton-root:hover {
+  background: #fff0ed;
+  color: #922f26;
+}
+
+.task-item-row.is-protected {
+  grid-template-columns: minmax(0, 1fr) 27px !important;
+}
+
+.task-item-row.is-protected .task-row-actions {
+  width: 27px !important;
+  min-width: 27px !important;
+  grid-template-columns: 27px !important;
+}
+
+.task-item-row.selected .task-group-dot {
+  animation: bioflow-signal-pulse 1.8s ease-in-out infinite;
+}
+
+.app-shell .topbar {
+  position: sticky;
+  z-index: 18;
+  top: 0;
+  min-height: 52px;
+  border-bottom: 1px solid #d8e0db;
+  background: color-mix(in srgb, #f7f9f7 97%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.app-shell .top-actions .MuiButton-root {
+  min-height: 30px;
+  padding: 4px 6px;
+  color: #466056;
+}
+
+.app-shell .top-actions .MuiButton-root:hover {
+  background: #edf2ef;
+}
+
+.app-shell .goal-strip {
+  position: sticky;
+  z-index: 17;
+  top: 52px;
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px 18px;
+  padding: 14px clamp(18px, 2.3vw, 28px) 12px;
+  border-bottom: 1px solid transparent;
+  background: color-mix(in srgb, #f4f7f5 97%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.app-shell .goal-strip h1 {
+  max-width: 760px;
+  margin: 4px 0 0;
+  font-size: clamp(18px, 1.55vw, 22px);
+  line-height: 1.3;
+}
+
+.app-shell .goal-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.app-shell .goal-actions .status-pill {
+  padding: 6px 9px;
+  white-space: nowrap;
+}
+
+.app-shell .goal-actions .MuiButton-root {
+  min-height: 34px;
+  padding: 5px 9px;
+  white-space: nowrap;
+}
+
+.app-shell .workspace.is-scrolled .goal-strip {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding-block: 7px;
+  border-bottom-color: #d8e0db;
+  box-shadow: 0 8px 18px #3b50450f;
+}
+
+.app-shell .workspace.is-scrolled .goal-strip h1 {
+  max-width: min(48vw, 680px);
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell .workspace.is-scrolled .goal-strip > div:first-child > small {
+  display: none;
+}
+
+.app-shell .workspace {
+  scrollbar-gutter: stable;
+}
+
+.app-shell .workspace-tool-dock.tool-dock {
+  position: fixed;
+  z-index: 24;
+  top: 50%;
+  right: 10px;
+  bottom: auto;
+  left: auto;
+  display: grid;
+  width: 42px;
+  grid-template-columns: 1fr;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid #d7dfda;
+  border-radius: 8px;
+  background: color-mix(in srgb, #ffffff 96%, transparent);
+  box-shadow: 0 12px 28px #31463a1a;
+  transform: translateY(-50%);
+  backdrop-filter: blur(14px);
+}
+
+.app-shell .workspace-tool-dock .MuiIconButton-root {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: #6f7d75;
+}
+
+.app-shell .workspace-tool-dock .MuiIconButton-root:hover {
+  border-color: #d8e0db;
+  background: #eef3f0;
+  color: #3e5b4e;
+}
+
+.app-shell .workspace-tool-dock .MuiIconButton-root.active {
+  border-color: #c3d173;
+  background: var(--bio-accent-soft);
+  color: #607014;
+  box-shadow: inset 2px 0 #91a31d;
+}
+
+.app-shell .workspace-tool-dock .tool-dock-icon {
+  display: block;
+}
+
+.app-shell .workspace-tool-dock .tool-dock-label {
+  display: none;
+}
+
+.responsive-dialog .responsive-dialog-title {
+  min-height: 56px;
+  padding: 10px 14px;
+}
+
+.responsive-dialog .responsive-dialog-title small {
+  font-size: 8px;
+}
+
+.responsive-dialog .responsive-dialog-title b {
+  font-size: 15px;
+}
+
+.responsive-dialog .responsive-dialog-content {
+  padding: 12px 14px;
+  font-size: 11px;
+}
+
+.responsive-dialog .modal-form {
+  gap: 10px;
+}
+
+.responsive-dialog .modal-form > p {
+  margin: 0;
+  color: #77837c;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.module-shell .project-overview-page {
+  min-height: 100%;
+  padding: 0 clamp(20px, 3.2vw, 48px) 48px;
+  background: #f4f7f5;
+  color: var(--bio-text);
+}
+
+.project-overview-header {
+  position: sticky;
+  z-index: 15;
+  top: 0;
+  display: flex;
+  min-height: 112px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 0 16px;
+  border-bottom: 1px solid var(--bio-line);
+  background: color-mix(in srgb, #f4f7f5 96%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.project-overview-title {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.project-overview-glyph {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid #cad69a;
+  border-radius: 8px;
+  background: #eff3d2;
+  color: #637317;
+}
+
+.project-overview-title small,
+.project-overview-title h1,
+.project-overview-title p {
+  display: block;
+  min-width: 0;
+  margin: 0;
+}
+
+.project-overview-title small {
+  color: #7a877f;
+  font:
+    8px "DM Mono",
+    monospace;
+}
+
+.project-overview-title h1 {
+  margin-top: 3px;
+  color: #26352d;
+  font-size: 22px;
+  line-height: 1.28;
+}
+
+.project-overview-title p {
+  margin-top: 4px;
+  color: #718078;
+  font-size: 10px;
+}
+
+.project-overview-actions {
+  display: flex;
+  flex: none;
+  gap: 7px;
+}
+
+.project-overview-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr)) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 0;
+}
+
+.project-overview-metrics > div {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid #d9e1dc;
+  border-radius: var(--bio-radius);
+  background: #fff;
+  color: #718078;
+}
+
+.project-overview-metrics > div > svg {
+  color: #798a19;
+  font-size: 19px;
+}
+
+.project-overview-metrics b,
+.project-overview-metrics small {
+  display: block;
+}
+
+.project-overview-metrics b {
+  color: #34443b;
+  font-size: 15px;
+}
+
+.project-overview-metrics small {
+  color: #7b8780;
+  font-size: 8px;
+}
+
+.project-metric-signal,
+.project-task-dot {
+  display: block;
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: #2a8270;
+  box-shadow: 0 0 0 4px #dff2eb;
+}
+
+.project-metric-signal.active {
+  background: #82941a;
+  box-shadow: 0 0 0 4px #eff3d2;
+}
+
+.project-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(250px, 0.5fr);
+  gap: 10px;
+}
+
+.project-task-panel,
+.project-resource-panel {
+  min-width: 0;
+  border: 1px solid #d8e0db;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.project-task-panel > header {
+  display: flex;
+  min-height: 62px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border-bottom: 1px solid #e1e7e3;
+}
+
+.project-task-panel h2,
+.project-resource-panel h2 {
+  margin: 0;
+  color: #34443b;
+  font-size: 13px;
+}
+
+.project-task-panel header small {
+  display: block;
+  margin-top: 3px;
+  color: #7b8780;
+  font-size: 8px;
+}
+
+.project-task-list {
+  display: grid;
+  max-height: min(520px, 62dvh);
+  overflow: auto;
+  padding: 5px;
+}
+
+.project-task-list > button,
+.project-resource-panel > button {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: #405047;
+  text-align: left;
+}
+
+.project-task-list > button {
+  min-height: 52px;
+  grid-template-columns: 10px minmax(0, 1fr) 18px;
+  gap: 10px;
+  padding: 8px 9px;
+  border-radius: 6px;
+}
+
+.project-task-list > button:hover,
+.project-resource-panel > button:hover {
+  background: #f3f7f4;
+}
+
+.project-task-list b,
+.project-task-list small,
+.project-resource-panel b,
+.project-resource-panel small {
+  display: block;
+  min-width: 0;
+}
+
+.project-task-list b {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-task-list small {
+  margin-top: 2px;
+  color: #7b8780;
+  font-size: 8px;
+}
+
+.project-task-dot.status-succeeded {
+  background: #16806d;
+  box-shadow: 0 0 0 3px #ddf2eb;
+}
+
+.project-task-dot.status-failed,
+.project-task-dot.status-cancelled {
+  background: #a84a40;
+  box-shadow: 0 0 0 3px #f8e7e4;
+}
+
+.project-task-dot.status-awaiting_approval,
+.project-task-dot.status-running,
+.project-task-dot.status-queued {
+  background: #87991b;
+  box-shadow: 0 0 0 3px #eef2d5;
+}
+
+.project-resource-panel {
+  align-self: start;
+  padding: 12px;
+}
+
+.project-resource-panel h2 {
+  padding: 1px 2px 9px;
+}
+
+.project-resource-panel > button {
+  grid-template-columns: 32px minmax(0, 1fr) 18px;
+  gap: 8px;
+  padding: 9px 6px;
+  border-top: 1px solid #e5eae7;
+  border-radius: 5px;
+}
+
+.project-resource-panel > button > svg:first-child {
+  color: #718119;
+}
+
+.project-resource-panel b {
+  font-size: 10px;
+}
+
+.project-resource-panel small {
+  margin-top: 2px;
+  color: #7a867f;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.project-storage-note {
+  margin-top: 9px;
+  padding: 9px;
+  border-radius: 6px;
+  background: #f2f6f3;
+}
+
+.project-storage-note b {
+  color: #4f6458;
+  font-size: 9px;
+}
+
+.project-storage-note p {
+  margin: 4px 0 0;
+  color: #718078;
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.project-overview-loading,
+.project-overview-error {
+  display: flex;
+  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #6f7e76;
+  font-size: 10px;
+}
+
+@keyframes bioflow-signal-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 20%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 5%, transparent);
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1200px) {
+  .app-shell .goal-strip,
+  .app-shell .workspace.is-scrolled .goal-strip {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .app-shell .goal-actions {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 1px;
+  }
+
+  .app-shell .goal-actions .primary {
+    margin-left: auto;
+  }
+
+  .app-shell .workspace.is-scrolled .goal-strip h1 {
+    max-width: 100%;
+  }
+
+  .app-shell .workspace.is-scrolled .goal-actions .status-pill {
+    display: none;
+  }
+
+  .app-shell .workspace-tool-dock.tool-dock {
+    right: 7px;
+  }
+
+  .project-overview-header {
+    align-items: flex-start;
+  }
+
+  .project-overview-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .project-overview-metrics > .MuiChip-root {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell .topbar {
+    min-height: 46px;
+  }
+
+  .app-shell .goal-strip,
+  .app-shell .workspace.is-scrolled .goal-strip {
+    top: 46px;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    padding: 9px 10px;
+  }
+
+  .app-shell .goal-strip h1,
+  .app-shell .workspace.is-scrolled .goal-strip h1 {
+    max-width: 100%;
+    margin-top: 3px;
+    font-size: 14px;
+    white-space: normal;
+  }
+
+  .app-shell .workspace.is-scrolled .goal-strip h1 {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .app-shell .goal-actions {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .app-shell .goal-actions .status-pill {
+    display: none;
+  }
+
+  .app-shell .goal-actions .MuiButton-root {
+    min-height: 32px;
+    flex: none;
+    padding: 4px 7px;
+    font-size: 9px;
+  }
+
+  .app-shell .goal-actions .primary {
+    margin-left: 0;
+  }
+
+  .app-shell .workspace-tool-dock.tool-dock {
+    position: fixed;
+    z-index: 30;
+    top: auto;
+    right: 0;
+    bottom: calc(56px + env(safe-area-inset-bottom));
+    left: 0;
+    width: auto;
+    height: 54px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+    padding: 3px 6px;
+    border-width: 1px 0 0;
+    border-radius: 0;
+    box-shadow: 0 -8px 24px #31463a14;
+    transform: none;
+  }
+
+  .app-shell .workspace-tool-dock .MuiIconButton-root {
+    display: grid;
+    width: 100%;
+    height: 48px;
+    min-height: 48px;
+    grid-template-rows: 23px auto;
+    place-items: center;
+    border: 0;
+    border-radius: 5px;
+  }
+
+  .app-shell .workspace-tool-dock .MuiIconButton-root.active {
+    box-shadow: inset 0 2px #91a31d;
+  }
+
+  .app-shell .workspace-tool-dock .tool-dock-label {
+    display: block;
+    margin: 0;
+    font-size: 8px;
+    line-height: 1.1;
+  }
+
+  .responsive-dialog .responsive-dialog-title {
+    min-height: 50px;
+  }
+
+  .responsive-dialog .responsive-dialog-title b {
+    font-size: 14px;
+  }
+
+  .project-manager-summary {
+    align-items: flex-start;
+  }
+
+  .project-manager-summary > span {
+    display: none;
+  }
+
+  .project-option-main {
+    grid-template-columns: 32px minmax(0, 1fr) 18px;
+  }
+
+  .project-option-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .module-shell .project-overview-page {
+    padding: 0 10px 88px;
+  }
+
+  .project-overview-header {
+    min-height: 0;
+    align-items: flex-start;
+    padding: 12px 0 10px;
+  }
+
+  .project-overview-title {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .project-overview-glyph {
+    width: 34px;
+    height: 34px;
+  }
+
+  .project-overview-title h1 {
+    font-size: 16px;
+  }
+
+  .project-overview-title p {
+    display: none;
+  }
+
+  .project-overview-actions {
+    gap: 4px;
+  }
+
+  .project-overview-actions .MuiButton-root {
+    min-width: 32px;
+    width: 32px;
+    padding: 0;
+    overflow: hidden;
+    color: transparent;
+  }
+
+  .project-overview-actions .MuiButton-startIcon {
+    margin: 0 !important;
+    color: #52665b;
+  }
+
+  .project-overview-actions .MuiButton-colorError .MuiButton-startIcon {
+    color: var(--bio-danger);
+  }
+
+  .project-overview-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+    padding: 8px 0;
+  }
+
+  .project-overview-metrics > div {
+    min-height: 50px;
+    gap: 7px;
+    padding: 7px;
+  }
+
+  .project-overview-metrics > div > svg {
+    display: none;
+  }
+
+  .project-overview-metrics > .MuiChip-root {
+    display: none;
+  }
+
+  .project-overview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .project-resource-panel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .project-resource-panel h2,
+  .project-storage-note {
+    grid-column: 1 / -1;
+  }
+
+  .project-resource-panel > button {
+    border: 1px solid #e1e7e3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-item-row.selected .task-group-dot {
+    animation: none;
+  }
+}

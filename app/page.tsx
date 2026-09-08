@@ -1,10 +1,6 @@
 "use client";
 import BiotechRounded from "@mui/icons-material/BiotechRounded";
-import AssessmentOutlined from "@mui/icons-material/AssessmentOutlined";
-import ChecklistRounded from "@mui/icons-material/ChecklistRounded";
 import DashboardCustomizeRounded from "@mui/icons-material/DashboardCustomizeRounded";
-import DescriptionOutlined from "@mui/icons-material/DescriptionOutlined";
-import EditNoteRounded from "@mui/icons-material/EditNoteRounded";
 import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import ExtensionRounded from "@mui/icons-material/ExtensionRounded";
 import FolderOutlined from "@mui/icons-material/FolderOutlined";
@@ -12,7 +8,6 @@ import HelpOutlineRounded from "@mui/icons-material/HelpOutlineRounded";
 import InputRounded from "@mui/icons-material/InputRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
 import MenuBookRounded from "@mui/icons-material/MenuBookRounded";
-import MemoryRounded from "@mui/icons-material/MemoryRounded";
 import ShareOutlined from "@mui/icons-material/ShareOutlined";
 import StreamRounded from "@mui/icons-material/StreamRounded";
 import HubOutlined from "@mui/icons-material/HubOutlined";
@@ -20,6 +15,11 @@ import ViewInArOutlined from "@mui/icons-material/ViewInArOutlined";
 import ViewQuiltRounded from "@mui/icons-material/ViewQuiltRounded";
 import WarningAmberRounded from "@mui/icons-material/WarningAmberRounded";
 import AdminPanelSettingsRounded from "@mui/icons-material/AdminPanelSettingsRounded";
+import AccountTreeRounded from "@mui/icons-material/AccountTreeRounded";
+import BuildOutlined from "@mui/icons-material/BuildOutlined";
+import PlayArrowRounded from "@mui/icons-material/PlayArrowRounded";
+import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
+import { Button } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { ParticleLoader } from "@/components/ParticleLoader";
@@ -38,6 +38,7 @@ import { ProductGuide } from "@/components/ProductGuide";
 import { DocumentationDrawer } from "@/components/DocumentationDrawer";
 import { RealAnalysisPanel } from "@/components/RealAnalysisPanel";
 import { ContentLoading } from "@/components/ContentLoading";
+import { WorkspaceToolDock } from "@/components/WorkspaceToolDock";
 import { FilePreview } from "@/components/FilePreview";
 import { useAuthSession } from "@/components/auth/AuthSessionGate";
 import {
@@ -1500,9 +1501,9 @@ ${task?.goal || config.goal}
             <span className="live">
               <i /> 智能体 · {statusLabel[task.status] || task.status}
             </span>
-            <button onClick={shareTask}>
-              <ShareOutlined sx={{ fontSize: 15 }} /> 分享
-            </button>
+            <Button size="small" variant="text" startIcon={<ShareOutlined />} onClick={shareTask}>
+              分享
+            </Button>
           </div>
         </header>
         <div className="goal-strip" data-guide="goal">
@@ -1515,24 +1516,51 @@ ${task?.goal || config.goal}
               ● {statusLabel[task.status] || task.status}
             </span>
             {task.executionMode !== "real" && (
-              <button className="secondary" onClick={() => setConfigOpen(true)}>
+              <Button
+                className="secondary"
+                variant="outlined"
+                startIcon={<SettingsOutlined />}
+                onClick={() => setConfigOpen(true)}
+              >
                 配置
-              </button>
+              </Button>
             )}
-            <button className="secondary" onClick={() => setPlanOpen((current) => !current)}>
+            <Button
+              className="secondary"
+              variant="outlined"
+              startIcon={<AccountTreeRounded />}
+              onClick={() => setPlanOpen((current) => !current)}
+            >
               {planOpen ? "收起工作流" : "查看工作流"}
-            </button>
-            <button className="secondary" onClick={() => setMobilePanel(!mobilePanel)}>
+            </Button>
+            <Button
+              className="secondary"
+              variant="outlined"
+              startIcon={<BuildOutlined />}
+              onClick={() => setMobilePanel(!mobilePanel)}
+            >
               工具
-            </button>
+            </Button>
             {task.status === "running" && task.executionMode !== "real" && (
-              <button className="secondary danger" onClick={cancel} disabled={cancellingRun}>
+              <Button
+                className="secondary danger"
+                variant="outlined"
+                color="error"
+                onClick={cancel}
+                disabled={cancellingRun}
+              >
                 {cancellingRun ? "取消中…" : "取消"}
-              </button>
+              </Button>
             )}
-            <button className="primary" data-guide="run" onClick={triggerPrimaryRun}>
+            <Button
+              className="primary"
+              variant="contained"
+              startIcon={<PlayArrowRounded />}
+              data-guide="run"
+              onClick={triggerPrimaryRun}
+            >
               {primaryRunLabel}
-            </button>
+            </Button>
           </div>
         </div>
         {(taskLoading || taskIsStale) && (
@@ -1776,39 +1804,19 @@ ${task?.goal || config.goal}
           }}
         />
       </section>
-      <nav className="tool-dock" aria-label="研究工具">
-        {[
-          { key: "todo", label: "待办", Icon: ChecklistRounded },
-          { key: "results", label: "结果", Icon: AssessmentOutlined },
-          { key: "compute", label: "计算", Icon: MemoryRounded },
-          { key: "notes", label: "笔记", Icon: EditNoteRounded },
-          { key: "docs", label: "文档", Icon: DescriptionOutlined },
-        ].map(({ key, label, Icon }) => (
-          <button
-            key={key}
-            title={label}
-            aria-label={`打开${label}`}
-            className={tab === key && mobilePanel ? "active" : ""}
-            onClick={() => {
-              if (key === "docs") {
-                setDocsOpen(true);
-                return;
-              }
-              if (task.executionMode === "real" && (key === "results" || key === "compute")) {
-                document.getElementById("real-analysis")?.scrollIntoView({ behavior: "smooth" });
-                return;
-              }
-              setTab(key as typeof tab);
-              setMobilePanel(true);
-            }}
-          >
-            <i>
-              <Icon sx={{ fontSize: 17 }} />
-            </i>
-            <span>{label}</span>
-          </button>
-        ))}
-      </nav>
+      <WorkspaceToolDock
+        activeTab={tab}
+        inspectorOpen={mobilePanel}
+        realExecution={task.executionMode === "real"}
+        onOpenDocumentation={() => setDocsOpen(true)}
+        onOpenRealAnalysis={() =>
+          document.getElementById("real-analysis")?.scrollIntoView({ behavior: "smooth" })
+        }
+        onOpenInspector={(nextTab) => {
+          setTab(nextTab);
+          setMobilePanel(true);
+        }}
+      />
       {mobilePanel && (
         <button
           className="inspector-backdrop"

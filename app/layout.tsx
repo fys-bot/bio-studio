@@ -1,5 +1,6 @@
 import "./globals.css";
 import "./product.css";
+import "./ui-contract.css";
 import type { Metadata } from "next";
 import { AuthSessionGate } from "@/components/auth/AuthSessionGate";
 import { BioFlowThemeProvider } from "@/components/ui/BioFlowThemeProvider";

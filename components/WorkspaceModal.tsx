@@ -4,8 +4,11 @@ import AddRounded from "@mui/icons-material/AddRounded";
 import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
 import CheckRounded from "@mui/icons-material/CheckRounded";
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
+import AccountTreeRounded from "@mui/icons-material/AccountTreeRounded";
+import CenterFocusStrongRounded from "@mui/icons-material/CenterFocusStrongRounded";
+import RestartAltRounded from "@mui/icons-material/RestartAltRounded";
 import ScienceOutlined from "@mui/icons-material/ScienceOutlined";
-import { Button, IconButton, TextField, Tooltip } from "@mui/material";
+import { Button, ButtonBase, IconButton, TextField, Tooltip } from "@mui/material";
 import { useState, type ChangeEvent, type KeyboardEvent } from "react";
 import type { DataFileProfile, TabularColumnProfile } from "@/lib/domain";
 import type { WorkspaceProject } from "@/lib/project-store";
@@ -101,6 +104,13 @@ export function WorkspaceModal({
       <div className="workspace-modal-body">
         {modal.kind === "projects" && (
           <div className="project-manager">
+            <div className="project-manager-summary">
+              <div>
+                <b>项目空间</b>
+                <small>{projects.length} 个项目，切换后保留当前任务上下文</small>
+              </div>
+              <span>本机持久化</span>
+            </div>
             <form
               className="project-create-row"
               onSubmit={async (event) => {
@@ -181,24 +191,30 @@ export function WorkspaceModal({
         )}
         {modal.kind === "new-task" && (
           <div className="modal-form">
-            <label>
-              任务名称
-              <input
-                autoFocus
-                value={newTaskName}
-                onChange={(event) => onNewTaskNameChange(event.target.value)}
-                onKeyDown={handleTaskNameKeyDown}
-                placeholder="例如：单细胞聚类与细胞注释"
-              />
-            </label>
+            <TextField
+              autoFocus
+              fullWidth
+              label="任务名称"
+              value={newTaskName}
+              onChange={(event) => onNewTaskNameChange(event.target.value)}
+              onKeyDown={handleTaskNameKeyDown}
+              placeholder="例如：单细胞聚类与细胞注释"
+              slotProps={{ htmlInput: { maxLength: 80 } }}
+            />
             <p>新任务会继承当前项目文件，并从对话澄清开始。</p>
             <div className="modal-actions">
-              <button className="secondary" onClick={onClose}>
+              <Button className="secondary" variant="outlined" onClick={onClose}>
                 取消
-              </button>
-              <button className="primary" onClick={onCreateTask}>
+              </Button>
+              <Button
+                className="primary"
+                variant="contained"
+                startIcon={<AddRounded />}
+                disabled={newTaskName.trim().length < 2}
+                onClick={onCreateTask}
+              >
                 创建任务
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -290,31 +306,37 @@ export function WorkspaceModal({
           </div>
         )}
         {modal.kind === "layout" && (
-          <div className="modal-list">
-            <button onClick={() => onApplyLayout("focus")}>
-              <span>◫</span>
+          <div className="modal-list layout-option-list">
+            <ButtonBase className="layout-option" onClick={() => onApplyLayout("focus")}>
+              <span className="layout-option-icon">
+                <CenterFocusStrongRounded sx={{ fontSize: 19 }} />
+              </span>
               <div>
                 <b>对话专注</b>
                 <small>收起计划、轨迹和工具抽屉</small>
               </div>
               <em>应用</em>
-            </button>
-            <button onClick={() => onApplyLayout("workflow")}>
-              <span>⌘</span>
+            </ButtonBase>
+            <ButtonBase className="layout-option" onClick={() => onApplyLayout("workflow")}>
+              <span className="layout-option-icon">
+                <AccountTreeRounded sx={{ fontSize: 19 }} />
+              </span>
               <div>
                 <b>工作流布局</b>
                 <small>展开可编辑工作流画布</small>
               </div>
               <em>应用</em>
-            </button>
-            <button onClick={() => onApplyLayout("reset")}>
-              <span>↺</span>
+            </ButtonBase>
+            <ButtonBase className="layout-option" onClick={() => onApplyLayout("reset")}>
+              <span className="layout-option-icon">
+                <RestartAltRounded sx={{ fontSize: 19 }} />
+              </span>
               <div>
                 <b>恢复默认布局</b>
                 <small>重置分栏、画布、缩放和面板</small>
               </div>
               <em>重置</em>
-            </button>
+            </ButtonBase>
           </div>
         )}
         {(modal.kind === "file" || modal.kind === "source") && (
@@ -343,12 +365,13 @@ export function WorkspaceModal({
                 </div>
               )}
             </dl>
-            <button
+            <Button
               className="primary full"
+              variant="contained"
               onClick={() => onConfirmDetail(modal.kind === "source" ? "source" : "file")}
             >
               确认
-            </button>
+            </Button>
           </div>
         )}
       </div>

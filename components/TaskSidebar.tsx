@@ -164,7 +164,12 @@ export function TaskSidebar({
 
   return (
     <aside className="task-sidebar">
-      <button className="project-head" onClick={onOpenProjectPicker}>
+      <button
+        type="button"
+        className="project-head"
+        aria-label={`管理项目：${projectName}`}
+        onClick={onOpenProjectPicker}
+      >
         <div>
           <small>项目</small>
           <strong>{projectName}</strong>
@@ -224,6 +229,7 @@ export function TaskSidebar({
                     className={`task-item-row ${activeTaskId === taskCard.id ? "selected" : ""} ${favorite ? "is-favorite" : ""} ${protectedTask ? "is-protected" : "has-delete"}`}
                   >
                     <button
+                      type="button"
                       className="task-item task-button"
                       title={taskCard.title}
                       onClick={() =>
@@ -308,6 +314,7 @@ export function TaskSidebar({
       <div className="dataset-list" aria-label="数据集列表">
         {(task.executionMode !== "real" || countMatrixProfile) && (
           <button
+            type="button"
             className="dataset dataset-button"
             onClick={() => onOpenFile("counts.csv", countMatrixDetail, countMatrixProfile?.id)}
           >
@@ -320,6 +327,7 @@ export function TaskSidebar({
         )}
         {(task.executionMode !== "real" || metadataProfile) && (
           <button
+            type="button"
             className="dataset dataset-button"
             onClick={() =>
               onOpenFile(
@@ -349,6 +357,7 @@ export function TaskSidebar({
             : "本次会话上传的项目文件";
           return (
             <button
+              type="button"
               className="dataset dataset-button"
               key={fileName}
               onClick={() => onOpenFile(fileName, fileDetail, dataProfile?.id)}

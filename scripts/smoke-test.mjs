@@ -301,7 +301,43 @@ const reparsedFile = await request(`/api/files/${reparsableFile.id}/reparse`, {
 if (!reparsedFile.file || !["pending", "indexed", "ready"].includes(reparsedFile.file.status)) {
   throw new Error("文件重新解析状态未更新");
 }
-log("能力中心与文件中心服务端目录、状态持久化和跨域保护");
+const protectedFile = fileCatalog.items.find((item) => item.source === "demo-seed");
+if (protectedFile) {
+  await expectStatus(`/api/files/${protectedFile.id}`, 409, {
+    method: "DELETE",
+    headers: { origin: base },
+  });
+}
+const deleteForm = new FormData();
+deleteForm.append(
+  "file",
+  new Blob(["BioFlow deletion contract\nThis fixture must be removed after the smoke test."], {
+    type: "text/markdown",
+  }),
+  `delete_contract_${Date.now()}.md`,
+);
+const deleteFixture = await request("/api/files/profile?taskId=task_demo_rnaseq", {
+  method: "POST",
+  headers: { origin: base },
+  body: deleteForm,
+});
+await expectStatus(`/api/files/${deleteFixture.profile.id}`, 403, {
+  method: "DELETE",
+  headers: { origin: "https://evil.example" },
+});
+const deletedFile = await request(`/api/files/${deleteFixture.profile.id}`, {
+  method: "DELETE",
+  headers: { origin: base },
+});
+if (deletedFile.deletedFileId !== deleteFixture.profile.id) {
+  throw new Error("文件删除接口没有返回被删除的文件标识");
+}
+await expectStatus(`/api/files/${deleteFixture.profile.id}`, 404);
+const taskAfterFileDelete = await request("/api/tasks/task_demo_rnaseq");
+if (taskAfterFileDelete.task.fileIds?.includes(deleteFixture.profile.id)) {
+  throw new Error("删除文件后任务仍保留旧文件绑定");
+}
+log("能力中心与文件中心目录、重解析、删除、任务解绑和跨域保护");
 const ragQuery = await request("/api/rag/query", {
   method: "POST",
   headers: { "content-type": "application/json", origin: base },

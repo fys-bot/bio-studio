@@ -23,7 +23,7 @@ export const permissionLabels: Record<BioflowPermission, string> = {
   "tasks:read": "查看任务",
   "tasks:write": "创建与编辑任务",
   "files:read": "查看项目文件",
-  "files:write": "上传与重新解析文件",
+  "files:write": "上传、重新解析与删除文件",
   "skills:read": "查看能力中心",
   "skills:write": "管理科研技能",
   "runs:execute": "执行 Agent 与计算工作流",

@@ -91,6 +91,11 @@ export type ManagedUser = BioflowSessionUser & {
 export type UsersResponse = { users: ManagedUser[]; user?: ManagedUser };
 export type ProjectsResponse = { projects: WorkspaceProject[]; project?: WorkspaceProject };
 export type DeleteTaskResponse = { deletedTaskId: string; tasks: TaskResponse["tasks"] };
+export type DeleteFileResponse = {
+  deletedFileId: string;
+  deletedName: string;
+  affectedTaskIds: string[];
+};
 export type ApiStreamEvent = {
   id: number;
   runId: string;
@@ -574,4 +579,9 @@ export const bioflowApi = {
 
   reparseProjectFile: (fileId: string) =>
     requestJson<ProjectFileResponse>(`/api/files/${fileId}/reparse`, { method: "POST" }),
+
+  deleteProjectFile: (fileId: string) =>
+    requestJson<DeleteFileResponse>(`/api/files/${encodeURIComponent(fileId)}`, {
+      method: "DELETE",
+    }),
 };

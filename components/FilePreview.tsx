@@ -2,11 +2,13 @@
 
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import DownloadRounded from "@mui/icons-material/DownloadRounded";
+import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import FindInPageRounded from "@mui/icons-material/FindInPageRounded";
 import FullscreenExitRounded from "@mui/icons-material/FullscreenExitRounded";
 import FullscreenRounded from "@mui/icons-material/FullscreenRounded";
 import OpenInNewRounded from "@mui/icons-material/OpenInNewRounded";
 import RefreshRounded from "@mui/icons-material/RefreshRounded";
+import { IconButton, Tooltip } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -17,6 +19,9 @@ import {
 } from "@/lib/api-client";
 import type { ProjectFileRecord } from "@/lib/domain";
 import type { ResearchDocument } from "@/lib/research-service";
+import { hasPermission } from "@/lib/access-control";
+import { useAuthSession } from "./auth/AuthSessionGate";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 
 const labels: Record<string, string> = {
   indexed: "已索引",
@@ -32,6 +37,7 @@ type FilePreviewProps = {
   mode?: "modal" | "panel";
   onClose?: () => void;
   onFileUpdated?: (file: ProjectFileRecord) => void;
+  onFileDeleted?: (fileId: string) => void;
 };
 
 function StructuredPreview({ document }: { document: ResearchDocument }) {
@@ -188,13 +194,23 @@ function DocumentRenderer({ document }: { document: ResearchDocument }) {
   return <StructuredPreview document={document} />;
 }
 
-export function FilePreview({ fileId, mode = "modal", onClose, onFileUpdated }: FilePreviewProps) {
+export function FilePreview({
+  fileId,
+  mode = "modal",
+  onClose,
+  onFileUpdated,
+  onFileDeleted,
+}: FilePreviewProps) {
   const router = useRouter();
+  const { user } = useAuthSession();
   const [document, setDocument] = useState<ResearchDocument | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const canWriteFiles = hasPermission(user, "files:write");
+  const canCreateTasks = hasPermission(user, "tasks:write");
 
   useEffect(() => {
     let stopped = false;
@@ -245,6 +261,21 @@ export function FilePreview({ fileId, mode = "modal", onClose, onFileUpdated }: 
     }
   };
 
+  const deleteFile = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      await bioflowApi.deleteProjectFile(fileId);
+      setConfirmDelete(false);
+      onFileDeleted?.(fileId);
+      onClose?.();
+    } catch (deleteError) {
+      setError(getApiErrorMessage(deleteError, "文件删除失败"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const preview = (
     <section
       className={`document-preview ${mode === "panel" ? "document-preview-panel" : "ui-modal"} ${fullscreen ? "is-fullscreen" : ""}`}
@@ -259,43 +290,70 @@ export function FilePreview({ fileId, mode = "modal", onClose, onFileUpdated }: 
           <h2>{document?.name || "文件预览"}</h2>
         </div>
         <div className="document-toolbar">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void reparse()}
-            title="重新解析并索引"
-          >
-            <RefreshRounded sx={{ fontSize: 17 }} className={busy ? "is-spinning" : ""} />
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              void downloadAuthorizedFile(
-                `/api/files/${encodeURIComponent(fileId)}/original?download=1`,
-                document?.name || "bioflow-file",
-              ).catch((downloadError) =>
-                setError(getApiErrorMessage(downloadError, "下载原文件失败")),
-              )
-            }
-            title="下载原文件"
-          >
-            <DownloadRounded sx={{ fontSize: 17 }} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setFullscreen((current) => !current)}
-            title={fullscreen ? "退出全屏" : "全屏预览"}
-          >
-            {fullscreen ? (
-              <FullscreenExitRounded sx={{ fontSize: 17 }} />
-            ) : (
-              <FullscreenRounded sx={{ fontSize: 17 }} />
-            )}
-          </button>
+          {canWriteFiles && (
+            <Tooltip title="重新解析并索引">
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={busy}
+                  onClick={() => void reparse()}
+                  aria-label="重新解析并索引"
+                >
+                  <RefreshRounded sx={{ fontSize: 17 }} className={busy ? "is-spinning" : ""} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          <Tooltip title="下载原文件">
+            <IconButton
+              size="small"
+              onClick={() =>
+                void downloadAuthorizedFile(
+                  `/api/files/${encodeURIComponent(fileId)}/original?download=1`,
+                  document?.name || "bioflow-file",
+                ).catch((downloadError) =>
+                  setError(getApiErrorMessage(downloadError, "下载原文件失败")),
+                )
+              }
+              aria-label="下载原文件"
+            >
+              <DownloadRounded sx={{ fontSize: 17 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={fullscreen ? "退出全屏" : "全屏预览"}>
+            <IconButton
+              size="small"
+              onClick={() => setFullscreen((current) => !current)}
+              aria-label={fullscreen ? "退出全屏" : "全屏预览"}
+            >
+              {fullscreen ? (
+                <FullscreenExitRounded sx={{ fontSize: 17 }} />
+              ) : (
+                <FullscreenRounded sx={{ fontSize: 17 }} />
+              )}
+            </IconButton>
+          </Tooltip>
+          {canWriteFiles && document?.source !== "demo-seed" && (
+            <Tooltip title="删除文件">
+              <span>
+                <IconButton
+                  size="small"
+                  className="document-delete-button"
+                  disabled={busy}
+                  onClick={() => setConfirmDelete(true)}
+                  aria-label={`删除文件${document?.name || ""}`}
+                >
+                  <DeleteOutlineRounded sx={{ fontSize: 17 }} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
           {onClose && (
-            <button type="button" aria-label="关闭文件预览" onClick={onClose} title="关闭预览">
-              <CloseRounded sx={{ fontSize: 18 }} />
-            </button>
+            <Tooltip title="关闭预览">
+              <IconButton size="small" aria-label="关闭文件预览" onClick={onClose}>
+                <CloseRounded sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
           )}
         </div>
       </header>
@@ -335,7 +393,7 @@ export function FilePreview({ fileId, mode = "modal", onClose, onFileUpdated }: 
             </code>
             <button
               className="primary"
-              disabled={busy}
+              disabled={busy || !canCreateTasks}
               onClick={async () => {
                 setBusy(true);
                 setError("");
@@ -351,7 +409,7 @@ export function FilePreview({ fileId, mode = "modal", onClose, onFileUpdated }: 
               }}
             >
               <OpenInNewRounded sx={{ fontSize: 15 }} />
-              新建分析任务
+              {canCreateTasks ? "新建分析任务" : "当前角色只读"}
             </button>
           </footer>
         </>
@@ -359,10 +417,31 @@ export function FilePreview({ fileId, mode = "modal", onClose, onFileUpdated }: 
     </section>
   );
 
-  if (mode === "panel") return preview;
+  const confirmation = (
+    <ConfirmDialog
+      open={confirmDelete}
+      title="删除项目文件"
+      description={`确定删除“${document?.name || "当前文件"}”吗？原文件、解析结果、向量索引和任务绑定会一起清理，删除后无法恢复。`}
+      busy={busy}
+      error={error}
+      onClose={() => setConfirmDelete(false)}
+      onConfirm={() => void deleteFile()}
+    />
+  );
+
+  if (mode === "panel")
+    return (
+      <>
+        {preview}
+        {confirmation}
+      </>
+    );
   return (
-    <div className="ui-modal-backdrop" onMouseDown={onClose}>
-      {preview}
-    </div>
+    <>
+      <div className="ui-modal-backdrop" onMouseDown={onClose}>
+        {preview}
+      </div>
+      {confirmation}
+    </>
   );
 }

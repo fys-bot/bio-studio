@@ -69,6 +69,12 @@ def all_records(kind):
         return [json.loads(row[0]) for row in conn.execute("SELECT body FROM records WHERE kind=?", (kind,))]
 
 
+def delete_record(kind, identity):
+    with db() as conn:
+        cursor = conn.execute("DELETE FROM records WHERE kind=? AND id=?", (kind, identity))
+    return cursor.rowcount > 0
+
+
 def authorize(x_bioflow_worker_token: str = Header(default="")):
     if not secrets.compare_digest(x_bioflow_worker_token, TOKEN):
         raise HTTPException(401, "Worker token required")
@@ -142,7 +148,7 @@ def ingest_bytes(name, content):
         raise
     record = {"id": identity, "name": name, "format": extension.upper(), "sizeBytes": len(content),
               "sha256": digest, "path": str(target), "createdAt": time.time(),
-              "indexStatus": "needs_ocr" if parsed["needsOcr"] else "pending", **parsed}
+              "source": "user-upload", "indexStatus": "needs_ocr" if parsed["needsOcr"] else "pending", **parsed}
     save("document", record)
     return record
 
@@ -274,6 +280,45 @@ def document(file_id: str):
     result["previewTruncated"] = len(record["sections"]) > 50
     result["chunkCount"] = len(record["chunks"])
     return result
+
+
+@app.delete("/documents/{file_id}")
+def delete_document(file_id: str):
+    record = get("document", file_id)
+    if record.get("source") == "demo-seed":
+        raise HTTPException(409, "示例资料受保护，不能删除")
+    active_jobs = [
+        job for job in all_records("job")
+        if job.get("status") in {"queued", "running"}
+        and file_id in {job.get("countsId"), job.get("metadataId")}
+    ]
+    if active_jobs:
+        raise HTTPException(409, "文件正在被计算作业使用，请等待完成或先取消作业")
+
+    with index_lock:
+        if qdrant.collection_exists(COLLECTION):
+            qdrant.delete(
+                COLLECTION,
+                models.FilterSelector(
+                    filter=models.Filter(
+                        must=[
+                            models.FieldCondition(
+                                key="fileId",
+                                match=models.MatchValue(value=file_id),
+                            )
+                        ]
+                    )
+                ),
+                wait=True,
+            )
+        target = Path(record["path"]).resolve()
+        object_root = (ROOT / "objects").resolve()
+        if not target.is_relative_to(object_root):
+            raise HTTPException(409, "文件路径不在受管理的对象目录中")
+        target.unlink(missing_ok=True)
+        if not delete_record("document", file_id):
+            raise HTTPException(404, "document not found")
+    return {"deletedFileId": file_id, "deletedName": record["name"]}
 
 
 @app.get("/documents/{file_id}/original")

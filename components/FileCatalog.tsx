@@ -4,11 +4,14 @@ import ChevronRightRounded from "@mui/icons-material/ChevronRightRounded";
 import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
 import DatabaseOutlined from "@mui/icons-material/StorageOutlined";
 import OpenInNewRounded from "@mui/icons-material/OpenInNewRounded";
+import RefreshRounded from "@mui/icons-material/RefreshRounded";
 import {
   Button,
   CircularProgress,
+  IconButton,
   Menu,
   MenuItem,
+  Tooltip,
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
@@ -158,31 +161,46 @@ export function FileCatalog() {
       <div className="catalog-sticky">
         <header className="catalog-header">
           <h1>文件中心</h1>
-          <Button
-            component="label"
-            variant="contained"
-            className="primary upload-button"
-            disabled={Boolean(uploadingFileName)}
-            startIcon={
-              uploadingFileName ? (
-                <CircularProgress size={14} color="inherit" />
-              ) : (
-                <CloudUploadOutlined />
-              )
-            }
-          >
-            {uploadingFileName ? "解析中" : "上传文件"}
-            <input
-              type="file"
-              accept=".csv,.tsv,.txt,.md,.xlsx,.pdf,.docx,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg"
+          <div className="catalog-header-actions">
+            <Tooltip title="刷新文件目录">
+              <span>
+                <IconButton
+                  className="catalog-refresh-button"
+                  size="small"
+                  disabled={loading}
+                  onClick={() => void loadFiles()}
+                  aria-label="刷新文件目录"
+                >
+                  <RefreshRounded className={loading ? "is-spinning" : ""} />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Button
+              component="label"
+              variant="contained"
+              className="primary upload-button"
               disabled={Boolean(uploadingFileName)}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) void handleUpload(file);
-                event.currentTarget.value = "";
-              }}
-            />
-          </Button>
+              startIcon={
+                uploadingFileName ? (
+                  <CircularProgress size={14} color="inherit" />
+                ) : (
+                  <CloudUploadOutlined />
+                )
+              }
+            >
+              {uploadingFileName ? "解析中" : "上传文件"}
+              <input
+                type="file"
+                accept=".csv,.tsv,.txt,.md,.xlsx,.pdf,.docx,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg"
+                disabled={Boolean(uploadingFileName)}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void handleUpload(file);
+                  event.currentTarget.value = "";
+                }}
+              />
+            </Button>
+          </div>
         </header>
         <section className="catalog-toolbar file-toolbar">
           <CatalogSearch
@@ -354,6 +372,10 @@ export function FileCatalog() {
                   items.map((item) => (item.id === updatedFile.id ? updatedFile : item)),
                 );
                 setSelected(updatedFile);
+              }}
+              onFileDeleted={(deletedFileId) => {
+                setFiles((items) => items.filter((item) => item.id !== deletedFileId));
+                setSelected(null);
               }}
             />
           </>

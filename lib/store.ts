@@ -19,6 +19,7 @@ import { createRagTrace } from "./rag";
 import {
   indexCount,
   searchDocumentIndex,
+  removeDocumentIndex,
   upsertDocumentIndex,
   vectorIndexDimensions,
 } from "./vector-index";
@@ -441,6 +442,28 @@ export function attachTaskFiles(taskId: string, fileIds: string[]) {
   task.fileIds = [...new Set([...(task.fileIds ?? []), ...fileIds])];
   persist(state());
   return structuredClone(task);
+}
+
+/** 删除文档后清理所有任务绑定和旧版索引，避免界面继续引用已经不存在的文件。 */
+export function detachFileFromTasks(fileId: string, fileName: string) {
+  const runtimeState = state();
+  const tasks = [runtimeState.task, ...Object.values(runtimeState.taskRecords ?? {})];
+  const affectedTaskIds: string[] = [];
+  for (const task of tasks) {
+    const hadFileId = task.fileIds?.includes(fileId) ?? false;
+    const hadProfile = task.dataProfiles?.some(
+      (profile) => profile.id === fileId || profile.fileName === fileName,
+    );
+    if (!hadFileId && !hadProfile) continue;
+    task.fileIds = task.fileIds?.filter((id) => id !== fileId);
+    task.dataProfiles = task.dataProfiles?.filter(
+      (profile) => profile.id !== fileId && profile.fileName !== fileName,
+    );
+    affectedTaskIds.push(task.id);
+  }
+  removeDocumentIndex(fileName);
+  persist(runtimeState);
+  return affectedTaskIds;
 }
 
 export function bindAnalysisJob(taskId: string, jobId: string) {

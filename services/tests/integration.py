@@ -12,7 +12,7 @@ from services.tests.test_parsers import fixtures
 
 base = os.getenv("BIOFLOW_TEST_URL", "http://127.0.0.1:3000")
 client = httpx.Client(base_url=base, trust_env=False, timeout=120, headers={"Origin": base})
-worker = httpx.Client(base_url="http://127.0.0.1:8000", trust_env=False, timeout=120, headers={"X-Bioflow-Worker-Token": os.getenv("BIOFLOW_WORKER_TOKEN", "local-development-only")})
+worker = httpx.Client(base_url=os.getenv("BIOFLOW_WORKER_URL", "http://127.0.0.1:8000"), trust_env=False, timeout=120, headers={"X-Bioflow-Worker-Token": os.getenv("BIOFLOW_WORKER_TOKEN", "local-development-only")})
 
 
 def request(method, path, **kwargs):
@@ -33,6 +33,7 @@ assert custom["skill"]["id"] == skill["id"]
 task = request("POST", "/api/tasks", json={"title": "Real RNA-seq " + stamp, "skillId": "rnaseq-deseq2"})["task"]
 task_id = task["id"]
 file_ids = []
+uploaded_ids = []
 with tempfile.TemporaryDirectory() as temp:
     root = Path(temp)
     fixtures(root)
@@ -40,6 +41,7 @@ with tempfile.TemporaryDirectory() as temp:
         payload = (root / name).read_bytes()
         result = request("POST", f"/api/files/profile?taskId={task_id}", files={"file":(stamp + "_" + name, payload)})
         identity = result["profile"]["id"]
+        uploaded_ids.append(identity)
         preview = request("GET", f"/api/files/{identity}")
         assert preview["sections"]
         original = client.get(f"/api/files/{identity}/original")
@@ -66,10 +68,21 @@ assert "ZEBRA42" in trace["chunks"][0]["text"]
 assert all(chunk["documentId"] in file_ids for chunk in trace["chunks"])
 print("PASS real multilingual embeddings + Qdrant + BM25/RRF + source filtering")
 
+deleted_id = uploaded_ids[-1]
+deleted = request("DELETE", f"/api/files/{deleted_id}")
+assert deleted["deletedFileId"] == deleted_id and task_id in deleted["affectedTaskIds"]
+assert client.get(f"/api/files/{deleted_id}").status_code == 404
+task_after_delete = request("GET", f"/api/tasks/{task_id}")["task"]
+assert deleted_id not in (task_after_delete.get("fileIds") or [])
+assert all(profile["id"] != deleted_id for profile in task_after_delete.get("dataProfiles") or [])
+print("PASS document delete + task binding cleanup + deleted resource 404")
+
 task = request("POST", f"/api/tasks/{task_id}/analysis", json={"action":"samples"})["task"]
 samples = worker.get("/samples").json()["documents"]
 counts = next(doc for doc in samples if doc["name"].endswith("counts.csv"))
 metadata = next(doc for doc in samples if doc["name"].endswith("metadata.tsv"))
+protected = client.delete(f"/api/files/{counts['id']}")
+assert protected.status_code == 409 and "受保护" in protected.text
 assert counts["id"] in task["fileIds"]
 request("POST", f"/api/tasks/{task_id}/clarifications", json={"answers":{"format":"Count 矩阵","comparison":"处理组 vs 对照组","organism":"人类","deliverable":"可发表结果"}})
 # Real tasks must not bypass the LLM planning gate. Compute regression below uses

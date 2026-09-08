@@ -102,4 +102,11 @@ export function indexCount(taskId: string) {
   return readIndex().entries.filter((entry) => entry.taskId === taskId).length;
 }
 
+export function removeDocumentIndex(fileName: string) {
+  const index = readIndex();
+  const entries = index.entries.filter((entry) => entry.fileName !== fileName);
+  writeIndex({ entries });
+  return index.entries.length - entries.length;
+}
+
 export const vectorIndexDimensions = dimensions;

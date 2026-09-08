@@ -68,6 +68,25 @@ async function fallbackWorkerPort() {
   return undefined;
 }
 
+function isolatedWorkerEnvironment(fallbackPort) {
+  const dataDirectory = `${runtimeEnv.BIOFLOW_DATA_DIR || "data/runtime"}-worker-${fallbackPort}`;
+  const qdrantPath = runtimeEnv.BIOFLOW_QDRANT_PATH
+    ? `${runtimeEnv.BIOFLOW_QDRANT_PATH}-worker-${fallbackPort}`
+    : `${dataDirectory}/qdrant`;
+  workerUrl = `http://127.0.0.1:${fallbackPort}`;
+  return {
+    ...runtimeEnv,
+    BIOFLOW_RESEARCH_PORT: String(fallbackPort),
+    BIOFLOW_WORKER_URL: workerUrl,
+    ...(runtimeEnv.QDRANT_URL
+      ? {}
+      : {
+          BIOFLOW_DATA_DIR: dataDirectory,
+          BIOFLOW_QDRANT_PATH: qdrantPath,
+        }),
+  };
+}
+
 if (!(await workerReady())) {
   const python = process.platform === "win32" ? ".venv/Scripts/python.exe" : ".venv/bin/python";
   if (fs.existsSync(runtimeEnv.BIOFLOW_PYTHON || python)) {
@@ -76,13 +95,10 @@ if (!(await workerReady())) {
     if (!ready) {
       const fallbackPort = await fallbackWorkerPort();
       if (fallbackPort) {
-        workerUrl = `http://127.0.0.1:${fallbackPort}`;
-        runtimeEnv = {
-          ...runtimeEnv,
-          BIOFLOW_RESEARCH_PORT: String(fallbackPort),
-          BIOFLOW_WORKER_URL: workerUrl,
-        };
-        console.warn(`Research Service fallback: ${workerUrl}`);
+        runtimeEnv = isolatedWorkerEnvironment(fallbackPort);
+        console.warn(
+          `Research Service fallback: ${workerUrl}${runtimeEnv.QDRANT_URL ? "" : ` · ${runtimeEnv.BIOFLOW_DATA_DIR}`}`,
+        );
         service = startResearchService(runtimeEnv);
         ready = await waitForWorker(service);
       }

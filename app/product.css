@@ -5984,3 +5984,831 @@ html {
     place-items: center;
   }
 }
+
+/* 技能详情：先回答是否可运行，再展开契约、说明与降级边界。 */
+.module-shell .skill-detail-page {
+  --skill-detail-width: 1120px;
+  padding-top: 0;
+  padding-bottom: 96px;
+}
+
+.skill-detail-toolbar,
+.skill-detail-hero,
+.skill-detail-tabs,
+.skill-overview,
+.skill-segment-view,
+.skill-detail-footer,
+.skill-detail-error {
+  box-sizing: border-box;
+  width: min(100%, var(--skill-detail-width));
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.skill-detail-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 16;
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--bf-line);
+  background: color-mix(in srgb, var(--bf-bg) 96%, transparent);
+  color: var(--bf-text-muted);
+  backdrop-filter: blur(12px);
+}
+
+.skill-detail-toolbar > span {
+  font-size: 10px;
+}
+
+.module-shell .skill-detail-back.MuiButton-root {
+  min-height: 32px;
+  padding: 4px 6px;
+  color: #456154;
+  font-size: 11px;
+}
+
+.skill-detail-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px 28px;
+  padding: 26px 0 22px;
+  border-bottom: 1px solid var(--bf-line);
+}
+
+.skill-detail-identity {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.skill-detail-glyph {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid #d6dfaa;
+  border-radius: 8px;
+  background: #eef3c9;
+  color: #64721b;
+}
+
+.skill-detail-badges {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.module-shell .skill-detail-badges .MuiChip-root {
+  height: 24px;
+  border-color: #ced8d2;
+  color: #52645a;
+  font-family: inherit;
+  font-size: 9px;
+}
+
+.module-shell .skill-runtime-chip.verified.MuiChip-root {
+  border-color: #a9d2c3;
+  background: #e7f4ef;
+  color: #176b5d;
+}
+
+.module-shell .skill-runtime-chip.adapter.MuiChip-root {
+  border-color: #dfcfad;
+  background: #fbf4e5;
+  color: #775927;
+}
+
+.module-shell .skill-detail-badges .MuiChip-icon {
+  margin-left: 6px;
+  font-size: 14px;
+}
+
+.module-shell .skill-detail-hero h1 {
+  margin: 0;
+  color: var(--bf-text);
+  font-family: Manrope, "PingFang SC", system-ui, sans-serif;
+  font-size: 26px;
+  font-weight: 680;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.skill-detail-hero p {
+  max-width: 720px;
+  margin: 8px 0 0;
+  color: var(--bf-text-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.skill-detail-meta {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 7px 22px;
+  grid-column: 1;
+  padding-left: 62px;
+}
+
+.skill-detail-meta span {
+  display: grid;
+  gap: 2px;
+}
+
+.skill-detail-meta small {
+  color: var(--bf-text-soft);
+  font-size: 9px;
+}
+
+.skill-detail-meta b {
+  color: #435249;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.skill-detail-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 8px;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.module-shell .skill-detail-actions .MuiButton-root,
+.module-shell .skill-detail-footer .MuiButton-root {
+  min-height: 36px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.module-shell .skill-detail-actions .MuiButton-outlined {
+  border-color: #b9c8c0;
+  color: #405b4e;
+}
+
+.module-shell .skill-detail-actions .MuiButton-contained,
+.module-shell .skill-detail-footer .MuiButton-contained {
+  background: #dff223;
+  color: #263018;
+  box-shadow: none;
+}
+
+.module-shell .skill-detail-actions .MuiButton-contained:hover,
+.module-shell .skill-detail-footer .MuiButton-contained:hover {
+  background: #d4e81c;
+  box-shadow: none;
+}
+
+.skill-detail-tabs {
+  position: sticky;
+  top: 48px;
+  z-index: 15;
+  border-bottom: 1px solid var(--bf-line);
+  background: color-mix(in srgb, var(--bf-bg) 96%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.module-shell .skill-detail-tabs .MuiTabs-root {
+  min-height: 44px;
+}
+
+.module-shell .skill-detail-tabs .MuiTab-root {
+  min-height: 44px;
+  padding: 8px 14px;
+  color: #6b7870;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.module-shell .skill-detail-tabs .MuiTab-icon {
+  margin-right: 5px;
+  font-size: 17px;
+}
+
+.module-shell .skill-detail-tabs .Mui-selected {
+  color: #49610d;
+}
+
+.module-shell .skill-detail-tabs .MuiTabs-indicator {
+  height: 2px;
+  background: #95a824;
+}
+
+.skill-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.skill-overview-primary {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+}
+
+.skill-detail-section,
+.skill-runtime-panel,
+.skill-segment-index,
+.skill-segment-doc,
+.skill-parameter-section,
+.skill-execution-section,
+.skill-fallback-section {
+  min-width: 0;
+  border: 1px solid var(--bf-line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.skill-detail-section,
+.skill-runtime-panel,
+.skill-parameter-section,
+.skill-execution-section,
+.skill-fallback-section {
+  padding: 15px;
+}
+
+.skill-detail-section > header,
+.skill-parameter-section > header,
+.skill-execution-section > header,
+.skill-fallback-section > header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+
+.skill-section-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  place-items: center;
+  border-radius: 6px;
+  background: #edf2df;
+  color: #627119;
+}
+
+.skill-section-icon svg {
+  font-size: 17px;
+}
+
+.skill-detail-section header small,
+.skill-runtime-panel header small,
+.skill-parameter-section header small,
+.skill-execution-section header small,
+.skill-fallback-section header small,
+.skill-segment-index > small {
+  display: block;
+  margin-bottom: 2px;
+  color: #7a8780;
+  font-size: 9px;
+}
+
+.skill-detail-section h2,
+.skill-runtime-panel h2,
+.skill-parameter-section h2,
+.skill-execution-section h2,
+.skill-fallback-section h2,
+.skill-segment-index h2,
+.skill-segment-doc h2 {
+  margin: 0;
+  color: var(--bf-text);
+  font-family: Manrope, "PingFang SC", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 680;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.skill-detail-section ul,
+.skill-fallback-section ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skill-detail-section li,
+.skill-fallback-section li {
+  position: relative;
+  padding-left: 14px;
+  color: #4c5b53;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.skill-detail-section li::before,
+.skill-fallback-section li::before {
+  position: absolute;
+  top: 0.55em;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #9daf25;
+  content: "";
+}
+
+.skill-contract-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.skill-contract-columns section {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 7px;
+}
+
+.skill-contract-columns section + section {
+  padding-left: 18px;
+  border-left: 1px solid var(--bf-line);
+}
+
+.skill-contract-columns h3 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 2px;
+  color: #526158;
+  font-size: 10px;
+}
+
+.skill-contract-columns h3 svg {
+  font-size: 15px;
+}
+
+.skill-contract-columns span {
+  padding: 7px 8px;
+  border-radius: 5px;
+  background: #f4f7f5;
+  color: #3f5148;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.skill-runtime-panel {
+  align-self: stretch;
+  border-color: #cbd8a9;
+  background: #fbfced;
+}
+
+.skill-runtime-panel > p {
+  margin: 9px 0 14px;
+  color: #536057;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.skill-runtime-panel dl {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.skill-runtime-panel dl div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-top: 1px solid #e1e5c5;
+}
+
+.skill-runtime-panel dt,
+.skill-parameter-section dt {
+  color: #7c867f;
+  font-size: 9px;
+}
+
+.skill-runtime-panel dd,
+.skill-parameter-section dd {
+  margin: 0;
+  color: #35453c;
+  font-size: 10px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.skill-runtime-panel code {
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+}
+
+.skill-requirements,
+.skill-boundaries {
+  align-self: start;
+}
+
+.skill-segment-view {
+  display: grid;
+  grid-template-columns: 218px minmax(0, 1fr);
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.skill-segment-index {
+  position: sticky;
+  top: 104px;
+  align-self: start;
+  padding: 14px;
+}
+
+.skill-segment-index ol {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skill-segment-index li {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+  padding: 7px;
+  border-radius: 5px;
+  color: #4b5a52;
+  font-size: 9px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.skill-segment-index li:first-child {
+  background: #f0f4db;
+  color: #536311;
+}
+
+.skill-segment-index li span,
+.skill-segment-doc article > span {
+  color: #82911e;
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.skill-segment-content {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+}
+
+.skill-segment-content .MuiAlert-root {
+  border-radius: 7px;
+  font-size: 10px;
+}
+
+.skill-segment-doc {
+  overflow: hidden;
+}
+
+.skill-segment-doc article {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  padding: 14px 15px;
+}
+
+.skill-segment-doc article + article {
+  border-top: 1px solid var(--bf-line);
+}
+
+.skill-segment-doc p {
+  margin: 6px 0 0;
+  color: #526159;
+  font-size: 10px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.skill-parameter-section dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+  margin: 0;
+}
+
+.skill-parameter-section dl div {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.38fr) minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--bf-line);
+}
+
+.skill-execution-section ol {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skill-execution-section li {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 23px minmax(0, 1fr);
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid var(--bf-line);
+  border-radius: 6px;
+  background: #f8faf9;
+}
+
+.skill-execution-section li > span {
+  display: grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border-radius: 50%;
+  background: #eaf0c8;
+  color: #5e6d18;
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+}
+
+.skill-execution-section li b {
+  display: block;
+  color: #34443b;
+  font-size: 10px;
+}
+
+.skill-execution-section li p {
+  margin: 3px 0 0;
+  color: #718078;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.skill-detail-footer {
+  position: sticky;
+  bottom: 10px;
+  z-index: 14;
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #cbd6d0;
+  border-radius: 8px;
+  background: color-mix(in srgb, #fff 96%, transparent);
+  box-shadow: 0 10px 30px #2e493b1f;
+  backdrop-filter: blur(12px);
+}
+
+.skill-detail-footer > span {
+  display: grid;
+  gap: 2px;
+}
+
+.skill-detail-footer b {
+  color: #384a40;
+  font-size: 10px;
+}
+
+.skill-detail-footer small {
+  color: #78847d;
+  font-size: 9px;
+}
+
+.skill-detail-error {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 60;
+  width: min(420px, calc(100vw - 36px));
+  font-size: 10px;
+}
+
+@media (max-width: 1100px) {
+  .skill-detail-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .skill-detail-actions {
+    justify-content: flex-start;
+    grid-column: 1;
+    grid-row: auto;
+    padding-left: 62px;
+  }
+
+  .skill-execution-section ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .module-shell .skill-detail-page {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+
+  .skill-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .skill-runtime-panel {
+    grid-row: 1;
+  }
+
+  .skill-segment-view {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+
+  .skill-parameter-section dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .module-shell .skill-detail-page {
+    padding: 0 10px 136px;
+  }
+
+  .skill-detail-toolbar {
+    min-height: 44px;
+  }
+
+  .skill-detail-toolbar > span {
+    display: none;
+  }
+
+  .skill-detail-hero {
+    gap: 12px;
+    padding: 16px 0;
+  }
+
+  .skill-detail-identity {
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .skill-detail-glyph {
+    width: 38px;
+    height: 38px;
+  }
+
+  .module-shell .skill-detail-hero h1 {
+    font-size: 20px;
+  }
+
+  .skill-detail-hero p {
+    margin-top: 6px;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .skill-detail-meta,
+  .skill-detail-actions {
+    padding-left: 48px;
+  }
+
+  .skill-detail-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .module-shell .skill-detail-actions .MuiButton-root {
+    width: 100%;
+    padding-inline: 8px;
+  }
+
+  .skill-detail-tabs {
+    top: 44px;
+  }
+
+  .module-shell .skill-detail-tabs .MuiTabs-flexContainer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .skill-overview,
+  .skill-segment-view {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding-top: 8px;
+  }
+
+  .skill-detail-section,
+  .skill-runtime-panel,
+  .skill-parameter-section,
+  .skill-execution-section,
+  .skill-fallback-section {
+    padding: 12px;
+  }
+
+  .skill-contract-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .skill-contract-columns section + section {
+    padding-top: 10px;
+    padding-left: 0;
+    border-top: 1px solid var(--bf-line);
+    border-left: 0;
+  }
+
+  .skill-segment-index {
+    position: static;
+    padding: 11px;
+    overflow: hidden;
+  }
+
+  .skill-segment-index ol {
+    display: flex;
+    gap: 6px;
+    margin-top: 9px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .skill-segment-index ol::-webkit-scrollbar {
+    display: none;
+  }
+
+  .skill-segment-index li {
+    min-width: min(230px, 78vw);
+    flex: none;
+  }
+
+  .skill-execution-section ol {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .skill-parameter-section dl div {
+    grid-template-columns: minmax(82px, 0.38fr) minmax(0, 1fr);
+  }
+
+  .skill-detail-footer {
+    position: fixed;
+    right: 8px;
+    bottom: 58px;
+    left: 8px;
+    z-index: 32;
+    width: auto;
+    min-height: 58px;
+    margin: 0;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .skill-detail-footer small {
+    display: none;
+  }
+
+  .skill-detail-error {
+    right: 8px;
+    bottom: 126px;
+    width: calc(100vw - 16px);
+  }
+}
+
+@media (max-width: 430px) {
+  .skill-detail-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding-left: 0;
+  }
+
+  .skill-detail-meta span {
+    padding: 7px;
+    border: 1px solid var(--bf-line);
+    border-radius: 6px;
+    background: #fff;
+  }
+
+  .skill-detail-actions {
+    padding-left: 0;
+  }
+
+  .skill-detail-footer > span {
+    max-width: 120px;
+  }
+}

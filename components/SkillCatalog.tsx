@@ -1,13 +1,26 @@
 "use client";
 
 import AddRounded from "@mui/icons-material/AddRounded";
+import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import ArrowOutwardRounded from "@mui/icons-material/ArrowOutwardRounded";
+import CheckCircleOutlineRounded from "@mui/icons-material/CheckCircleOutlineRounded";
+import DataObjectRounded from "@mui/icons-material/DataObjectRounded";
+import DescriptionOutlined from "@mui/icons-material/DescriptionOutlined";
+import HubOutlined from "@mui/icons-material/HubOutlined";
+import OutputRounded from "@mui/icons-material/OutputRounded";
+import PlayArrowRounded from "@mui/icons-material/PlayArrowRounded";
 import ScienceOutlined from "@mui/icons-material/ScienceOutlined";
+import SecurityRounded from "@mui/icons-material/SecurityRounded";
+import SettingsSuggestRounded from "@mui/icons-material/SettingsSuggestRounded";
+import WarningAmberRounded from "@mui/icons-material/WarningAmberRounded";
 import {
+  Alert,
   Button,
   Chip,
   CircularProgress,
   IconButton,
+  Tab,
+  Tabs,
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
@@ -25,6 +38,149 @@ import { SelectControl } from "./ui/SelectControl";
 
 const sources = ["全部来源", "BioFlow Lab", "Team", "Community", "Mine"];
 const availabilityOptions = ["全部状态", "已启用", "可用"];
+
+type SkillRuntimeSpec = {
+  level: "verified" | "adapter";
+  badge: string;
+  engine: string;
+  summary: string;
+  binding: string;
+  scenarios: string[];
+  dependencies: string[];
+  boundaries: string[];
+  parameters: Array<{ name: string; value: string }>;
+  steps: Array<{ title: string; detail: string }>;
+  fallback: string[];
+};
+
+const verifiedRuntimeSpecs: Record<string, SkillRuntimeSpec> = {
+  "rnaseq-deseq2": {
+    level: "verified",
+    badge: "真实计算器已绑定",
+    engine: "PyDESeq2 0.5.4 · SQLite 队列 · 独立 Python Worker",
+    summary: "上传并校验矩阵和样本表后，提交真实异步统计作业，持续返回状态并生成结果文件。",
+    binding: "POST /api/tasks/:taskId/analysis",
+    scenarios: ["处理组与对照组差异表达", "批次协变量设计", "结果表、火山图与方法报告交付"],
+    dependencies: [
+      "Count 矩阵：基因为行、样本为列，值为非负整数",
+      "样本元数据：样本 ID 与矩阵列一一对应",
+      "比较方向与设计公式：运行前由用户确认",
+    ],
+    boundaries: [
+      "不直接处理 FASTQ 原始测序文件，需先完成定量",
+      "PyDESeq2 是 Python 实现，不保证与 R DESeq2 逐值完全一致",
+      "统计结果需要结合实验设计与生物学背景复核",
+    ],
+    parameters: [
+      { name: "设计公式", value: "condition，可选 batch 协变量" },
+      { name: "比较方向", value: "treated vs control，由用户确认" },
+      { name: "显著性", value: "FDR 0.05，Benjamini-Hochberg 校正" },
+      { name: "低计数过滤", value: "总 Count ≥ 10" },
+    ],
+    steps: [
+      { title: "输入校验", detail: "核对整数矩阵、样本映射、分组水平和缺失值。" },
+      { title: "设计确认", detail: "锁定比较方向、协变量、过滤阈值和交付要求。" },
+      { title: "异步计算", detail: "写入 SQLite 队列，由独立 Worker 执行 PyDESeq2。" },
+      { title: "结果交付", detail: "生成 CSV、PNG 与 Markdown 报告并保留运行状态。" },
+    ],
+    fallback: [
+      "输入不匹配时停止提交，并返回具体字段或样本差异。",
+      "Worker 失败时保留失败状态和错误信息，支持修正配置后重试。",
+      "刷新页面后从服务端恢复作业进度，不用重新发起计算。",
+    ],
+  },
+  "rag-evidence": {
+    level: "verified",
+    badge: "真实检索链路已绑定",
+    engine: "FastEmbed 384 维 · Qdrant · BM25 / cosine / RRF",
+    summary: "对项目文件执行格式路由、清洗、分段、向量化和混合检索，并返回可追溯原文片段。",
+    binding: "POST /api/rag/query",
+    scenarios: ["研究方案问答", "分析参数 grounding", "项目文档证据追溯"],
+    dependencies: [
+      "已解析并完成索引的项目文件",
+      "Qdrant Local Mode 或 Qdrant Server",
+      "FastEmbed 多语言向量模型；交叉编码器为可选配置",
+    ],
+    boundaries: [
+      "未配置交叉编码器时只声明 RRF 排序，不伪称语义精排",
+      "扫描 PDF 的 OCR 质量取决于已配置的视觉模型与页面质量",
+      "检索片段用于证据辅助，不替代原文核对和专业判断",
+    ],
+    parameters: [
+      { name: "检索范围", value: "当前任务绑定的 fileIds" },
+      { name: "候选召回", value: "BM25 + cosine" },
+      { name: "融合排序", value: "Reciprocal Rank Fusion" },
+      { name: "精排", value: "环境变量配置后启用 cross-encoder" },
+    ],
+    steps: [
+      { title: "策略路由", detail: "按 PDF、Office、表格和纯文本选择对应解析器。" },
+      { title: "清洗分段", detail: "保留标题、表格和页码来源，清理重复空白与噪声。" },
+      { title: "索引检索", detail: "写入 Qdrant，并在限定文件范围内执行混合召回。" },
+      { title: "来源回传", detail: "返回命中文本、文件、分数和排序策略用于审计。" },
+    ],
+    fallback: [
+      "视觉 OCR 未配置时回退到可提取文本，并明确记录路由结果。",
+      "可选 reranker 不可用时保留 BM25 + cosine + RRF 结果。",
+      "解析或索引失败时文件进入 failed 状态，可在文件中心重新解析。",
+    ],
+  },
+};
+
+function runtimeSpecFor(skill: SkillRecord): SkillRuntimeSpec {
+  const verified = verifiedRuntimeSpecs[skill.id];
+  if (verified) return verified;
+  return {
+    level: "adapter",
+    badge: "Adapter 待绑定",
+    engine: "技能契约已持久化 · 暂无专用执行器",
+    summary: "可以创建任务、绑定文件并生成计划；进入专用计算前会明确阻止，不会返回伪造结果。",
+    binding: "通用任务与计划 API；专用 executor 尚未配置",
+    scenarios: [
+      skill.description,
+      `围绕 ${skill.inputs.join("、")} 组织输入`,
+      `按 ${skill.outputs.join("、")} 定义交付`,
+    ],
+    dependencies: skill.inputs.map((item) => `${item}：运行前需要绑定并通过格式校验`),
+    boundaries: [
+      "当前版本没有该技能的专用计算器或外部工具绑定",
+      "任务创建不代表真实计算能力已经就绪",
+      "接入执行器前只提供契约、计划和文件上下文管理",
+    ],
+    parameters: skill.inputs.map((item) => ({ name: item, value: "由任务配置或项目文件提供" })),
+    steps: [
+      { title: "读取契约", detail: "确认技能版本、输入、输出与执行说明。" },
+      { title: "绑定上下文", detail: "选择项目文件并补充任务所需参数。" },
+      { title: "生成计划", detail: "智能体基于契约生成可审批步骤，不生成分析结果。" },
+      { title: "等待执行器", detail: "专用 Adapter 接入后才能执行真实计算或外部调用。" },
+    ],
+    fallback: [
+      "未绑定执行器时在运行前返回明确错误，不降级为随机或固定结果。",
+      "技能说明仍可用于计划生成、输入检查和后续 Adapter 开发。",
+    ],
+  };
+}
+
+function instructionSegments(skill: SkillRecord, spec: SkillRuntimeSpec) {
+  const customSections = (skill.instructions ?? "")
+    .split(/\n{2,}/)
+    .map((section) => section.trim())
+    .filter(Boolean);
+  if (customSections.length) {
+    return customSections.map((section, index) => {
+      const [firstLine, ...rest] = section.split("\n");
+      return {
+        title: rest.length ? firstLine.replace(/^#+\s*/, "") : `执行说明 ${index + 1}`,
+        detail: rest.length ? rest.join("\n") : firstLine,
+      };
+    });
+  }
+  return [
+    { title: "能力目标", detail: skill.description },
+    { title: "运行实现", detail: `${spec.engine}\n${spec.summary}` },
+    { title: "输入要求", detail: spec.dependencies.join("\n") },
+    { title: "安全边界", detail: spec.boundaries.join("\n") },
+  ];
+}
 
 function SkillFilters({
   query,
@@ -410,8 +566,10 @@ export function SkillCatalog() {
 export function SkillDetail({ skillId }: { skillId: string }) {
   const router = useRouter();
   const [applying, setApplying] = useState(false);
+  const [toggling, setToggling] = useState(false);
   const [applyError, setApplyError] = useState("");
   const [skill, setSkill] = useState<SkillRecord | null>(null);
+  const [activeTab, setActiveTab] = useState<"overview" | "segments">("overview");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -426,84 +584,363 @@ export function SkillDetail({ skillId }: { skillId: string }) {
 
   if (error)
     return (
-      <main className="detail-page">
-        <section className="catalog-state error">{error}</section>
+      <main className="detail-page skill-detail-page">
+        <section className="catalog-state error">
+          <span>{error}</span>
+          <Button size="small" component={Link} href="/skills">
+            返回能力中心
+          </Button>
+        </section>
       </main>
     );
   if (!skill)
     return (
-      <main className="detail-page">
-        <section className="catalog-state">正在加载技能契约…</section>
+      <main className="detail-page skill-detail-page">
+        <ResourceLoading variant="skills" label="正在读取技能契约" />
       </main>
     );
+
+  const spec = runtimeSpecFor(skill);
+  const segments = instructionSegments(skill, spec);
+  const updatedAt = new Date(skill.updatedAt).toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  const toggleSkill = async () => {
+    setToggling(true);
+    setApplyError("");
+    try {
+      const response = await bioflowApi.setSkillEnabled(skill.id, !skill.enabled);
+      setSkill(response.skill);
+    } catch (toggleError) {
+      setApplyError(getApiErrorMessage(toggleError, "技能状态保存失败"));
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  const applySkill = async () => {
+    setApplying(true);
+    setApplyError("");
+    try {
+      if (!skill.enabled) {
+        const response = await bioflowApi.setSkillEnabled(skill.id, true);
+        setSkill(response.skill);
+      }
+      const response = await bioflowApi.createTask(skill.name, { skillId: skill.id });
+      router.push(`/projects/proj_a5211690a4/tasks/${response.task.id}`);
+    } catch (applyTaskError) {
+      setApplyError(getApiErrorMessage(applyTaskError, "应用技能失败"));
+      setApplying(false);
+    }
+  };
+
   return (
-    <main className="detail-page">
-      <Link href="/skills" className="back-link">
-        ← 返回能力中心
-      </Link>
-      <div className="detail-hero">
-        <span className="skill-glyph">◇</span>
-        <span className="skill-category">
-          {skill.category} · {skill.source} · v{skill.version}
-        </span>
-        <h1>{skill.name}</h1>
-        <p>{skill.description}</p>
-      </div>
-      <div className="detail-grid">
-        <section>
-          <h2>输入契约</h2>
-          {skill.inputs.map((item) => (
-            <div className="contract-row" key={item}>
-              <b>✓</b>
-              <span>{item}</span>
+    <main className="detail-page skill-detail-page">
+      <header className="skill-detail-toolbar">
+        <Button
+          component={Link}
+          href="/skills"
+          size="small"
+          startIcon={<ArrowBackRounded />}
+          className="skill-detail-back"
+        >
+          能力中心
+        </Button>
+        <span>技能契约与运行边界</span>
+      </header>
+
+      <section className="skill-detail-hero">
+        <div className="skill-detail-identity">
+          <span className="skill-detail-glyph" aria-hidden="true">
+            <ScienceOutlined sx={{ fontSize: 26 }} />
+          </span>
+          <div>
+            <div className="skill-detail-badges">
+              <Chip size="small" label={skill.category} variant="outlined" />
+              <Chip
+                size="small"
+                className={`skill-runtime-chip ${spec.level}`}
+                icon={
+                  spec.level === "verified" ? (
+                    <CheckCircleOutlineRounded />
+                  ) : (
+                    <WarningAmberRounded />
+                  )
+                }
+                label={spec.badge}
+              />
             </div>
-          ))}
+            <h1>{skill.name}</h1>
+            <p>{skill.description}</p>
+          </div>
+        </div>
+        <div className="skill-detail-meta" aria-label="技能版本信息">
+          <span>
+            <small>来源</small>
+            <b>{skill.source}</b>
+          </span>
+          <span>
+            <small>版本</small>
+            <b>v{skill.version}</b>
+          </span>
+          <span>
+            <small>更新时间</small>
+            <b>{updatedAt}</b>
+          </span>
+        </div>
+        <div className="skill-detail-actions">
+          <Button
+            variant="outlined"
+            disabled={toggling || applying}
+            onClick={() => void toggleSkill()}
+          >
+            {toggling && <CircularProgress size={13} sx={{ mr: 0.7 }} />}
+            {toggling ? "保存中" : skill.enabled ? "停用技能" : "启用技能"}
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={
+              applying ? <CircularProgress size={14} color="inherit" /> : <PlayArrowRounded />
+            }
+            disabled={applying || toggling}
+            onClick={() => void applySkill()}
+          >
+            {applying ? "创建任务中" : skill.enabled ? "使用技能创建任务" : "启用并创建任务"}
+          </Button>
+        </div>
+      </section>
+
+      <section className="skill-detail-tabs">
+        <Tabs
+          value={activeTab}
+          onChange={(_, value: "overview" | "segments") => setActiveTab(value)}
+          aria-label="技能详情视图"
+        >
+          <Tab value="overview" icon={<HubOutlined />} iconPosition="start" label="总览" />
+          <Tab
+            value="segments"
+            icon={<DescriptionOutlined />}
+            iconPosition="start"
+            label="分段解析"
+          />
+        </Tabs>
+      </section>
+
+      {activeTab === "overview" ? (
+        <section className="skill-overview" aria-label="技能总览">
+          <div className="skill-overview-primary">
+            <article className="skill-detail-section skill-scenarios">
+              <header>
+                <span className="skill-section-icon">
+                  <SettingsSuggestRounded />
+                </span>
+                <div>
+                  <small>适用场景</small>
+                  <h2>这个技能能解决什么</h2>
+                </div>
+              </header>
+              <ul>
+                {spec.scenarios.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+
+            <article className="skill-detail-section skill-contract-panel">
+              <header>
+                <span className="skill-section-icon">
+                  <DataObjectRounded />
+                </span>
+                <div>
+                  <small>数据契约</small>
+                  <h2>运行前后会交换什么</h2>
+                </div>
+              </header>
+              <div className="skill-contract-columns">
+                <section>
+                  <h3>
+                    <DataObjectRounded /> 输入
+                  </h3>
+                  {skill.inputs.map((item) => (
+                    <span key={item}>{item}</span>
+                  ))}
+                </section>
+                <section>
+                  <h3>
+                    <OutputRounded /> 输出
+                  </h3>
+                  {skill.outputs.map((item) => (
+                    <span key={item}>{item}</span>
+                  ))}
+                </section>
+              </div>
+            </article>
+          </div>
+
+          <aside className="skill-runtime-panel">
+            <header>
+              <small>当前项目绑定</small>
+              <h2>{spec.badge}</h2>
+            </header>
+            <p>{spec.summary}</p>
+            <dl>
+              <div>
+                <dt>执行引擎</dt>
+                <dd>{spec.engine}</dd>
+              </div>
+              <div>
+                <dt>接口绑定</dt>
+                <dd>
+                  <code>{spec.binding}</code>
+                </dd>
+              </div>
+              <div>
+                <dt>启用状态</dt>
+                <dd>{skill.enabled ? "已启用，可由智能体选择" : "未启用，不参与智能体调度"}</dd>
+              </div>
+            </dl>
+          </aside>
+
+          <article className="skill-detail-section skill-requirements">
+            <header>
+              <span className="skill-section-icon">
+                <CheckCircleOutlineRounded />
+              </span>
+              <div>
+                <small>运行准备</small>
+                <h2>依赖与输入检查</h2>
+              </div>
+            </header>
+            <ul>
+              {spec.dependencies.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+
+          <article className="skill-detail-section skill-boundaries">
+            <header>
+              <span className="skill-section-icon">
+                <SecurityRounded />
+              </span>
+              <div>
+                <small>可信边界</small>
+                <h2>不会被包装成真实能力的部分</h2>
+              </div>
+            </header>
+            <ul>
+              {spec.boundaries.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
         </section>
-        <section>
-          <h2>输出契约</h2>
-          {skill.outputs.map((item) => (
-            <div className="contract-row" key={item}>
-              <b>→</b>
-              <span>{item}</span>
-            </div>
-          ))}
-        </section>
-        <section>
-          <h2>运行绑定</h2>
-          <p>
-            {skill.id === "rnaseq-deseq2"
-              ? "PyDESeq2 0.5.4 · 异步统计计算"
-              : skill.id === "rag-evidence"
-                ? "真实文档解析 · Qdrant · BM25 / RRF"
-                : "配置已保存 · 尚未绑定专用计算器"}
-          </p>
-        </section>
-      </div>
-      {skill.instructions && (
-        <section className="skill-instructions">
-          <h2>执行说明</h2>
-          <p>{skill.instructions}</p>
+      ) : (
+        <section className="skill-segment-view" aria-label="技能分段解析">
+          <aside className="skill-segment-index">
+            <small>本地技能说明</small>
+            <h2>{segments.length} 个语义段</h2>
+            <ol>
+              {segments.map((segment, index) => (
+                <li key={`${segment.title}-${index}`}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  {segment.title}
+                </li>
+              ))}
+            </ol>
+          </aside>
+          <div className="skill-segment-content">
+            {spec.level === "adapter" && (
+              <Alert severity="warning" variant="outlined">
+                当前仅有技能契约和执行说明，专用 Adapter 尚未绑定；页面不会展示虚假的运行结果。
+              </Alert>
+            )}
+            <section className="skill-segment-doc">
+              {segments.map((segment, index) => (
+                <article key={`${segment.title}-${index}`}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <div>
+                    <h2>{segment.title}</h2>
+                    {segment.detail.split("\n").map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </section>
+
+            <section className="skill-parameter-section">
+              <header>
+                <small>参数契约</small>
+                <h2>运行参数与默认策略</h2>
+              </header>
+              <dl>
+                {spec.parameters.map((parameter) => (
+                  <div key={parameter.name}>
+                    <dt>{parameter.name}</dt>
+                    <dd>{parameter.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+
+            <section className="skill-execution-section">
+              <header>
+                <small>执行步骤</small>
+                <h2>从输入到交付</h2>
+              </header>
+              <ol>
+                {spec.steps.map((step, index) => (
+                  <li key={step.title}>
+                    <span>{index + 1}</span>
+                    <div>
+                      <b>{step.title}</b>
+                      <p>{step.detail}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            <section className="skill-fallback-section">
+              <header>
+                <small>失败与降级</small>
+                <h2>异常时系统怎么处理</h2>
+              </header>
+              <ul>
+                {spec.fallback.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </section>
+          </div>
         </section>
       )}
-      <button
-        className="primary detail-cta"
-        disabled={applying}
-        onClick={async () => {
-          setApplying(true);
-          setApplyError("");
-          try {
-            if (!skill.enabled) await bioflowApi.setSkillEnabled(skill.id, true);
-            const response = await bioflowApi.createTask(skill.name, { skillId: skill.id });
-            router.push(`/projects/proj_a5211690a4/tasks/${response.task.id}`);
-          } catch (error) {
-            setApplyError(getApiErrorMessage(error, "应用技能失败"));
-            setApplying(false);
+
+      <footer className="skill-detail-footer">
+        <span>
+          <b>{skill.enabled ? "技能已启用" : "技能未启用"}</b>
+          <small>{spec.level === "verified" ? spec.badge : "创建任务后仍需绑定专用执行器"}</small>
+        </span>
+        <Button
+          variant="contained"
+          startIcon={
+            applying ? <CircularProgress size={14} color="inherit" /> : <PlayArrowRounded />
           }
-        }}
-      >
-        {applying ? "创建任务中…" : "使用此技能创建任务"}
-      </button>
-      {applyError && <p role="alert">{applyError}</p>}
+          disabled={applying || toggling}
+          onClick={() => void applySkill()}
+        >
+          {applying ? "创建任务中" : skill.enabled ? "创建任务" : "启用并创建任务"}
+        </Button>
+      </footer>
+      {applyError && (
+        <Alert className="skill-detail-error" severity="error" onClose={() => setApplyError("")}>
+          {applyError}
+        </Alert>
+      )}
     </main>
   );
 }

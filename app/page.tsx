@@ -15,7 +15,7 @@ import BuildOutlined from "@mui/icons-material/BuildOutlined";
 import PlayArrowRounded from "@mui/icons-material/PlayArrowRounded";
 import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
 import { Button, Menu, MenuItem } from "@mui/material";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { ParticleLoader } from "@/components/ParticleLoader";
 import { ConfigPanel } from "@/components/ConfigPanel";
@@ -330,7 +330,6 @@ export default function Home() {
   const [initializationError, setInitializationError] = useState("");
   const [taskLoading, setTaskLoading] = useState(false);
   const [taskLoadError, setTaskLoadError] = useState("");
-  const [workspaceScrolled, setWorkspaceScrolled] = useState(false);
   const [ragTrace, setRagTrace] = useState<RagTrace | null>(null);
   const [nodeDetailId, setNodeDetailId] = useState<string | null>(null);
   const guideInitializedRef = useRef(false);
@@ -687,15 +686,6 @@ export default function Home() {
       notify(`已选择残基 ${selectedResidue}，证据与代码上下文已关联`);
     }
   }, [selectedResidue]);
-  useEffect(() => {
-    if (!planOpen) return;
-    const timer = window.setTimeout(() => {
-      document
-        .querySelector(".workflow-guide-target")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [planOpen]);
   const notify = (message: string) => setToast(message);
   const saveConfig = async () => {
     setConfigSaving(true);
@@ -1330,6 +1320,16 @@ ${task?.goal || config.goal}
     );
   }
   const taskIsStale = task.id !== routeTaskId;
+  const workspaceOffset =
+    viewportWidth <= 760
+      ? 0
+      : 68 + (viewportWidth <= 1500 ? Math.min(sidebarWidth, 220) : sidebarWidth);
+  const composerWidth =
+    viewportWidth <= 760 ? 0 : Math.min(960, Math.max(280, viewportWidth - workspaceOffset - 92));
+  const composerLeft =
+    viewportWidth <= 760
+      ? 0
+      : workspaceOffset + Math.max(20, (viewportWidth - workspaceOffset - 72 - composerWidth) / 2);
   const switcherTasks = taskList.length
     ? taskList
     : [
@@ -1342,14 +1342,52 @@ ${task?.goal || config.goal}
           hasUnreadResult: false,
         },
       ];
+  const realAnalysisPanel =
+    task.executionMode === "real" ? (
+      <RealAnalysisPanel
+        key={task.id}
+        task={task}
+        onTaskChange={setTask}
+        onStreamConnect={(jobId) => {
+          setTraceOpen(true);
+          setStreamStatus("connecting");
+          receivedStreamEventIdsRef.current.clear();
+          setStreamEvents([
+            createClientStreamEvent(
+              activeTask,
+              "client.sse.connecting",
+              {
+                stage: "analysis-event-stream",
+                progress: 2,
+                detail: "正在订阅真实 PyDESeq2 作业状态",
+              },
+              jobId,
+            ),
+          ]);
+        }}
+        onStreamEvent={(event) => {
+          setStreamEvents((events) => appendStreamEvent(events, event));
+          setLiveLogs((logs) =>
+            [...logs, `[${new Date(event.createdAt).toLocaleTimeString()}] ${event.type}`].slice(
+              -100,
+            ),
+          );
+        }}
+        onStreamStatus={setStreamStatus}
+      />
+    ) : null;
   return (
     <main
       className={`app-shell ${resizing ? "is-resizing" : ""}`}
-      style={{
-        gridTemplateColumns: `68px ${
-          viewportWidth <= 1500 ? Math.min(sidebarWidth, 220) : sidebarWidth
-        }px minmax(0,1fr)`,
-      }}
+      style={
+        {
+          gridTemplateColumns: `68px ${
+            viewportWidth <= 1500 ? Math.min(sidebarWidth, 220) : sidebarWidth
+          }px minmax(0,1fr)`,
+          "--composer-left": `${composerLeft}px`,
+          "--composer-width": `${composerWidth}px`,
+        } as CSSProperties
+      }
     >
       <aside className="rail">
         <div className="brand" aria-hidden="true">
@@ -1499,36 +1537,94 @@ ${task?.goal || config.goal}
         onOpenGuide={() => setGuideOpen(true)}
         onResizeStart={(event) => startResize("sidebar", event)}
       />
-      <section
-        className={`workspace ${workspaceScrolled ? "is-scrolled" : ""} ${taskLoading || taskIsStale ? "is-task-loading" : ""}`}
-        onScroll={(event) => setWorkspaceScrolled(event.currentTarget.scrollTop > 86)}
-      >
-        <header className="topbar">
-          <div className="crumb">
-            <span>快捷任务</span>
-            <b>/</b>
-            <button
-              id="task-switcher-trigger"
-              type="button"
-              className="task-switcher-trigger"
-              aria-label={`切换当前任务，当前为${task.title}`}
-              aria-haspopup="menu"
-              aria-expanded={Boolean(taskSwitcherAnchor)}
-              onClick={(event) => setTaskSwitcherAnchor(event.currentTarget)}
-            >
-              <strong>{task.title}</strong>
-              <ExpandMoreRounded sx={{ fontSize: 16 }} aria-hidden="true" />
-            </button>
+      <section className={`workspace ${taskLoading || taskIsStale ? "is-task-loading" : ""}`}>
+        <div className="workspace-header-stack">
+          <header className="topbar">
+            <div className="crumb">
+              <span>快捷任务</span>
+              <b>/</b>
+              <button
+                id="task-switcher-trigger"
+                type="button"
+                className="task-switcher-trigger"
+                aria-label={`切换当前任务，当前为${task.title}`}
+                aria-haspopup="menu"
+                aria-expanded={Boolean(taskSwitcherAnchor)}
+                onClick={(event) => setTaskSwitcherAnchor(event.currentTarget)}
+              >
+                <strong>{task.title}</strong>
+                <ExpandMoreRounded sx={{ fontSize: 16 }} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="top-actions">
+              <span className="live">
+                <i /> 智能体 · {statusLabel[task.status] || task.status}
+              </span>
+              <Button size="small" variant="text" startIcon={<ShareOutlined />} onClick={shareTask}>
+                分享
+              </Button>
+            </div>
+          </header>
+          <div className="goal-strip" data-guide="goal">
+            <div>
+              <small>
+                当前研究目标 · {task.executionMode === "real" ? "真实服务" : "演示数据"}
+              </small>
+              <h1>{task.goal}</h1>
+            </div>
+            <div className="goal-actions">
+              <span className={`status-pill ${task.status}`}>
+                ● {statusLabel[task.status] || task.status}
+              </span>
+              {task.executionMode !== "real" && (
+                <Button
+                  className="secondary"
+                  variant="outlined"
+                  startIcon={<SettingsOutlined />}
+                  onClick={() => setConfigOpen(true)}
+                >
+                  配置
+                </Button>
+              )}
+              <Button
+                className="secondary"
+                variant="outlined"
+                startIcon={<AccountTreeRounded />}
+                onClick={() => setPlanOpen((current) => !current)}
+              >
+                {planOpen ? "收起工作流" : "查看工作流"}
+              </Button>
+              <Button
+                className="secondary"
+                variant="outlined"
+                startIcon={<BuildOutlined />}
+                onClick={() => setMobilePanel(!mobilePanel)}
+              >
+                工具
+              </Button>
+              {task.status === "running" && task.executionMode !== "real" && (
+                <Button
+                  className="secondary danger"
+                  variant="outlined"
+                  color="error"
+                  onClick={cancel}
+                  disabled={cancellingRun}
+                >
+                  {cancellingRun ? "取消中…" : "取消"}
+                </Button>
+              )}
+              <Button
+                className="primary"
+                variant="contained"
+                startIcon={<PlayArrowRounded />}
+                data-guide="run"
+                onClick={triggerPrimaryRun}
+              >
+                {primaryRunLabel}
+              </Button>
+            </div>
           </div>
-          <div className="top-actions">
-            <span className="live">
-              <i /> 智能体 · {statusLabel[task.status] || task.status}
-            </span>
-            <Button size="small" variant="text" startIcon={<ShareOutlined />} onClick={shareTask}>
-              分享
-            </Button>
-          </div>
-        </header>
+        </div>
         <Menu
           className="task-switcher-menu"
           anchorEl={taskSwitcherAnchor}
@@ -1558,63 +1654,6 @@ ${task?.goal || config.goal}
             </MenuItem>
           ))}
         </Menu>
-        <div className="goal-strip" data-guide="goal">
-          <div>
-            <small>当前研究目标 · {task.executionMode === "real" ? "真实服务" : "演示数据"}</small>
-            <h1>{task.goal}</h1>
-          </div>
-          <div className="goal-actions">
-            <span className={`status-pill ${task.status}`}>
-              ● {statusLabel[task.status] || task.status}
-            </span>
-            {task.executionMode !== "real" && (
-              <Button
-                className="secondary"
-                variant="outlined"
-                startIcon={<SettingsOutlined />}
-                onClick={() => setConfigOpen(true)}
-              >
-                配置
-              </Button>
-            )}
-            <Button
-              className="secondary"
-              variant="outlined"
-              startIcon={<AccountTreeRounded />}
-              onClick={() => setPlanOpen((current) => !current)}
-            >
-              {planOpen ? "收起工作流" : "查看工作流"}
-            </Button>
-            <Button
-              className="secondary"
-              variant="outlined"
-              startIcon={<BuildOutlined />}
-              onClick={() => setMobilePanel(!mobilePanel)}
-            >
-              工具
-            </Button>
-            {task.status === "running" && task.executionMode !== "real" && (
-              <Button
-                className="secondary danger"
-                variant="outlined"
-                color="error"
-                onClick={cancel}
-                disabled={cancellingRun}
-              >
-                {cancellingRun ? "取消中…" : "取消"}
-              </Button>
-            )}
-            <Button
-              className="primary"
-              variant="contained"
-              startIcon={<PlayArrowRounded />}
-              data-guide="run"
-              onClick={triggerPrimaryRun}
-            >
-              {primaryRunLabel}
-            </Button>
-          </div>
-        </div>
         {(taskLoading || taskIsStale) && (
           <div className="content-loading-layer">
             <ContentLoading label={taskLoadError ? "任务切换失败" : "正在切换任务"} />
@@ -1687,6 +1726,37 @@ ${task?.goal || config.goal}
                 />
               )}
             </div>
+          </div>
+          {realAnalysisPanel}
+          <div className={`workflow-guide-target ${planOpen ? "workflow-open" : ""}`}>
+            <WorkflowCanvas
+              open={planOpen}
+              nodes={task.nodes}
+              edges={task.edges}
+              extraEdges={extraEdges}
+              selected={selected}
+              impactNodeIds={impactNodeIds}
+              connectingFrom={connectingFrom}
+              canvasZoom={canvasZoom}
+              canvasPan={canvasPan}
+              canvasPanning={canvasPanning}
+              nodePositions={nodePositions}
+              layoutRevision={layoutRevision}
+              layoutVersionCount={layoutVersionCount}
+              layoutSaveState={layoutSaveState}
+              creatingVersion={creatingLayoutVersion}
+              onZoomChange={(update) => setCanvasZoom((value) => clampCanvasZoom(update(value)))}
+              onReset={resetCanvas}
+              onCreateVersion={createLayoutVersion}
+              onCanvasPanStart={startCanvasPan}
+              onCanvasWheel={(event) => {
+                event.preventDefault();
+                setCanvasZoom((value) =>
+                  clampCanvasZoom(value + (event.deltaY < 0 ? 0.08 : -0.08)),
+                );
+              }}
+              onNodePointerDown={startNodeDrag}
+            />
           </div>
           <ConversationPanel
             messages={conversationMessages}
@@ -1793,34 +1863,6 @@ ${task?.goal || config.goal}
             </div>
           </div>
         )}
-        <div className={`workflow-guide-target ${planOpen ? "workflow-open" : ""}`}>
-          <WorkflowCanvas
-            open={planOpen}
-            nodes={task.nodes}
-            edges={task.edges}
-            extraEdges={extraEdges}
-            selected={selected}
-            impactNodeIds={impactNodeIds}
-            connectingFrom={connectingFrom}
-            canvasZoom={canvasZoom}
-            canvasPan={canvasPan}
-            canvasPanning={canvasPanning}
-            nodePositions={nodePositions}
-            layoutRevision={layoutRevision}
-            layoutVersionCount={layoutVersionCount}
-            layoutSaveState={layoutSaveState}
-            creatingVersion={creatingLayoutVersion}
-            onZoomChange={(update) => setCanvasZoom((value) => clampCanvasZoom(update(value)))}
-            onReset={resetCanvas}
-            onCreateVersion={createLayoutVersion}
-            onCanvasPanStart={startCanvasPan}
-            onCanvasWheel={(event) => {
-              event.preventDefault();
-              setCanvasZoom((value) => clampCanvasZoom(value + (event.deltaY < 0 ? 0.08 : -0.08)));
-            }}
-            onNodePointerDown={startNodeDrag}
-          />
-        </div>
         <WorkflowNodeDialog
           node={nodeDetail}
           upstream={nodeDetailNeighbors.upstream}
@@ -1833,40 +1875,6 @@ ${task?.goal || config.goal}
             setMobilePanel(true);
           }}
         />
-        {task.executionMode === "real" && (
-          <RealAnalysisPanel
-            key={task.id}
-            task={task}
-            onTaskChange={setTask}
-            onStreamConnect={(jobId) => {
-              setTraceOpen(true);
-              setStreamStatus("connecting");
-              receivedStreamEventIdsRef.current.clear();
-              setStreamEvents([
-                createClientStreamEvent(
-                  activeTask,
-                  "client.sse.connecting",
-                  {
-                    stage: "analysis-event-stream",
-                    progress: 2,
-                    detail: "正在订阅真实 PyDESeq2 作业状态",
-                  },
-                  jobId,
-                ),
-              ]);
-            }}
-            onStreamEvent={(event) => {
-              setStreamEvents((events) => appendStreamEvent(events, event));
-              setLiveLogs((logs) =>
-                [
-                  ...logs,
-                  `[${new Date(event.createdAt).toLocaleTimeString()}] ${event.type}`,
-                ].slice(-100),
-              );
-            }}
-            onStreamStatus={setStreamStatus}
-          />
-        )}
       </section>
       <WorkspaceToolDock
         activeTab={tab}

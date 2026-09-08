@@ -20,8 +20,33 @@ import {
 } from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
+import { invalidateAuthSessionCache } from "@/components/auth/AuthSessionGate";
 import { LoginMoleculeScene } from "@/components/auth/LoginMoleculeScene";
 import { bioflowApi, getApiErrorMessage, type BioflowRole } from "@/lib/api-client";
+
+const demoCredentials: Record<
+  BioflowRole,
+  { username: string; password: string; label: string; description: string }
+> = {
+  researcher: {
+    username: "researcher",
+    password: "bioflow2026",
+    label: "研究员账号已预填",
+    description: "可创建任务、上传文件并运行分析",
+  },
+  reviewer: {
+    username: "reviewer",
+    password: "review2026",
+    label: "审阅者账号已预填",
+    description: "只读查看任务、证据和结果",
+  },
+  admin: {
+    username: "admin",
+    password: "admin2026",
+    label: "管理员账号已预填",
+    description: "可进入权限中心管理用户与角色",
+  },
+};
 
 function LoginContent() {
   const router = useRouter();
@@ -39,6 +64,7 @@ function LoginContent() {
     setLoading(true);
     setError("");
     try {
+      invalidateAuthSessionCache();
       await bioflowApi.login({ username, password, role });
       window.localStorage.removeItem("bioflow-studio-guide-v2");
       window.localStorage.removeItem("bioflow-studio-guide-step-v2");
@@ -91,7 +117,14 @@ function LoginContent() {
               fullWidth
               size="small"
               value={role}
-              onChange={(_, nextRole) => nextRole && setRole(nextRole)}
+              onChange={(_, nextRole) => {
+                if (!nextRole) return;
+                const next = nextRole as BioflowRole;
+                setRole(next);
+                setUsername(demoCredentials[next].username);
+                setPassword(demoCredentials[next].password);
+                setError("");
+              }}
               aria-label="选择登录角色"
             >
               <ToggleButton value="researcher">
@@ -173,8 +206,11 @@ function LoginContent() {
           </Button>
         </form>
         <div className="login-demo-note">
-          <b>研究员账号已预填</b>
-          <span>审阅者 reviewer / review2026 · 管理员 admin / admin2026</span>
+          <b>{demoCredentials[role].label}</b>
+          <span>{demoCredentials[role].description}</span>
+          <small>
+            账号：{demoCredentials[role].username} · 密码：{demoCredentials[role].password}
+          </small>
           <small>选择的身份必须与账号角色一致；服务重启后需重新登录。</small>
         </div>
       </section>

@@ -35,7 +35,10 @@ export function WorkspaceToolDock({
   onOpenRealAnalysis,
 }: WorkspaceToolDockProps) {
   return (
-    <nav className="tool-dock workspace-tool-dock" aria-label="研究工具">
+    <nav
+      className={`tool-dock workspace-tool-dock ${inspectorOpen ? "is-open" : ""}`}
+      aria-label="研究工具"
+    >
       {tools.map(({ key, label, Icon }) => {
         const selected = inspectorOpen && activeTab === key;
         return (

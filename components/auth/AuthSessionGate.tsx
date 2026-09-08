@@ -15,6 +15,18 @@ import type { BioflowSessionUser } from "@/lib/access-control";
 
 let sessionVerified = false;
 let verifiedUser: BioflowSessionUser | null = null;
+let verifiedToken = "";
+
+function resetCachedSession() {
+  sessionVerified = false;
+  verifiedUser = null;
+  verifiedToken = "";
+}
+
+/** 登录身份切换时清掉根布局中的旧用户快照，避免研究员权限泄漏到管理员界面。 */
+export function invalidateAuthSessionCache() {
+  resetCachedSession();
+}
 
 const AuthSessionContext = createContext<{ user: BioflowSessionUser | null }>({ user: null });
 
@@ -30,21 +42,21 @@ export function AuthSessionGate({ children }: { children: ReactNode }) {
 
   const verifySession = useCallback(async () => {
     if (pathname === "/login") {
+      resetCachedSession();
       setUser(null);
       setStatus("ready");
       return;
     }
     const accessToken = getAccessToken();
     if (!accessToken) {
-      sessionVerified = false;
-      verifiedUser = null;
+      resetCachedSession();
       setUser(null);
       setStatus("checking");
       const next = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
       router.replace(`/login${next}`);
       return;
     }
-    if (sessionVerified) {
+    if (sessionVerified && verifiedToken === accessToken && verifiedUser) {
       setUser(verifiedUser);
       setStatus("ready");
       return;
@@ -52,13 +64,15 @@ export function AuthSessionGate({ children }: { children: ReactNode }) {
     setStatus("checking");
     try {
       const response: LoginResponse = await bioflowApi.restoreSession();
+      // 登录状态可能在请求期间被切换；旧请求不能覆盖新身份。
+      if (getAccessToken() !== accessToken) return;
       sessionVerified = true;
       verifiedUser = response.user;
+      verifiedToken = accessToken;
       setUser(response.user);
       setStatus("ready");
     } catch (error) {
-      sessionVerified = false;
-      verifiedUser = null;
+      resetCachedSession();
       setUser(null);
       clearAccessToken();
       if (error instanceof ApiClientError && error.status === 401) {

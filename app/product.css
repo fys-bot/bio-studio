@@ -3241,7 +3241,7 @@ html {
   }
 
   .canvas-toolbar-actions {
-    justify-content: space-between;
+    justify-content: flex-start;
     width: 100%;
   }
 }

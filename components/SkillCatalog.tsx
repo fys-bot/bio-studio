@@ -981,7 +981,7 @@ export function SkillDetail({ skillId }: { skillId: string }) {
         </section>
       )}
 
-      <footer className="skill-detail-footer">
+      {/* <footer className="skill-detail-footer">
         <span>
           <b>{skill.enabled ? "技能已启用" : "技能未启用"}</b>
           <small>{spec.level === "verified" ? spec.badge : "创建任务后仍需绑定专用执行器"}</small>
@@ -996,7 +996,7 @@ export function SkillDetail({ skillId }: { skillId: string }) {
         >
           {applying ? "创建任务中" : skill.enabled ? "创建任务" : "启用并创建任务"}
         </Button>
-      </footer>
+      </footer> */}
       {applyError && (
         <Alert className="skill-detail-error" severity="error" onClose={() => setApplyError("")}>
           {applyError}

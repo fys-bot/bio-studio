@@ -44,7 +44,7 @@ Browser
 | `files:read` | 是 | 是 | 是 | 文件目录、正文、原件 |
 | `files:write` | 是 | 否 | 是 | 上传、重解析、删除文件 |
 | `skills:read` | 是 | 是 | 是 | 能力中心 |
-| `skills:write` | 否 | 否 | 是 | 创建技能、启停技能 |
+| `skills:write` | 是 | 否 | 是 | 创建、启停、移除当前工作区技能 |
 | `runs:execute` | 是 | 否 | 是 | RAG、LLM 计划、Runner、PyDESeq2 |
 | `reviews:write` | 是 | 是 | 是 | 研究笔记/审阅意见 |
 | `users:manage` | 否 | 否 | 是 | 用户和权限管理、测试数据清理 |

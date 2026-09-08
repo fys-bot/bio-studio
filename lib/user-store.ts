@@ -22,7 +22,7 @@ export type ManagedUser = BioflowSessionUser & {
   updatedAt: string;
 };
 
-type UserStore = { version: 1; users: StoredUser[] };
+type UserStore = { version: 1 | 2; users: StoredUser[] };
 
 const storePath = () =>
   path.join(
@@ -93,11 +93,25 @@ function readStore(): UserStore {
   const target = storePath();
   try {
     const parsed = JSON.parse(fs.readFileSync(target, "utf8")) as UserStore;
-    if (parsed.version === 1 && Array.isArray(parsed.users)) return parsed;
+    if ((parsed.version === 1 || parsed.version === 2) && Array.isArray(parsed.users)) {
+      if (parsed.version === 1) {
+        // 仅迁移默认研究员一次，不覆盖管理员为其他用户做出的细粒度权限调整。
+        const defaultResearcher = parsed.users.find(
+          (user) => user.id === "user-researcher-demo" && user.role === "researcher",
+        );
+        if (defaultResearcher && !defaultResearcher.permissions.includes("skills:write")) {
+          defaultResearcher.permissions = [...defaultResearcher.permissions, "skills:write"];
+          defaultResearcher.updatedAt = new Date().toISOString();
+        }
+        parsed.version = 2;
+        writeStore(parsed);
+      }
+      return parsed;
+    }
   } catch {
     // 首次启动或损坏时重新建立演示账号；运行目录不会提交到 Git。
   }
-  const created = { version: 1 as const, users: bootstrapAccounts.map(storedUser) };
+  const created = { version: 2 as const, users: bootstrapAccounts.map(storedUser) };
   writeStore(created);
   return created;
 }

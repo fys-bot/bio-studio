@@ -25,7 +25,7 @@ export const permissionLabels: Record<BioflowPermission, string> = {
   "files:read": "查看项目文件",
   "files:write": "上传、重新解析与删除文件",
   "skills:read": "查看能力中心",
-  "skills:write": "管理科研技能",
+  "skills:write": "管理当前工作区技能",
   "runs:execute": "执行 Agent 与计算工作流",
   "reviews:write": "填写审阅意见",
   "users:manage": "管理用户与权限",
@@ -37,13 +37,14 @@ export const roleDefinitions: Record<
 > = {
   researcher: {
     label: "研究员",
-    description: "创建任务、上传材料、运行智能体与真实计算。",
+    description: "创建任务、管理当前工作区技能、上传材料、运行智能体与真实计算。",
     permissions: [
       "tasks:read",
       "tasks:write",
       "files:read",
       "files:write",
       "skills:read",
+      "skills:write",
       "runs:execute",
       "reviews:write",
     ],

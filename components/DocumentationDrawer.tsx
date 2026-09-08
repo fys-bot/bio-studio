@@ -353,7 +353,7 @@ const dataSections: AtomicSection[] = [
     summary: "零 Docker、单命令启动的混合持久化，不是纯内存 Demo。",
     items: [
       ["state.json", "任务、对话、笔记、画布布局、运行事件和 RAG Trace。"],
-      ["catalog-state.json", "技能启用状态与管理员创建的声明式技能。"],
+      ["catalog-state.json", "当前工作区技能启用、移除状态与研究员创建的声明式技能。"],
       ["auth-users / projects", "用户 scrypt 哈希、角色权限和项目目录。"],
       ["research.sqlite", "文档解析与 PyDESeq2 作业记录，使用 SQLite WAL。"],
     ],

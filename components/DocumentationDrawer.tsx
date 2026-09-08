@@ -20,7 +20,7 @@ type DocumentationDrawerProps = {
   activeTaskId: string;
 };
 
-type DocumentationTab = "guide" | "architecture" | "api" | "frontend" | "rag";
+type DocumentationTab = "guide" | "architecture" | "api" | "frontend" | "rag" | "data";
 
 type AtomicSection = {
   id: string;
@@ -89,7 +89,10 @@ const architectureSections: AtomicSection[] = [
     items: [
       ["前端", "令牌只保存在 sessionStorage，由 authorizedFetch 统一注入 Authorization。"],
       ["服务端", "登录接口校验同源、账号密码和角色，受保护 API 统一验证签名与过期时间。"],
-      ["当前角色", "研究员已开放；审阅者与管理员保留角色契约但明确标记开发中。"],
+      [
+        "当前角色",
+        "研究员、审阅者和管理员均已实现；管理员可新增用户、分配角色、细调权限和停用账号。",
+      ],
       ["验收", "清除令牌后访问 / 或 /files 必须跳转 /login；伪造 Token 返回 401。"],
     ],
   },
@@ -159,48 +162,91 @@ const architectureSections: AtomicSection[] = [
       ["数据边界", "真实结果、演示种子与 Adapter 能力在界面和文档中明确区分。"],
     ],
   },
+  {
+    id: "persistence",
+    title: "本机持久化与生产迁移",
+    summary: "当前不是无数据库，而是为面试机设计的 JSON + SQLite + Qdrant + 文件混合存储。",
+    items: [
+      ["任务域", "data/state.json 保存任务、对话、笔记、布局、运行事件和 RAG Trace。"],
+      [
+        "科研域",
+        "research.sqlite 保存文档/作业记录，Qdrant Local 保存真实向量，objects/jobs 保存原件与产物。",
+      ],
+      ["账号与项目", "auth-users.json 保存 scrypt 哈希和权限；projects.json 保存项目目录。"],
+      [
+        "生产目标",
+        "PostgreSQL + 对象存储 + Qdrant Server + 专用队列 Worker；应用内可下载完整 DDL。",
+      ],
+    ],
+  },
 ];
 
 const apiGroups: AtomicSection[] = [
   {
     id: "api-auth",
-    title: "身份与会话",
-    summary: "创建、验证和清理 Bearer Token。",
+    title: "1. 鉴权与用户",
+    summary: "Bearer 会话、三角色登录和管理员用户权限闭环。",
     items: [
       ["POST /api/auth/login", "校验账号、密码、角色和 Origin，返回 HMAC-SHA256 访问令牌。"],
       ["GET /api/auth/session", "验证令牌签名、角色与过期时间，并恢复当前会话。"],
       ["POST /api/auth/logout", "前端清除 sessionStorage 中的访问令牌。"],
+      ["GET/POST/PATCH /api/admin/users", "管理员读取、新增、分配角色/权限、重置密码和停用用户。"],
     ],
   },
   {
-    id: "api-task",
-    title: "任务、计划与对话",
-    summary: "覆盖任务主状态机和用户交互上下文。",
+    id: "api-project-task",
+    title: "2. 项目与任务",
+    summary: "项目目录、任务状态机、澄清、审批、对话与笔记。",
     items: [
+      ["GET/POST/DELETE /api/projects", "读取、新建和二次确认后删除项目目录。"],
       ["GET/DELETE /api/tasks/:taskId", "读取或删除任务、节点、文件、运行与产物快照。"],
       ["POST /api/tasks", "创建真实任务，可绑定 skillId、fileIds 和 executionMode。"],
       ["POST /api/tasks/:taskId/clarifications", "提交四项研究上下文。"],
-      ["POST /api/agent/plan", "通过 SSE 生成并持久化可审批计划。"],
       ["POST /api/tasks/:taskId/approve", "批准计划并解除真实计算阻塞。"],
       ["GET/PUT /api/tasks/:taskId/conversation", "读取和保存任务级对话。"],
+      ["GET/PUT /api/tasks/:taskId/notes", "读取和保存任务级研究笔记或审阅意见。"],
     ],
   },
   {
     id: "api-files",
-    title: "文件与 RAG",
-    summary: "上传、预览、重新解析、下载和检索。",
+    title: "3. 文件与解析",
+    summary: "上传、预览、重新解析、下载和原件/索引安全删除。",
     items: [
       ["GET /api/files", "读取真实 Research Worker 文档目录。"],
       ["POST /api/files/profile?taskId=:taskId", "上传并按格式策略解析、清洗、分块和索引。"],
       ["GET /api/files/:fileId", "读取受限正文、表格、解析器与索引状态。"],
       ["GET /api/files/:fileId/original", "鉴权后内联预览或下载原文件。"],
       ["POST /api/files/:fileId/reparse", "重新执行解析与索引。"],
-      ["POST /api/rag/query?taskId=:taskId", "生成限定任务文件范围的 RAG Trace。"],
+      ["DELETE /api/files/:fileId", "同步删除 SQLite 记录、Qdrant 向量、原件与任务绑定。"],
+    ],
+  },
+  {
+    id: "api-rag",
+    title: "4. RAG",
+    summary: "任务文件范围内的混合检索和分阶段审计。",
+    items: [
+      ["GET/POST /api/rag/query", "查询 Trace 历史或执行 Qdrant + BM25 + RRF。"],
+      ["GET /api/rag/traces/:traceId", "读取完整 Trace、来源、分数和最终决策。"],
+      [
+        "GET /api/rag/traces/:traceId/:stage",
+        "按 documents/chunks/retrieval/rerank/graph/grounding/tools 查看。",
+      ],
+      ["GET /api/rag/traces/:traceId/events", "以一次性 SSE 读取已完成 Trace。"],
+    ],
+  },
+  {
+    id: "api-plan",
+    title: "5. Agent 计划与 SSE",
+    summary: "真实模型计划、等待心跳、失败定位和任务持久化。",
+    items: [
+      ["POST /api/agent/plan", "JSON 或 SSE；推送校验、Worker、LLM 回退、等待、持久化和完成事件。"],
+      ["Agent mode", "快速/标准/深度研究分别传递 low/medium/high reasoning effort。"],
+      ["错误合同", "建立流后通过 plan.failed 返回 attempts、code、hint 和失败阶段。"],
     ],
   },
   {
     id: "api-runs",
-    title: "运行、SSE 与产物",
+    title: "6. 运行与计算",
     summary: "运行实例、事件恢复、真实计算和产物下载。",
     items: [
       ["POST /api/runs?taskId=:taskId", "创建工作流运行并返回 runId。"],
@@ -208,7 +254,32 @@ const apiGroups: AtomicSection[] = [
       ["POST /api/runs/:runId/cancel", "取消当前运行。"],
       ["POST /api/runs/:runId/nodes/:nodeId/retry", "重试失败节点。"],
       ["POST/GET /api/tasks/:taskId/analysis", "提交、查询、取消和流式跟踪 PyDESeq2。"],
+      [
+        "GET /api/tasks/:taskId/analysis/:name",
+        "下载 results.csv、volcano.png、report.md 与 analysis.py。",
+      ],
+    ],
+  },
+  {
+    id: "api-skill-layout",
+    title: "7. 技能与工作流布局",
+    summary: "技能目录、声明式创建、启停和画布版本。",
+    items: [
+      ["GET/POST /api/skills", "搜索分页技能或由管理员创建声明式技能。"],
+      ["GET/PATCH /api/skills/:skillId", "读取技能详情或修改启用状态。"],
       ["GET/PUT/POST /api/workflows/:id/layout", "读取、自动保存和创建画布布局版本。"],
+      ["GET /api/structures/:accession", "读取 PDB/CIF 结构 Adapter 状态和降级结果。"],
+    ],
+  },
+  {
+    id: "api-diagnostics",
+    title: "8. 演示与诊断",
+    summary: "受控演示配置、重置、测试清理和交付文档。",
+    items: [
+      ["GET/POST /api/demo/config", "读取或更新演示配置。"],
+      ["POST /api/demo/reset / cleanup", "仅开发环境重置演示或由管理员清理集成夹具。"],
+      ["GET /api/research/openapi", "下载 FastAPI Research Service OpenAPI。"],
+      ["GET /api/docs/:document", "下载完整 API Markdown 或 PostgreSQL DDL。"],
     ],
   },
 ];
@@ -307,6 +378,56 @@ const ragSections: AtomicSection[] = [
   },
 ];
 
+const dataSections: AtomicSection[] = [
+  {
+    id: "data-local",
+    title: "1. 当前本机数据层",
+    summary: "零 Docker、单命令启动的混合持久化，不是纯内存 Demo。",
+    items: [
+      ["state.json", "任务、对话、笔记、画布布局、运行事件和 RAG Trace。"],
+      ["catalog-state.json", "技能启用状态与管理员创建的声明式技能。"],
+      ["auth-users / projects", "用户 scrypt 哈希、角色权限和项目目录。"],
+      ["research.sqlite", "文档解析与 PyDESeq2 作业记录，使用 SQLite WAL。"],
+    ],
+  },
+  {
+    id: "data-binary",
+    title: "2. 向量、原件与产物",
+    summary: "结构化元数据、向量索引和二进制对象分开保存。",
+    items: [
+      ["Qdrant Local", "保存 384 维 FastEmbed 向量、片段和定位 Metadata。"],
+      ["objects/", "保存用户上传原件；预览和下载均经过 Bearer 鉴权。"],
+      ["jobs/", "保存 PyDESeq2 日志、结果 CSV、火山图、报告和分析脚本。"],
+      ["删除", "用户文件删除会同步清理 SQLite、Qdrant、原件和任务绑定。"],
+    ],
+  },
+  {
+    id: "data-production",
+    title: "3. 生产目标模型",
+    summary: "PostgreSQL 负责事务数据，对象存储和 Qdrant Server 各自承担明确职责。",
+    items: [
+      ["身份", "users、roles、permissions、sessions 与项目成员关系。"],
+      ["任务", "projects、tasks、workflow_nodes/edges/layouts、runs 与 run_events。"],
+      ["科研", "documents、document_chunks、rag_traces、analysis_jobs 与 artifacts。"],
+      ["交付", "可下载的 SQL 包含约束、索引、触发器、角色和权限种子。"],
+    ],
+  },
+  {
+    id: "data-boundary",
+    title: "4. 为什么不直接要求 Docker",
+    summary: "面试现场先保证可运行，再展示清晰的生产迁移边界。",
+    items: [
+      [
+        "操作成本",
+        "本地只需 Node、Python 和 npm run dev，不要求安装 PostgreSQL、Redis 或 Docker Desktop。",
+      ],
+      ["数据真实性", "简化的是运维拓扑，不是文件解析、向量、SSE 或 PyDESeq2 计算。"],
+      ["生产迁移", "DTO、API 和实体关系已经固定，可逐层替换存储而不重写前端业务组件。"],
+      ["诚实说明", "本地方案不具备生产多租户、HA、强审计、配额和隔离能力。"],
+    ],
+  },
+];
+
 function AtomicAccordion({
   section,
   defaultExpanded = false,
@@ -373,6 +494,7 @@ export function DocumentationDrawer({ open, onClose, activeTaskId }: Documentati
               ["api", "API"],
               ["frontend", "前端接入"],
               ["rag", "RAG 链路"],
+              ["data", "数据与 DDL"],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -428,7 +550,7 @@ export function DocumentationDrawer({ open, onClose, activeTaskId }: Documentati
             <>
               <div className="documentation-section-head">
                 <small>ARCHITECTURE / MODULE BOUNDARIES</small>
-                <h3>七个可独立验收的模块</h3>
+                <h3>八个可独立验收的模块</h3>
               </div>
               {renderSections(architectureSections)}
             </>
@@ -441,18 +563,44 @@ export function DocumentationDrawer({ open, onClose, activeTaskId }: Documentati
                   <small>HTTP API / AUTHENTICATED CONTRACTS</small>
                   <h3>按业务域查看接口</h3>
                 </div>
-                <Button
-                  size="small"
-                  startIcon={<DownloadRounded />}
-                  onClick={() =>
-                    void downloadAuthorizedFile(
-                      "/api/research/openapi",
-                      "bioflow-research-openapi.json",
-                    )
-                  }
-                >
-                  下载 OpenAPI
-                </Button>
+                <div className="documentation-download-actions">
+                  <Button
+                    size="small"
+                    startIcon={<DownloadRounded />}
+                    onClick={() =>
+                      void downloadAuthorizedFile(
+                        "/api/docs/api-contract?download=1",
+                        "BioFlow-Studio-API接口规范.md",
+                      )
+                    }
+                  >
+                    API 规范
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<DownloadRounded />}
+                    onClick={() =>
+                      void downloadAuthorizedFile(
+                        "/api/docs/database-ddl?download=1",
+                        "BioFlow-Studio-数据库设计.sql",
+                      )
+                    }
+                  >
+                    数据库 DDL
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<DownloadRounded />}
+                    onClick={() =>
+                      void downloadAuthorizedFile(
+                        "/api/research/openapi",
+                        "bioflow-research-openapi.json",
+                      )
+                    }
+                  >
+                    Worker OpenAPI
+                  </Button>
+                </div>
               </div>
               {renderSections(apiGroups)}
             </>
@@ -484,6 +632,37 @@ export function DocumentationDrawer({ open, onClose, activeTaskId }: Documentati
                 <p>
                   Cross-encoder、视觉 OCR、知识图谱和完整 Mol* 均通过 Adapter
                   接入；未配置时界面会明确显示降级状态，不包装成生产级真实能力。
+                </p>
+              </div>
+            </>
+          )}
+
+          {activeTab === "data" && (
+            <>
+              <div className="documentation-section-head documentation-section-actions">
+                <div>
+                  <small>DATA / LOCAL RUNTIME AND PRODUCTION TARGET</small>
+                  <h3>当前数据层与生产迁移</h3>
+                </div>
+                <Button
+                  size="small"
+                  startIcon={<DownloadRounded />}
+                  onClick={() =>
+                    void downloadAuthorizedFile(
+                      "/api/docs/database-ddl?download=1",
+                      "BioFlow-Studio-数据库设计.sql",
+                    )
+                  }
+                >
+                  下载 PostgreSQL DDL
+                </Button>
+              </div>
+              {renderSections(dataSections)}
+              <div className="documentation-note">
+                <b>面试时如何表述</b>
+                <p>
+                  当前是为了零 Docker 交付采用的真实本机混合持久化；生产目标已经用规范化 SQL
+                  建模，但不能把本地 JSON/SQLite 描述成生产多租户数据库。
                 </p>
               </div>
             </>

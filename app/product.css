@@ -831,6 +831,21 @@
   font-size: 9px;
 }
 
+.documentation-download-actions {
+  display: flex;
+  max-width: 360px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.documentation-download-actions .MuiButton-root {
+  min-height: 30px;
+  border: 1px solid #d6dfda;
+  background: #fff;
+  white-space: nowrap;
+}
+
 @media (max-width: 700px) {
   .documentation-drawer {
     width: 100vw;
@@ -857,6 +872,13 @@
 
   .documentation-section-actions {
     align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .documentation-download-actions {
+    width: 100%;
+    max-width: none;
+    justify-content: flex-start;
   }
 }
 

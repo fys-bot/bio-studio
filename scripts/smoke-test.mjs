@@ -112,9 +112,17 @@ log("项目、任务、能力中心、技能详情和文件中心路由可访问
 const login = await request("/api/auth/login", {
   method: "POST",
   headers: { "content-type": "application/json", origin: base },
-  body: JSON.stringify({ username: "researcher", password: "bioflow2026" }),
+  body: JSON.stringify({ username: "researcher", password: "bioflow2026", role: "researcher" }),
 });
 if (!login.accessToken || !login.authenticated) throw new Error("登录接口未返回访问令牌");
+const apiContract = await request("/api/docs/api-contract");
+if (!String(apiContract).includes("BioFlow Studio API")) {
+  throw new Error("API 接口规范下载内容不完整");
+}
+const databaseDdl = await request("/api/docs/database-ddl");
+if (!String(databaseDdl).includes("CREATE TABLE")) {
+  throw new Error("数据库 DDL 下载内容不完整");
+}
 log("页面、文件解析与工作流布局接口登录鉴权");
 const structure = await request("/api/structures/AF-Q01094-F1?format=pdb");
 if (structure.state?.status !== "ready" || structure.state?.source !== "pdb") {

@@ -18,7 +18,15 @@ export function AuthSessionGate({ children }: { children: ReactNode }) {
       setStatus("ready");
       return;
     }
-    if (sessionVerified && getAccessToken()) {
+    const accessToken = getAccessToken();
+    if (!accessToken) {
+      sessionVerified = false;
+      setStatus("checking");
+      const next = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
+      router.replace(`/login${next}`);
+      return;
+    }
+    if (sessionVerified) {
       setStatus("ready");
       return;
     }

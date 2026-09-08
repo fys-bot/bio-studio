@@ -4,7 +4,16 @@ import BiotechOutlined from "@mui/icons-material/BiotechOutlined";
 import LockOutlined from "@mui/icons-material/LockOutlined";
 import PersonOutlineRounded from "@mui/icons-material/PersonOutlineRounded";
 import ScienceOutlined from "@mui/icons-material/ScienceOutlined";
-import { Alert, Button, CircularProgress, InputAdornment, TextField } from "@mui/material";
+import VisibilityOffOutlined from "@mui/icons-material/VisibilityOffOutlined";
+import VisibilityOutlined from "@mui/icons-material/VisibilityOutlined";
+import {
+  Alert,
+  Button,
+  CircularProgress,
+  IconButton,
+  InputAdornment,
+  TextField,
+} from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 import { LoginMoleculeScene } from "@/components/auth/LoginMoleculeScene";
@@ -15,6 +24,7 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const [username, setUsername] = useState("researcher");
   const [password, setPassword] = useState("bioflow2026");
+  const [passwordVisible, setPasswordVisible] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -82,7 +92,7 @@ function LoginContent() {
           />
           <TextField
             label="密码"
-            type="password"
+            type={passwordVisible ? "text" : "password"}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"
@@ -92,6 +102,22 @@ function LoginContent() {
                 startAdornment: (
                   <InputAdornment position="start">
                     <LockOutlined fontSize="small" />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      edge="end"
+                      size="small"
+                      aria-label={passwordVisible ? "隐藏演示密码" : "显示演示密码"}
+                      onClick={() => setPasswordVisible((visible) => !visible)}
+                    >
+                      {passwordVisible ? (
+                        <VisibilityOffOutlined fontSize="small" />
+                      ) : (
+                        <VisibilityOutlined fontSize="small" />
+                      )}
+                    </IconButton>
                   </InputAdornment>
                 ),
               },
@@ -105,7 +131,7 @@ function LoginContent() {
         </form>
         <div className="login-demo-note">
           <b>面试演示账号已预填</b>
-          <span>直接登录即可，访问令牌有效期 8 小时。</span>
+          <span>账号 researcher · 密码 bioflow2026 · 服务重启后需重新登录。</span>
         </div>
       </section>
     </main>

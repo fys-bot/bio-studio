@@ -288,7 +288,6 @@ export default function Home() {
   const [guideOpen, setGuideOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [skipBoot, setSkipBoot] = useState(false);
   const [bootAttempt, setBootAttempt] = useState(0);
   const [initializationError, setInitializationError] = useState("");
   const [taskLoading, setTaskLoading] = useState(false);
@@ -1168,7 +1167,7 @@ ${task?.goal || config.goal}
   if (!authed || !task) {
     return (
       <main className="boot">
-        {!skipBoot && <ParticleLoader onSkip={() => setSkipBoot(true)} />}
+        <ParticleLoader />
         <div className="boot-content">
           <div className="boot-mark">BIOFLOW / EVIDENCE WORKSPACE</div>
           {initializationError ? (
@@ -1179,7 +1178,6 @@ ${task?.goal || config.goal}
                 className="boot-retry"
                 onClick={() => {
                   setInitializationError("");
-                  setSkipBoot(false);
                   setBootAttempt((attempt) => attempt + 1);
                 }}
               >
@@ -1188,8 +1186,8 @@ ${task?.goal || config.goal}
             </>
           ) : (
             <>
-              <p>{skipBoot ? "正在进入安全科研工作区…" : "正在初始化安全科研工作区…"}</p>
-              <small>正在连接任务状态 · 加载证据索引 · 可随时跳过动画</small>
+              <p>正在初始化安全科研工作区…</p>
+              <small>正在连接任务状态 · 加载证据索引 · 恢复工作流上下文</small>
             </>
           )}
         </div>

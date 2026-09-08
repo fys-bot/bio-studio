@@ -2,8 +2,6 @@
 
 import { useEffect, useRef } from "react";
 
-type ParticleLoaderProps = { onSkip?: () => void };
-
 const helixParticles = Array.from({ length: 46 }, (_, index) => {
   const ratio = index / 45;
   const phase = ratio * Math.PI * 5.2;
@@ -16,7 +14,7 @@ const helixParticles = Array.from({ length: 46 }, (_, index) => {
   };
 });
 
-export function ParticleLoader({ onSkip }: ParticleLoaderProps) {
+export function ParticleLoader() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -119,11 +117,6 @@ export function ParticleLoader({ onSkip }: ParticleLoaderProps) {
           </span>
         ))}
       </div>
-      {onSkip && (
-        <button className="boot-skip" onClick={onSkip}>
-          跳过动画，继续加载
-        </button>
-      )}
     </>
   );
 }

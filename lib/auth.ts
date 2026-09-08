@@ -1,6 +1,15 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { headers } from "next/headers";
-const secret = () => process.env.BIOFLOW_SESSION_SECRET || "local-demo-secret-change-in-production";
+
+const authRuntimeRegistry = globalThis as typeof globalThis & {
+  __bioflowSessionNonce?: string;
+};
+
+// 演示工作台要求服务重启后重新登录；globalThis 可避免开发热更新误伤当前会话。
+authRuntimeRegistry.__bioflowSessionNonce ??= randomBytes(24).toString("base64url");
+
+const secret = () =>
+  `${process.env.BIOFLOW_SESSION_SECRET || "local-demo-secret-change-in-production"}:${authRuntimeRegistry.__bioflowSessionNonce}`;
 
 export type SessionPayload = {
   sub: string;

@@ -1,15 +1,20 @@
 "use client";
 
+import AccountTreeRounded from "@mui/icons-material/AccountTreeRounded";
 import AutorenewRounded from "@mui/icons-material/AutorenewRounded";
 import CheckCircleRounded from "@mui/icons-material/CheckCircleRounded";
 import ErrorRounded from "@mui/icons-material/ErrorRounded";
 import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
+import FormatListBulletedRounded from "@mui/icons-material/FormatListBulletedRounded";
 import MonitorHeartRounded from "@mui/icons-material/MonitorHeartRounded";
 import PendingRounded from "@mui/icons-material/PendingRounded";
-import { LinearProgress } from "@mui/material";
+import { LinearProgress, ToggleButton, ToggleButtonGroup } from "@mui/material";
+import { useEffect, useMemo, useState } from "react";
 import type { ApiStreamEvent } from "@/lib/api-client";
 
 export type RunStreamEvent = ApiStreamEvent;
+type TraceViewMode = "timeline" | "canvas";
+
 export type StreamStatus =
   | "idle"
   | "blocked"
@@ -162,6 +167,42 @@ function initialStateCopy(status: StreamStatus) {
   return ["等待启动", "运行工作流后，这里会实时输出每一个处理步骤"];
 }
 
+function streamEventKey(event: RunStreamEvent) {
+  return `${event.runId}:${event.id}`;
+}
+
+function payloadValue(value: unknown) {
+  if (Array.isArray(value)) return value.join("、");
+  if (value && typeof value === "object") return JSON.stringify(value);
+  return String(value ?? "-");
+}
+
+function EventDetails({ event }: { event: RunStreamEvent }) {
+  return (
+    <div className="run-trace-detail">
+      <dl>
+        <div>
+          <dt>事件类型</dt>
+          <dd>{event.type}</dd>
+        </div>
+        <div>
+          <dt>发生时间</dt>
+          <dd>{new Date(event.createdAt).toLocaleString("zh-CN", { hour12: false })}</dd>
+        </div>
+        <div>
+          <dt>执行阶段</dt>
+          <dd>{stringValue(event.payload.stage) || "运行工作流"}</dd>
+        </div>
+        <div>
+          <dt>节点</dt>
+          <dd>{event.nodeId ? nodeLabels[event.nodeId] || event.nodeId : "全局运行"}</dd>
+        </div>
+      </dl>
+      <pre>{JSON.stringify(event.payload, null, 2)}</pre>
+    </div>
+  );
+}
+
 export function RunStreamTrace({
   events,
   open,
@@ -173,7 +214,10 @@ export function RunStreamTrace({
   streamStatus: StreamStatus;
   onToggle: () => void;
 }) {
+  const [viewMode, setViewMode] = useState<TraceViewMode>("timeline");
+  const [selectedEventKey, setSelectedEventKey] = useState("");
   const latestEvent = events.at(-1);
+  const latestEventKey = latestEvent ? streamEventKey(latestEvent) : "";
   const [emptyTitle, emptyDetail] = initialStateCopy(streamStatus);
   const planning = events.some((event) => event.runId.startsWith("planning:"));
   const rawProgress = latestEvent?.payload.progress;
@@ -184,6 +228,23 @@ export function RunStreamTrace({
         ? 100
         : undefined;
   const active = ["starting", "connecting", "connected", "reconnecting"].includes(streamStatus);
+  const canvasEvents = useMemo(() => events.slice(-12), [events]);
+  const canvasNodes = useMemo(
+    () =>
+      canvasEvents.map((event, index) => ({
+        event,
+        x: 24 + index * 154,
+        y: index % 2 === 0 ? 24 : 116,
+      })),
+    [canvasEvents],
+  );
+  const canvasWidth = Math.max(620, (canvasNodes.at(-1)?.x || 0) + 166);
+  const selectedEvent =
+    events.find((event) => streamEventKey(event) === selectedEventKey) || latestEvent;
+
+  useEffect(() => {
+    if (latestEventKey) setSelectedEventKey(latestEventKey);
+  }, [latestEventKey]);
 
   return (
     <section className={`run-stream-trace ${open ? "is-open" : ""}`} data-guide="evidence">
@@ -221,68 +282,169 @@ export function RunStreamTrace({
       )}
 
       {open && (
-        <div className="run-trace-events" aria-live="polite">
-          {events.length === 0 && (
-            <div className="run-trace-empty">
-              <PendingRounded sx={{ fontSize: 18 }} />
-              <span>{emptyDetail}</span>
+        <div className="run-trace-expanded">
+          <div className="run-trace-viewbar">
+            <span>
+              <b>执行审计</b>
+              <small>时间线逐条核对，通路画布展示阶段关系。</small>
+            </span>
+            <ToggleButtonGroup
+              exclusive
+              size="small"
+              value={viewMode}
+              onChange={(_, value: TraceViewMode | null) => value && setViewMode(value)}
+              aria-label="运行过程展示方式"
+            >
+              <ToggleButton value="timeline" aria-label="时间线视图">
+                <FormatListBulletedRounded sx={{ fontSize: 15 }} />
+                时间线
+              </ToggleButton>
+              <ToggleButton value="canvas" aria-label="通路画布视图">
+                <AccountTreeRounded sx={{ fontSize: 15 }} />
+                通路画布
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </div>
+
+          {viewMode === "timeline" ? (
+            <div className="run-trace-events" aria-live="polite">
+              {events.length === 0 && (
+                <div className="run-trace-empty">
+                  <PendingRounded sx={{ fontSize: 18 }} />
+                  <span>{emptyDetail}</span>
+                </div>
+              )}
+              {events.map((event, index) => {
+                const tone = eventTone(event, index === events.length - 1);
+                return (
+                  <details className={`run-trace-event ${tone}`} key={streamEventKey(event)}>
+                    <summary>
+                      <span className="run-trace-index">{String(index + 1).padStart(2, "0")}</span>
+                      <span className="run-trace-tone">
+                        <ToneIcon tone={tone} />
+                      </span>
+                      <span className="run-trace-copy">
+                        <b>{eventLabels[event.type] || event.type}</b>
+                        <small>{eventSummary(event)}</small>
+                      </span>
+                      <span className="run-trace-meta">
+                        {event.nodeId && <b>{nodeLabels[event.nodeId] || event.nodeId}</b>}
+                        {typeof event.payload.step === "number" && (
+                          <b>
+                            第 {String(event.payload.step)} /{" "}
+                            {String(event.payload.totalSteps || "-")} 步
+                          </b>
+                        )}
+                        <time>
+                          {new Date(event.createdAt).toLocaleTimeString("zh-CN", {
+                            hour12: false,
+                          })}
+                        </time>
+                      </span>
+                      <ExpandMoreRounded sx={{ fontSize: 15 }} />
+                    </summary>
+                    <EventDetails event={event} />
+                  </details>
+                );
+              })}
             </div>
-          )}
-          {events.map((event, index) => {
-            const tone = eventTone(event, index === events.length - 1);
-            return (
-              <details className={`run-trace-event ${tone}`} key={`${event.runId}-${event.id}`}>
-                <summary>
-                  <span className="run-trace-index">{String(index + 1).padStart(2, "0")}</span>
-                  <span className="run-trace-tone">
-                    <ToneIcon tone={tone} />
-                  </span>
-                  <span className="run-trace-copy">
-                    <b>{eventLabels[event.type] || event.type}</b>
-                    <small>{eventSummary(event)}</small>
-                  </span>
-                  <span className="run-trace-meta">
-                    {event.nodeId && <b>{nodeLabels[event.nodeId] || event.nodeId}</b>}
-                    {typeof event.payload.step === "number" && (
-                      <b>
-                        第 {String(event.payload.step)} / {String(event.payload.totalSteps || "-")}{" "}
-                        步
-                      </b>
-                    )}
-                    <time>
-                      {new Date(event.createdAt).toLocaleTimeString("zh-CN", { hour12: false })}
-                    </time>
-                  </span>
-                  <ExpandMoreRounded sx={{ fontSize: 15 }} />
-                </summary>
-                <div className="run-trace-detail">
+          ) : (
+            <div className="run-trace-canvas-shell" aria-live="polite">
+              <div className="run-trace-canvas-viewport">
+                {canvasEvents.length === 0 ? (
+                  <div className="run-trace-empty">
+                    <PendingRounded sx={{ fontSize: 18 }} />
+                    <span>{emptyDetail}</span>
+                  </div>
+                ) : (
+                  <div
+                    className="run-trace-canvas-stage"
+                    style={{ width: canvasWidth, height: 208 }}
+                  >
+                    <svg
+                      viewBox={`0 0 ${canvasWidth} 208`}
+                      preserveAspectRatio="none"
+                      aria-hidden="true"
+                    >
+                      {canvasNodes.slice(1).map((node, index) => {
+                        const previous = canvasNodes[index];
+                        const middle = (previous.x + 142 + node.x) / 2;
+                        return (
+                          <path
+                            key={`${streamEventKey(previous.event)}-${streamEventKey(node.event)}`}
+                            d={`M ${previous.x + 142} ${previous.y + 30} C ${middle} ${previous.y + 30}, ${middle} ${node.y + 30}, ${node.x} ${node.y + 30}`}
+                            className={
+                              index === canvasNodes.length - 2 && active ? "is-active" : ""
+                            }
+                          />
+                        );
+                      })}
+                    </svg>
+                    {canvasNodes.map((node, index) => {
+                      const tone = eventTone(node.event, index === canvasNodes.length - 1);
+                      const selected =
+                        streamEventKey(node.event) ===
+                        (selectedEvent ? streamEventKey(selectedEvent) : "");
+                      return (
+                        <button
+                          type="button"
+                          key={streamEventKey(node.event)}
+                          className={`run-trace-canvas-node ${tone} ${selected ? "selected" : ""}`}
+                          style={{ left: node.x, top: node.y }}
+                          onClick={() => setSelectedEventKey(streamEventKey(node.event))}
+                          aria-pressed={selected}
+                        >
+                          <span className="run-trace-canvas-node-head">
+                            <ToneIcon tone={tone} />
+                            {String(events.indexOf(node.event) + 1).padStart(2, "0")}
+                          </span>
+                          <b>{eventLabels[node.event.type] || node.event.type}</b>
+                          <small>{stringValue(node.event.payload.stage) || "运行工作流"}</small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              {selectedEvent && (
+                <aside className="run-trace-canvas-inspector">
+                  <header>
+                    <span className="run-trace-tone">
+                      <ToneIcon tone={eventTone(selectedEvent, selectedEvent === latestEvent)} />
+                    </span>
+                    <div>
+                      <b>{eventLabels[selectedEvent.type] || selectedEvent.type}</b>
+                      <small>{eventSummary(selectedEvent)}</small>
+                    </div>
+                  </header>
                   <dl>
                     <div>
-                      <dt>事件类型</dt>
-                      <dd>{event.type}</dd>
+                      <dt>阶段</dt>
+                      <dd>{stringValue(selectedEvent.payload.stage) || "运行工作流"}</dd>
                     </div>
                     <div>
-                      <dt>发生时间</dt>
+                      <dt>时间</dt>
                       <dd>
-                        {new Date(event.createdAt).toLocaleString("zh-CN", { hour12: false })}
+                        {new Date(selectedEvent.createdAt).toLocaleTimeString("zh-CN", {
+                          hour12: false,
+                        })}
                       </dd>
                     </div>
-                    <div>
-                      <dt>执行阶段</dt>
-                      <dd>{stringValue(event.payload.stage) || "运行工作流"}</dd>
-                    </div>
-                    <div>
-                      <dt>节点</dt>
-                      <dd>
-                        {event.nodeId ? nodeLabels[event.nodeId] || event.nodeId : "全局运行"}
-                      </dd>
-                    </div>
+                    {Object.entries(selectedEvent.payload)
+                      .filter(([key]) => !["stage", "detail", "message"].includes(key))
+                      .slice(0, 6)
+                      .map(([key, value]) => (
+                        <div key={key}>
+                          <dt>{key}</dt>
+                          <dd>{payloadValue(value)}</dd>
+                        </div>
+                      ))}
                   </dl>
-                  <pre>{JSON.stringify(event.payload, null, 2)}</pre>
-                </div>
-              </details>
-            );
-          })}
+                  <pre>{JSON.stringify(selectedEvent.payload, null, 2)}</pre>
+                </aside>
+              )}
+            </div>
+          )}
         </div>
       )}
     </section>

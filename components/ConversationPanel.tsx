@@ -1,11 +1,16 @@
 "use client";
 
 import AddRounded from "@mui/icons-material/AddRounded";
+import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
+import ManageSearchRounded from "@mui/icons-material/ManageSearchRounded";
+import ScienceRounded from "@mui/icons-material/ScienceRounded";
 import SendRounded from "@mui/icons-material/SendRounded";
+import SpeedRounded from "@mui/icons-material/SpeedRounded";
+import { Button, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
 import type { ChangeEvent, FormEvent, KeyboardEvent } from "react";
+import { useState, type MouseEvent } from "react";
 import type { ConversationMessage } from "@/lib/domain";
-
-type AgentMode = "标准模式" | "严谨模式" | "快速模式";
+import { AGENT_MODE_OPTIONS, type AgentMode } from "@/lib/agent-mode";
 
 type ConversationPanelProps = {
   messages: ConversationMessage[];
@@ -15,7 +20,7 @@ type ConversationPanelProps = {
   onMessageTextChange: (messageText: string) => void;
   onSendMessage: () => void;
   onAddFile: () => void;
-  onAgentModeChange: () => void;
+  onAgentModeChange: (mode: AgentMode) => void;
   onOpenFailureEvidence: () => void;
   onOpenCode: () => void;
   onCopyMessage: (content: string) => void;
@@ -99,6 +104,7 @@ export function ConversationPanel({
   onFeedback,
   onFollowUp,
 }: ConversationPanelProps) {
+  const [modeAnchor, setModeAnchor] = useState<HTMLElement | null>(null);
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     onSendMessage();
@@ -116,6 +122,13 @@ export function ConversationPanel({
   };
 
   const followUpQuestions = ["解释这个参数为什么适合当前实验设计", "查看候选基因的结构证据"];
+  const selectedMode =
+    AGENT_MODE_OPTIONS.find((option) => option.value === agentMode) ?? AGENT_MODE_OPTIONS[1];
+  const modeIcon = (mode: AgentMode) => {
+    if (mode === "快速模式") return <SpeedRounded fontSize="small" />;
+    if (mode === "深度研究") return <ManageSearchRounded fontSize="small" />;
+    return <ScienceRounded fontSize="small" />;
+  };
 
   return (
     <div className="conversation">
@@ -222,14 +235,42 @@ export function ConversationPanel({
           placeholder="继续提问，或要求智能体修改分析参数…"
           aria-label="输入科研问题"
         />
-        <button
-          type="button"
+        <Button
           className="mode"
-          onClick={onAgentModeChange}
-          aria-label="切换智能体模式"
+          onClick={(event: MouseEvent<HTMLButtonElement>) => setModeAnchor(event.currentTarget)}
+          aria-label={`当前为${agentMode}，打开智能体模式菜单`}
+          aria-haspopup="menu"
+          aria-expanded={Boolean(modeAnchor)}
+          endIcon={<ExpandMoreRounded sx={{ fontSize: 16 }} />}
         >
-          {agentMode}
-        </button>
+          <span className="composer-mode-copy">
+            <b>{agentMode}</b>
+            <small>reasoning: {selectedMode.effort}</small>
+          </span>
+        </Button>
+        <Menu
+          className="agent-mode-menu"
+          anchorEl={modeAnchor}
+          open={Boolean(modeAnchor)}
+          onClose={() => setModeAnchor(null)}
+          anchorOrigin={{ vertical: "top", horizontal: "right" }}
+          transformOrigin={{ vertical: "bottom", horizontal: "right" }}
+        >
+          {AGENT_MODE_OPTIONS.map((option) => (
+            <MenuItem
+              key={option.value}
+              selected={option.value === agentMode}
+              onClick={() => {
+                onAgentModeChange(option.value);
+                setModeAnchor(null);
+              }}
+            >
+              <ListItemIcon>{modeIcon(option.value)}</ListItemIcon>
+              <ListItemText primary={option.label} secondary={option.description} />
+              <span className="agent-mode-effort">{option.effort}</span>
+            </MenuItem>
+          ))}
+        </Menu>
         <button type="submit" aria-label="发送">
           <SendRounded sx={{ fontSize: 17 }} />
         </button>

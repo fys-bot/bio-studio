@@ -1,3 +1,5 @@
+import type { AgentMode, ReasoningEffort } from "./agent-mode";
+
 /**
  * BioFlow 工作流领域模型。
  * 页面、API 客户端和可视化组件共享这组类型，避免响应结构在各处重复声明。
@@ -58,6 +60,8 @@ export type ResearchTask = {
     requiredInputs: string[];
     provider: "llm" | "demo";
     model?: string;
+    mode?: AgentMode;
+    reasoningEffort?: ReasoningEffort;
     generatedAt: string;
   };
   notes?: string;
@@ -306,6 +310,8 @@ export type RagTrace = {
   id: string;
   query: string;
   normalizedQuery: string;
+  agentMode?: AgentMode;
+  reasoningEffort?: ReasoningEffort;
   status: "completed" | "running" | "failed";
   createdAt: string;
   completedAt?: string;

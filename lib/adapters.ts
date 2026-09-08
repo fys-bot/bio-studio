@@ -1,10 +1,11 @@
 import type { RagTrace, StructureAdapterState } from "@/lib/domain";
 import type { StructurePoint } from "@/lib/structure-model";
+import type { AgentMode } from "@/lib/agent-mode";
 
 export type AgentRequest = {
   taskId: string;
   prompt: string;
-  mode: "标准模式" | "严谨模式" | "快速模式";
+  mode: AgentMode;
 };
 
 export type AgentResponse = {

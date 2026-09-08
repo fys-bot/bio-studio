@@ -3,12 +3,14 @@ import { authGuard, isSameOrigin } from "@/lib/auth";
 import { generateLlmPlan } from "@/lib/llm-client";
 import { researchJson, ResearchServiceError } from "@/lib/research-service";
 import { saveTaskPlan, taskSnapshot } from "@/lib/store";
+import { normalizeAgentMode, reasoningEffortForMode, type AgentMode } from "@/lib/agent-mode";
 
 type PlanRequest = {
   taskId: string;
   query: string;
   clarification: Record<string, string>;
   evidence: unknown[];
+  mode: AgentMode;
 };
 
 type ProviderResult = {
@@ -41,12 +43,15 @@ function errorMessage(error: unknown, fallback: string) {
 }
 
 async function generateAndPersistPlan(body: PlanRequest, emit: PlanEventEmitter) {
+  const reasoningEffort = reasoningEffortForMode(body.mode);
   emit("plan.started", {
     stage: "validation",
     step: 1,
     totalSteps: 5,
     progress: 8,
     detail: "已校验任务、研究问题、澄清信息与证据输入",
+    mode: body.mode,
+    reasoningEffort,
   });
 
   let result: ProviderResult;
@@ -69,6 +74,7 @@ async function generateAndPersistPlan(body: PlanRequest, emit: PlanEventEmitter)
           query: body.query,
           clarification: body.clarification,
           evidence: body.evidence,
+          mode: body.mode,
         }),
       },
       190_000,
@@ -80,6 +86,8 @@ async function generateAndPersistPlan(body: PlanRequest, emit: PlanEventEmitter)
       progress: 72,
       detail: `科研 Worker 已返回 ${result.plan.steps.length} 个可执行步骤`,
       model: result.model,
+      mode: body.mode,
+      reasoningEffort,
     });
   } catch (workerError) {
     const workerFailure = errorMessage(workerError, "科研 Worker 调用失败");
@@ -109,6 +117,7 @@ async function generateAndPersistPlan(body: PlanRequest, emit: PlanEventEmitter)
         query: body.query,
         clarification: body.clarification,
         evidence: body.evidence,
+        mode: body.mode,
       });
       emit("llm.completed", {
         stage: "direct-llm",
@@ -117,6 +126,8 @@ async function generateAndPersistPlan(body: PlanRequest, emit: PlanEventEmitter)
         progress: 72,
         detail: `大模型已返回 ${result.plan.steps.length} 个可执行步骤`,
         model: result.model,
+        mode: body.mode,
+        reasoningEffort,
       });
     } catch (llmError) {
       const llmFailure = errorMessage(llmError, "LLM 直连失败");
@@ -136,6 +147,8 @@ async function generateAndPersistPlan(body: PlanRequest, emit: PlanEventEmitter)
     ...result.plan,
     provider: "llm" as const,
     model: result.model,
+    mode: body.mode,
+    reasoningEffort,
     generatedAt: new Date().toISOString(),
   };
   const task = saveTaskPlan(body.taskId, plan);
@@ -220,6 +233,8 @@ function streamPlan(request: Request, body: PlanRequest) {
               progress: 100,
               detail: `分析计划已就绪，共 ${result.plan.steps.length} 个步骤，可进入人工审批`,
               model: result.plan.model,
+              mode: result.plan.mode,
+              reasoningEffort: result.plan.reasoningEffort,
             },
             { result },
           ),
@@ -271,6 +286,7 @@ export async function POST(request: Request) {
     query: input.query,
     clarification: input.clarification || {},
     evidence: input.evidence || [],
+    mode: normalizeAgentMode(input.mode),
   };
 
   if (request.headers.get("accept")?.includes("text/event-stream")) {

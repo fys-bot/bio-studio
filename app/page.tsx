@@ -46,6 +46,7 @@ import {
   type StreamStatus,
 } from "@/components/RunStreamTrace";
 import { defaultDemoConfig, type DemoConfig } from "@/lib/demo-config";
+import { DEFAULT_AGENT_MODE, type AgentMode } from "@/lib/agent-mode";
 import {
   ApiClientError,
   authorizedFetch,
@@ -283,7 +284,7 @@ export default function Home() {
   const [modal, setModal] = useState<WorkspaceModalState | null>(null);
   const [previewFileId, setPreviewFileId] = useState("");
   const [toast, setToast] = useState("");
-  const [agentMode, setAgentMode] = useState<"标准模式" | "严谨模式" | "快速模式">("标准模式");
+  const [agentMode, setAgentMode] = useState<AgentMode>(DEFAULT_AGENT_MODE);
   const [taskList, setTaskList] = useState<TaskListItem[]>(
     () => warmWorkspaceSnapshot?.taskList ?? [],
   );
@@ -824,20 +825,24 @@ ${task?.goal || config.goal}
         task?.goal || response.task.goal,
         answers,
         [],
-        (event) => {
-          setStreamEvents((events) => appendStreamEvent(events, event));
-          if (event.type !== "plan.waiting") {
-            setLiveLogs((logs) =>
-              [...logs, `[${new Date(event.createdAt).toLocaleTimeString()}] ${event.type}`].slice(
-                -100,
-              ),
-            );
-          }
-          if (event.type === "plan.completed") setStreamStatus("completed");
-          else if (event.type === "plan.failed") setStreamStatus("failed");
-          else setStreamStatus("connected");
+        {
+          mode: agentMode,
+          onEvent: (event) => {
+            setStreamEvents((events) => appendStreamEvent(events, event));
+            if (event.type !== "plan.waiting") {
+              setLiveLogs((logs) =>
+                [
+                  ...logs,
+                  `[${new Date(event.createdAt).toLocaleTimeString()}] ${event.type}`,
+                ].slice(-100),
+              );
+            }
+            if (event.type === "plan.completed") setStreamStatus("completed");
+            else if (event.type === "plan.failed") setStreamStatus("failed");
+            else setStreamStatus("connected");
+          },
+          onOpen: () => setStreamStatus("connected"),
         },
-        () => setStreamStatus("connected"),
       );
       setTask(planResponse.task || response.task);
       notify("LLM 已生成分析计划，请检查证据和风险");
@@ -1036,7 +1041,7 @@ ${task?.goal || config.goal}
     ]);
     setMessageText("");
     void bioflowApi
-      .runRagQuery(text, activeTask)
+      .runRagQuery(text, activeTask, agentMode)
       .then((response) => {
         const citations = response.trace.rerankedResults
           .filter((item) => item.kept)
@@ -1612,7 +1617,7 @@ ${task?.goal || config.goal}
                 <h2>{task.plan?.title || task.skill?.name || task.title}</h2>
                 <p>
                   {task.executionMode === "real"
-                    ? `${task.plan?.provider === "llm" ? `LLM · ${task.plan.model}` : "等待 LLM 计划"} · 已绑定 ${task.fileIds?.length || 0} 份输入文件 · 本机分析`
+                    ? `${task.plan?.provider === "llm" ? `LLM · ${task.plan.model} · ${task.plan.mode || agentMode} / ${task.plan.reasoningEffort || "medium"}` : "等待 LLM 计划"} · 已绑定 ${task.fileIds?.length || 0} 份输入文件 · 本机分析`
                     : "演示工作流 · 6 步"}
                 </p>
               </div>
@@ -1744,15 +1749,9 @@ ${task?.goal || config.goal}
           onMessageTextChange={setMessageText}
           onSendMessage={sendMessage}
           onAddFile={() => setModal({ kind: "upload", title: "添加项目文件" })}
-          onAgentModeChange={() => {
-            const nextMode =
-              agentMode === "标准模式"
-                ? "严谨模式"
-                : agentMode === "严谨模式"
-                  ? "快速模式"
-                  : "标准模式";
+          onAgentModeChange={(nextMode) => {
             setAgentMode(nextMode);
-            notify(`已切换为${nextMode}`);
+            notify(`已切换为${nextMode}，后续请求会携带对应 reasoning effort`);
           }}
           onOpenFailureEvidence={() => {
             setSelected("design");

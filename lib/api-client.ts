@@ -15,6 +15,7 @@ import type { WorkflowLayoutInput } from "@/lib/workflow-layout";
 import type { BioflowRole, BioflowSessionUser } from "@/lib/access-control";
 import type { BioflowPermission } from "@/lib/access-control";
 import type { WorkspaceProject } from "@/lib/project-store";
+import { DEFAULT_AGENT_MODE, type AgentMode } from "@/lib/agent-mode";
 
 type ApiErrorPayload = {
   error?: string;
@@ -400,8 +401,11 @@ export const bioflowApi = {
     query: string,
     clarification: Record<string, string>,
     evidence: unknown[] = [],
-    onEvent?: (event: ApiStreamEvent) => void,
-    onOpen?: () => void,
+    options: {
+      mode?: AgentMode;
+      onEvent?: (event: ApiStreamEvent) => void;
+      onOpen?: () => void;
+    } = {},
   ) => {
     let result: PlanStreamMessage["result"];
     let failure: Pick<PlanStreamMessage, "error" | "code"> | undefined;
@@ -410,11 +414,17 @@ export const bioflowApi = {
       request: {
         method: "POST",
         headers: jsonHeaders,
-        body: JSON.stringify({ taskId, query, clarification, evidence }),
+        body: JSON.stringify({
+          taskId,
+          query,
+          clarification,
+          evidence,
+          mode: options.mode ?? DEFAULT_AGENT_MODE,
+        }),
       },
-      onOpen,
+      onOpen: options.onOpen,
       onEvent: (message) => {
-        onEvent?.(message.event);
+        options.onEvent?.(message.event);
         if (message.result) result = message.result;
         if (message.error) failure = { error: message.error, code: message.code };
       },
@@ -491,13 +501,13 @@ export const bioflowApi = {
       },
     ),
 
-  runRagQuery: (query: string, taskId?: string) =>
+  runRagQuery: (query: string, taskId?: string, mode: AgentMode = DEFAULT_AGENT_MODE) =>
     requestJson<RagTraceResponse>(
       `/api/rag/query${taskId ? `?taskId=${encodeURIComponent(taskId)}` : ""}`,
       {
         method: "POST",
         headers: jsonHeaders,
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query, mode }),
       },
     ),
 

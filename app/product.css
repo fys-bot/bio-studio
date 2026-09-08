@@ -8185,3 +8185,441 @@ html {
     grid-template-columns: 28px minmax(0, 1fr);
   }
 }
+
+/* 2026-09-08 SSE 双视图与可解释 Agent 模式。 */
+.run-trace-expanded {
+  border-top: 1px solid var(--bf-line);
+  background: #f7f9f8;
+}
+
+.run-trace-viewbar {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px 6px 10px;
+  border-bottom: 1px solid #e0e6e2;
+  background: #fff;
+}
+
+.run-trace-viewbar > span,
+.run-trace-viewbar > span b,
+.run-trace-viewbar > span small {
+  display: block;
+  min-width: 0;
+}
+
+.run-trace-viewbar > span b {
+  color: #405248;
+  font-size: 9px;
+}
+
+.run-trace-viewbar > span small {
+  margin-top: 2px;
+  color: #818d86;
+  font-size: 8px;
+}
+
+.run-trace-viewbar .MuiToggleButtonGroup-root {
+  flex: none;
+  padding: 2px;
+  border: 1px solid #d8e0db;
+  border-radius: 6px;
+  background: #f4f7f5;
+}
+
+.run-trace-viewbar .MuiToggleButton-root {
+  display: inline-flex;
+  min-width: 78px;
+  min-height: 27px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border: 0;
+  border-radius: 4px !important;
+  color: #68776f;
+  font-family: inherit;
+  font-size: 8px;
+  line-height: 1.2;
+  text-transform: none;
+}
+
+.run-trace-viewbar .MuiToggleButton-root.Mui-selected {
+  background: #eaf0ca;
+  color: #5f6d13;
+}
+
+.run-trace-events {
+  border-top: 0;
+}
+
+.run-trace-canvas-shell {
+  display: grid;
+  max-height: min(430px, 58dvh);
+  grid-template-columns: minmax(0, 1fr) 226px;
+  overflow: hidden;
+  background: #f5f8f6;
+}
+
+.run-trace-canvas-viewport {
+  min-width: 0;
+  min-height: 226px;
+  overflow: auto;
+  border-right: 1px solid #dce4df;
+  overscroll-behavior: contain;
+}
+
+.run-trace-canvas-stage {
+  position: relative;
+  min-width: 100%;
+  background-color: #f5f8f6;
+  background-image: radial-gradient(#cbd6cf 0.7px, transparent 0.7px);
+  background-size: 18px 18px;
+}
+
+.run-trace-canvas-stage > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.run-trace-canvas-stage > svg path {
+  fill: none;
+  stroke: #a9b8af;
+  stroke-dasharray: 4 3;
+  stroke-width: 1.4;
+}
+
+.run-trace-canvas-stage > svg path.is-active {
+  stroke: #84951a;
+  stroke-dasharray: 7 5;
+  stroke-width: 2;
+  animation: run-trace-flow 900ms linear infinite;
+}
+
+@keyframes run-trace-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.run-trace-canvas-node {
+  position: absolute;
+  display: grid;
+  width: 142px;
+  min-height: 60px;
+  align-content: center;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid #d8e1dc;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 4px 12px #3f554908;
+  color: #405148;
+  text-align: left;
+}
+
+.run-trace-canvas-node:hover,
+.run-trace-canvas-node:focus-visible {
+  border-color: #abbcb2;
+  background: #f9fbfa;
+}
+
+.run-trace-canvas-node.selected {
+  border-color: #a9b83d;
+  box-shadow: 0 0 0 2px #a9b83d20;
+}
+
+.run-trace-canvas-node.success {
+  box-shadow: inset 3px 0 #4d8a6b;
+}
+
+.run-trace-canvas-node.error {
+  border-color: #ddb8b3;
+  box-shadow: inset 3px 0 #ae483d;
+}
+
+.run-trace-canvas-node.active {
+  box-shadow: inset 3px 0 #94a21d;
+}
+
+.run-trace-canvas-node-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #7b8981;
+  font:
+    7px "DM Mono",
+    monospace;
+}
+
+.run-trace-canvas-node b,
+.run-trace-canvas-node small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.run-trace-canvas-node b {
+  color: #35473d;
+  font-size: 9px;
+}
+
+.run-trace-canvas-node small {
+  color: #7c8982;
+  font-size: 7px;
+}
+
+.run-trace-canvas-inspector {
+  min-width: 0;
+  padding: 10px;
+  overflow: auto;
+  background: #fff;
+}
+
+.run-trace-canvas-inspector header {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #e4e9e6;
+}
+
+.run-trace-canvas-inspector header b,
+.run-trace-canvas-inspector header small {
+  display: block;
+  min-width: 0;
+}
+
+.run-trace-canvas-inspector header b {
+  color: #35473d;
+  font-size: 10px;
+}
+
+.run-trace-canvas-inspector header small {
+  margin-top: 3px;
+  color: #77857d;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.run-trace-canvas-inspector dl {
+  display: grid;
+  gap: 5px;
+  margin: 9px 0;
+}
+
+.run-trace-canvas-inspector dl > div {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 5px;
+}
+
+.run-trace-canvas-inspector dt,
+.run-trace-canvas-inspector dd {
+  margin: 0;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.run-trace-canvas-inspector dt {
+  color: #8a958f;
+}
+
+.run-trace-canvas-inspector dd {
+  overflow-wrap: anywhere;
+  color: #506159;
+}
+
+.run-trace-canvas-inspector pre {
+  max-height: 150px;
+  margin: 0;
+  padding: 7px;
+  overflow: auto;
+  border: 1px solid #dce4df;
+  border-radius: 5px;
+  background: #f3f6f4;
+  color: #43544a;
+  font:
+    7px/1.55 "DM Mono",
+    monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.app-shell .conversation .composer {
+  border: 0 !important;
+  box-shadow: 0 8px 24px #31473b16;
+}
+
+.app-shell .conversation .composer input {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+.app-shell .conversation .composer .mode.MuiButton-root {
+  width: auto !important;
+  min-width: 112px;
+  height: 36px !important;
+  justify-content: flex-end;
+  gap: 3px;
+  padding: 4px 6px !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  background: #f2f5f3 !important;
+  color: #506158 !important;
+  font-family: inherit;
+  line-height: 1.2;
+  text-transform: none;
+}
+
+.app-shell .conversation .composer .mode.MuiButton-root:hover {
+  background: #e9efeb !important;
+}
+
+.app-shell .conversation .composer .mode .MuiButton-endIcon {
+  margin-right: 0;
+  margin-left: 2px;
+}
+
+.composer-mode-copy,
+.composer-mode-copy b,
+.composer-mode-copy small {
+  display: block;
+  min-width: 0;
+}
+
+.composer-mode-copy {
+  text-align: right;
+}
+
+.composer-mode-copy b {
+  color: #43534a;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.composer-mode-copy small {
+  margin-top: 1px;
+  color: #819087;
+  font:
+    7px "DM Mono",
+    monospace;
+  text-transform: lowercase;
+}
+
+.agent-mode-menu .MuiPaper-root {
+  width: min(340px, calc(100vw - 20px));
+  margin-top: -6px;
+  border: 1px solid #d7e0da;
+  border-radius: 7px;
+  box-shadow: 0 16px 38px #283d3226;
+}
+
+.agent-mode-menu .MuiList-root {
+  padding: 4px;
+}
+
+.agent-mode-menu .MuiMenuItem-root {
+  display: grid;
+  min-height: 54px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 7px;
+  margin: 2px 0;
+  padding: 7px 8px;
+  border-radius: 5px;
+  white-space: normal;
+}
+
+.agent-mode-menu .MuiMenuItem-root.Mui-selected {
+  background: #eef2d5;
+}
+
+.agent-mode-menu .MuiListItemIcon-root {
+  min-width: 0;
+  color: #687718;
+}
+
+.agent-mode-menu .MuiListItemText-primary {
+  color: #35473d;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.agent-mode-menu .MuiListItemText-secondary {
+  margin-top: 2px;
+  color: #7c8982;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.agent-mode-effort {
+  padding: 3px 5px;
+  border-radius: 4px;
+  background: #f1f4f2;
+  color: #69776f;
+  font:
+    7px "DM Mono",
+    monospace;
+}
+
+@media (max-width: 760px) {
+  .run-trace-viewbar > span small {
+    display: none;
+  }
+
+  .run-trace-viewbar .MuiToggleButton-root {
+    min-width: 62px;
+    padding-inline: 5px;
+    font-size: 7px;
+  }
+
+  .run-trace-canvas-shell {
+    max-height: min(470px, 62dvh);
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .run-trace-canvas-viewport {
+    min-height: 218px;
+    border-right: 0;
+    border-bottom: 1px solid #dce4df;
+  }
+
+  .run-trace-canvas-inspector {
+    max-height: 190px;
+  }
+
+  .app-shell .conversation .composer .mode.MuiButton-root {
+    min-width: 38px;
+    width: 38px !important;
+    justify-content: center;
+    padding: 3px !important;
+  }
+
+  .composer-mode-copy small,
+  .app-shell .conversation .composer .mode .MuiButton-endIcon {
+    display: none;
+  }
+
+  .composer-mode-copy b {
+    max-width: 32px;
+    overflow: hidden;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .run-trace-canvas-stage > svg path.is-active {
+    animation: none;
+  }
+}

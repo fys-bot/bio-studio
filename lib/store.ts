@@ -221,7 +221,11 @@ function state(): BioFlowRuntimeState {
 }
 
 /** 保存一次完整的 RAG Trace，支持按阶段接口读取与前端审计。 */
-export function createAndStoreRagTrace(query: string, taskId = state().task.id) {
+export function createAndStoreRagTrace(
+  query: string,
+  taskId = state().task.id,
+  context: Pick<RagTrace, "agentMode" | "reasoningEffort"> = {},
+) {
   const runtimeState = state();
   const task = taskReference(taskId, runtimeState);
   const indexedChunks = searchDocumentIndex(taskId, query).map((entry) => ({
@@ -229,10 +233,13 @@ export function createAndStoreRagTrace(query: string, taskId = state().task.id) 
     text: entry.text,
     score: entry.score,
   }));
-  const trace = createRagTrace(query, {
-    dataProfiles: task?.dataProfiles ?? [],
-    indexedChunks,
-  });
+  const trace = {
+    ...createRagTrace(query, {
+      dataProfiles: task?.dataProfiles ?? [],
+      indexedChunks,
+    }),
+    ...context,
+  };
   trace.indexSummary.dimensions = vectorIndexDimensions;
   trace.indexSummary.indexedChunks = indexCount(taskId);
   runtimeState.ragTraces = [...runtimeState.ragTraces.slice(-49), trace];

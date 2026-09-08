@@ -121,6 +121,25 @@ function appendStreamEvent(current: RunStreamEvent[], next: RunStreamEvent) {
   return updated;
 }
 
+function isLegacyDemoReply(message: ConversationMessage) {
+  return (
+    message.role === "assistant" &&
+    (/^演示建议：/.test(message.content) ||
+      /^已收到。我会按 \*\*.+\*\* 检查项目文件/.test(message.content))
+  );
+}
+
+/**
+ * 旧版本把确定性 RAG 文案写进了对话历史。移除对应问答对，避免新界面继续伪装成模型输出。
+ */
+function removeLegacyDemoConversation(messages: ConversationMessage[]) {
+  return messages.reduce<ConversationMessage[]>((current, message) => {
+    if (!isLegacyDemoReply(message)) return [...current, message];
+    if (current.at(-1)?.role === "user") return current.slice(0, -1);
+    return current;
+  }, []);
+}
+
 let clientEventSequence = 0;
 function createClientStreamEvent(
   taskId: string,
@@ -417,6 +436,8 @@ export default function Home() {
   }, [activeProjectId, authed]);
   useEffect(() => {
     let cancelled = false;
+    conversationHydratedRef.current = false;
+    notesHydratedRef.current = false;
     (async () => {
       try {
         setInitializationError("");
@@ -441,7 +462,7 @@ export default function Home() {
           organism: taskResponse.task.clarification?.answers?.organism || "",
           deliverable: taskResponse.task.clarification?.answers?.deliverable || "",
         });
-        setConversationMessages(conversationResponse.messages ?? []);
+        setConversationMessages(removeLegacyDemoConversation(conversationResponse.messages ?? []));
         setNotes(notesResponse.notes ?? taskResponse.task.notes ?? "");
         conversationHydratedRef.current = true;
         notesHydratedRef.current = true;

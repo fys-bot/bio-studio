@@ -5,6 +5,8 @@ import DashboardCustomizeRounded from "@mui/icons-material/DashboardCustomizeRou
 import ExtensionRounded from "@mui/icons-material/ExtensionRounded";
 import FolderOutlined from "@mui/icons-material/FolderOutlined";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
+import HelpOutlineRounded from "@mui/icons-material/HelpOutlineRounded";
+import MenuBookRounded from "@mui/icons-material/MenuBookRounded";
 import PersonOutlineRounded from "@mui/icons-material/PersonOutlineRounded";
 import { ListItemIcon, Menu, MenuItem } from "@mui/material";
 import Link from "next/link";
@@ -85,6 +87,28 @@ export function GlobalRail() {
             <PersonOutlineRounded fontSize="small" />
           </ListItemIcon>
           DF 研究员
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAccountAnchor(null);
+            router.push("/projects/proj_a5211690a4/tasks/task_demo_rnaseq?docs=1");
+          }}
+        >
+          <ListItemIcon>
+            <MenuBookRounded fontSize="small" />
+          </ListItemIcon>
+          开发与验收手册
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAccountAnchor(null);
+            router.push("/projects/proj_a5211690a4/tasks/task_demo_rnaseq?guide=1");
+          }}
+        >
+          <ListItemIcon>
+            <HelpOutlineRounded fontSize="small" />
+          </ListItemIcon>
+          从 0 到 1 指引
         </MenuItem>
         <MenuItem
           onClick={() => {

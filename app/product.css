@@ -669,6 +669,197 @@
   }
 }
 
+/* 开发与验收手册：按模块折叠，避免长文一次性堆叠。 */
+.documentation-drawer {
+  width: min(680px, 100vw);
+  overflow: hidden;
+}
+
+.documentation-header,
+.documentation-tabs {
+  flex: none;
+}
+
+.documentation-header .MuiIconButton-root {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d2dbd6;
+  color: #52645a;
+}
+
+.documentation-tabs {
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.documentation-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.documentation-tabs button {
+  min-width: 82px;
+  flex: 1 0 auto;
+  white-space: nowrap;
+}
+
+.documentation-content {
+  height: calc(100dvh - 118px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.documentation-proof {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.documentation-proof > div:first-child {
+  min-width: 0;
+}
+
+.documentation-proof-chips {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.documentation-proof-chips .MuiChip-root {
+  height: 22px;
+  border: 1px solid #d3ddaa;
+  background: #f0f3d5;
+  color: #617016;
+  font-size: 8px;
+}
+
+.documentation-accordion-list {
+  display: grid;
+  gap: 6px;
+}
+
+.documentation-accordion.MuiAccordion-root {
+  overflow: hidden;
+  border: 1px solid #d9e1dc;
+  border-radius: 7px !important;
+  background: #fff;
+  box-shadow: none;
+}
+
+.documentation-accordion.MuiAccordion-root::before {
+  display: none;
+}
+
+.documentation-accordion .MuiAccordionSummary-root {
+  min-height: 54px;
+  padding: 0 12px;
+}
+
+.documentation-accordion .MuiAccordionSummary-content {
+  min-width: 0;
+  margin: 9px 0;
+}
+
+.documentation-accordion .MuiAccordionSummary-content > span,
+.documentation-accordion .MuiAccordionSummary-content b,
+.documentation-accordion .MuiAccordionSummary-content small {
+  display: block;
+  min-width: 0;
+}
+
+.documentation-accordion .MuiAccordionSummary-content b {
+  color: #35463d;
+  font-size: 11px;
+}
+
+.documentation-accordion .MuiAccordionSummary-content small {
+  margin-top: 4px;
+  overflow: hidden;
+  color: #78857e;
+  font-size: 9px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.documentation-accordion.Mui-expanded .MuiAccordionSummary-content small {
+  white-space: normal;
+}
+
+.documentation-accordion .MuiAccordionDetails-root {
+  display: grid;
+  gap: 1px;
+  padding: 5px;
+  border-top: 1px solid #e2e7e4;
+  background: #f5f7f5;
+}
+
+.documentation-accordion .MuiAccordionDetails-root article {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.24fr) minmax(0, 1fr);
+  gap: 10px;
+  padding: 8px;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.documentation-accordion .MuiAccordionDetails-root article b {
+  color: #5f6e17;
+  font-size: 9px;
+}
+
+.documentation-accordion .MuiAccordionDetails-root article p {
+  margin: 0;
+  color: #56665d;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.documentation-section-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.documentation-section-actions .MuiButton-root {
+  flex: none;
+  color: #526713;
+  font-size: 9px;
+}
+
+@media (max-width: 700px) {
+  .documentation-drawer {
+    width: 100vw;
+  }
+
+  .documentation-content {
+    height: calc(100dvh - 108px);
+    padding: 10px;
+  }
+
+  .documentation-proof {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .documentation-proof-chips {
+    justify-content: flex-start;
+  }
+
+  .documentation-accordion .MuiAccordionDetails-root article {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .documentation-section-actions {
+    align-items: flex-start;
+  }
+}
+
 /* 登录与会话校验：生命科学视觉保持轻量，不与工作台浅色主题割裂。 */
 .session-gate {
   display: flex;

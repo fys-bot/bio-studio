@@ -379,7 +379,13 @@ export default function Home() {
   useEffect(() => {
     if (!authed || !task || guideInitializedRef.current) return;
     guideInitializedRef.current = true;
-    if (!window.localStorage.getItem("bioflow-studio-guide-v2")) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("docs")) {
+      setGuideOpen(false);
+      setDocsOpen(true);
+      return;
+    }
+    if (params.has("guide") || !window.localStorage.getItem("bioflow-studio-guide-v2")) {
       setGuideOpen(true);
     }
   }, [authed, task]);

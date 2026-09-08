@@ -265,5 +265,6 @@ git diff --check
 - [原子级产品验收清单](./docs/原子级产品验收清单.md)
 - [AI 使用与 Review 记录](./docs/AI使用说明.md)
 - [5–8 分钟演示脚本](./docs/演示脚本.md)
+- [面试汇报 PPT 逐页设计方案](./docs/面试汇报PPT设计方案.md)
 - [操作流程手册 DOCX](./deliverables/BioFlow-Studio操作流程手册.docx)
 - [视觉与交互规范 PPTX](./deliverables/BioFlow-Studio视觉与交互规范-交付版.pptx)

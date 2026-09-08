@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { authGuard, isAuthorized, isSameOrigin } from "@/lib/auth";
-import { getSkill, setSkillEnabled } from "@/lib/catalog-service";
+import { deleteSkill, getSkill, setSkillEnabled } from "@/lib/catalog-service";
 
 export async function GET(_: Request, { params }: { params: { skillId: string } }) {
   if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -22,5 +22,16 @@ export async function PATCH(request: Request, { params }: { params: { skillId: s
   const skill = setSkillEnabled(params.skillId, payload.enabled);
   return skill
     ? NextResponse.json({ skill })
+    : NextResponse.json({ error: "技能不存在" }, { status: 404 });
+}
+
+export async function DELETE(request: Request, { params }: { params: { skillId: string } }) {
+  const denied = authGuard("skills:write");
+  if (denied) return denied;
+  if (!isSameOrigin(request))
+    return NextResponse.json({ error: "Forbidden origin" }, { status: 403 });
+  const result = deleteSkill(params.skillId);
+  return result
+    ? NextResponse.json(result)
     : NextResponse.json({ error: "技能不存在" }, { status: 404 });
 }

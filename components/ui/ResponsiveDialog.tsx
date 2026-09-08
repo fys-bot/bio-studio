@@ -45,7 +45,11 @@ export function ResponsiveDialog({
       className={`responsive-dialog ${className}`}
       slotProps={{
         backdrop: {
-          sx: { backgroundColor: "rgba(28, 39, 33, 0.48)", backdropFilter: "blur(2px)" },
+          sx: {
+            backgroundColor: "rgba(28, 39, 33, 0.38)",
+            backdropFilter: "blur(10px) saturate(0.9)",
+            WebkitBackdropFilter: "blur(10px) saturate(0.9)",
+          },
         },
         paper: {
           sx: {

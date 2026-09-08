@@ -124,8 +124,9 @@
   border-radius: 8px;
 }
 .skill-card:focus-within {
-  outline: 2px solid #168579;
-  outline-offset: 2px;
+  outline: none;
+  border-color: #168579;
+  box-shadow: 0 0 0 2px #d7ebe5;
 }
 .skill-card footer .text-button {
   position: relative;
@@ -831,19 +832,16 @@
   font-size: 9px;
 }
 
-.documentation-download-actions {
-  display: flex;
-  max-width: 360px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 4px;
+.documentation-download-trigger {
+  flex: none;
+  border: 1px solid #d6dfda !important;
+  background: #fff !important;
+  color: #526713 !important;
 }
 
-.documentation-download-actions .MuiButton-root {
-  min-height: 30px;
-  border: 1px solid #d6dfda;
-  background: #fff;
-  white-space: nowrap;
+.documentation-download-trigger:hover {
+  border-color: #aebc73 !important;
+  background: #eff3d8 !important;
 }
 
 @media (max-width: 700px) {
@@ -875,10 +873,8 @@
     flex-direction: column;
   }
 
-  .documentation-download-actions {
-    width: 100%;
-    max-width: none;
-    justify-content: flex-start;
+  .documentation-download-trigger {
+    align-self: flex-start;
   }
 }
 
@@ -3250,6 +3246,17 @@ html {
   }
 }
 
+/* 资源卡片以卡片自身表达键盘焦点，避免链接焦点与卡片描边叠加。 */
+.skill-card :where(a, button):focus-visible {
+  outline: none !important;
+}
+
+.skill-card:focus-within {
+  outline: none;
+  border-color: #168579;
+  box-shadow: 0 0 0 2px #d7ebe5;
+}
+
 @media (max-width: 760px) {
   .app-shell .topbar {
     padding: 0 12px;
@@ -3292,6 +3299,34 @@ html {
   .module-shell .catalog-header h1 {
     transition: none;
   }
+}
+
+/* 最终交互契约：操作栏不绘制无意义分隔线，焦点只保留一层可识别状态。 */
+.task-item-row .task-favorite.MuiIconButton-root,
+.task-item-row .task-delete.MuiIconButton-root {
+  border-left: 0 !important;
+  box-shadow: none;
+}
+
+.task-item-row.has-delete:hover .task-delete.MuiIconButton-root,
+.task-item-row.has-delete:focus-within .task-delete.MuiIconButton-root {
+  border-left: 0 !important;
+}
+
+.module-shell .rail-btn,
+.module-shell .rail-btn .rail-icon {
+  border: 0 !important;
+  border-bottom: 0 !important;
+  text-decoration: none;
+  box-shadow: none;
+}
+
+.module-shell.without-module-sidebar {
+  grid-template-columns: 58px minmax(0, 1fr);
+}
+
+.module-shell.without-module-sidebar .module-content {
+  grid-column: 2;
 }
 
 @media (max-width: 760px) {
@@ -5233,6 +5268,20 @@ html {
 
 .skill-open-button {
   width: 28px;
+}
+
+.skill-delete-button {
+  position: relative;
+  z-index: 2;
+  width: 28px;
+  min-height: 28px;
+  border: 0;
+  border-radius: 5px;
+  color: #a13f37 !important;
+}
+
+.skill-delete-button:hover {
+  background: #fff0ed !important;
 }
 
 .module-shell .skill-card footer .text-button:hover,

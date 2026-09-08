@@ -134,6 +134,7 @@ export type ConversationMessage = {
   traceId?: string;
   citations?: Array<{ id: string; label: string; detail?: string }>;
   feedback?: "up" | "down";
+  model?: string;
 };
 
 export type StructureAdapterState = {

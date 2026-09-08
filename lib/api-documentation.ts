@@ -380,15 +380,15 @@ export const apiGroups: ApiGroup[] = [
       endpoint(
         "POST",
         "/api/rag/query",
-        "在当前任务文件范围内执行 Qdrant + BM25 + RRF。",
+        "在当前任务文件范围内执行 Qdrant + BM25 + RRF；对话场景可追加真实 LLM 答复。",
         "runs:execute；写请求同源校验。",
         requestContract(writeHeaders, {
           query: "taskId:string 必填",
-          body: "query:string(1..2000)；mode:快速模式 | 标准模式 | 深度研究",
+          body: "query:string(1..2000)；mode:快速模式 | 标准模式 | 深度研究；includeAnswer?:boolean",
         }),
-        "trace:RagTrace，含解析文档、chunks、召回、排序、grounding 和决策",
-        "200；400；401；403；404；409；422",
-        "保存完整 Trace、来源、分数、模式和 reasoning effort。",
+        "trace:RagTrace；includeAnswer=true 时额外返回 answer:{content,provider,model}",
+        "200；400；401；403；404；409；422；502",
+        "保存完整 Trace、来源、分数、模式和 reasoning effort；模型仅读取证据摘要，不持久化密钥。",
       ),
       endpoint(
         "GET",
@@ -582,6 +582,16 @@ export const apiGroups: ApiGroup[] = [
         "skill:SkillRecord",
         "200；400；401；403；404",
         "更新 data/catalog-state.json；生产映射 skills.enabled。",
+      ),
+      endpoint(
+        "DELETE",
+        "/api/skills/:skillId",
+        "删除自建技能，或从当前工作区能力目录移除预置/共享技能。",
+        "skills:write；写请求同源校验。",
+        requestContract(writeHeaders, { path: "skillId:string" }),
+        "deletedSkillId:string；disposition: deleted | removed",
+        "200；401；403；404",
+        "自建技能从 data/catalog-state.json.customSkills 删除；预置技能写入 removedSkillIds。生产映射 workspace_skill_catalog。",
       ),
       endpoint(
         "GET",

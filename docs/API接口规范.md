@@ -482,16 +482,16 @@ curl -sS http://127.0.0.1:3000/api/rag/query -H "Authorization: Bearer $TOKEN"
 ### 6.2 `POST /api/rag/query?taskId=:taskId`
 
 - 权限：`runs:execute`；同源校验。
-- 请求：`{"query":"问题，1..2000 字符","mode":"快速模式|标准模式|深度研究"}`。
-- 响应：`{"trace":<RagTrace>}`。
-- 状态码：`200/400/401/403/404/409/422`。
-- 行为：有 `fileIds` 时真实调用 Qdrant + BM25 + RRF；真实任务无文件返回 `409`；演示任务可降级到确定性 Trace。
-- 持久化：保存完整 Trace、来源、分数、模式和 reasoning effort。
+- 请求：`{"query":"问题，1..2000 字符","mode":"快速模式|标准模式|深度研究","includeAnswer":true|false}`。
+- 响应：始终返回 `{"trace":<RagTrace>}`；当 `includeAnswer=true` 时，额外返回 `answer.content/provider/model`，由服务端使用同一份 LLM 环境变量生成自然语言分析答复。
+- 状态码：`200/400/401/403/404/409/422/502`。
+- 行为：有 `fileIds` 时真实调用 Qdrant + BM25 + RRF；真实任务无文件返回 `409`；对话请求只把前 3 条可审计片段传给模型，模型不可见 Token、Worker Token、对象路径或完整本地数据。
+- 持久化：保存完整 Trace、来源、分数、模式和 reasoning effort；模型密钥不进入 Trace 或浏览器。
 
 ```bash
 curl -sS -X POST 'http://127.0.0.1:3000/api/rag/query?taskId=task_xxx' \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  --data '{"query":"实验方案中推荐的 FDR 阈值是什么？","mode":"标准模式"}'
+  --data '{"query":"实验方案中推荐的 FDR 阈值是什么？","mode":"标准模式","includeAnswer":true}'
 ```
 
 ### 6.3 `GET /api/rag/traces/:traceId`
@@ -693,7 +693,19 @@ curl -sS -X PATCH http://127.0.0.1:3000/api/skills/SKILL_ID \
   --data '{"enabled":true}'
 ```
 
-### 9.5 `GET/PUT/POST /api/workflows/:workflowId/layout?taskId=:taskId`
+### 9.5 `DELETE /api/skills/:skillId`
+
+- 权限：`skills:write`；同源校验。
+- 响应：`{"deletedSkillId":"...","disposition":"deleted|removed"}`。
+- 状态码：`200/401/403/404`。
+- 行为：自建技能会删除声明式配置；预置或共享技能只会从当前工作区目录移除，不会破坏内置能力定义。
+
+```bash
+curl -sS -X DELETE http://127.0.0.1:3000/api/skills/SKILL_ID \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### 9.6 `GET/PUT/POST /api/workflows/:workflowId/layout?taskId=:taskId`
 
 - GET 权限：已登录；响应 `{"layout":<WorkflowLayoutState>}`。
 - PUT 权限：`tasks:write`；保存当前 `nodePositions/extraEdges/zoom/pan/revision`。
@@ -709,7 +721,7 @@ curl -sS -X PUT 'http://127.0.0.1:3000/api/workflows/workflow_demo/layout?taskId
   --data '{"nodePositions":{},"extraEdges":[],"zoom":1,"pan":{"x":0,"y":0},"revision":1}'
 ```
 
-### 9.6 `POST /api/workflows/:workflowId/approve`
+### 9.7 `POST /api/workflows/:workflowId/approve`
 
 - 权限：`tasks:write`；同源校验。
 - 说明：兼容旧演示调用，内部审批默认任务；新代码应使用 `/api/tasks/:taskId/approve`。
@@ -720,7 +732,7 @@ curl -sS -X POST http://127.0.0.1:3000/api/workflows/workflow_demo/approve \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### 9.7 `GET /api/structures/:accession?format=pdb|cif`
+### 9.8 `GET /api/structures/:accession?format=pdb|cif`
 
 - 权限：已登录。
 - 响应：结构 Adapter 状态与坐标内容/降级信息。

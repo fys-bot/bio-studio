@@ -10,6 +10,11 @@ import {
   Button,
   Chip,
   IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Tooltip,
 } from "@mui/material";
 import { useState } from "react";
 import { downloadAuthorizedFile } from "@/lib/api-client";
@@ -29,6 +34,71 @@ type AtomicSection = {
   summary: string;
   items: Array<[string, string]>;
 };
+
+const deliveryDownloads = [
+  {
+    label: "API 接口规范",
+    detail: "Markdown 契约与示例",
+    path: "/api/docs/api-contract?download=1",
+    fileName: "BioFlow-Studio-API接口规范.md",
+  },
+  {
+    label: "数据库 DDL",
+    detail: "PostgreSQL 生产建模",
+    path: "/api/docs/database-ddl?download=1",
+    fileName: "BioFlow-Studio-数据库设计.sql",
+  },
+  {
+    label: "Worker OpenAPI",
+    detail: "FastAPI 服务契约",
+    path: "/api/research/openapi",
+    fileName: "bioflow-research-openapi.json",
+  },
+] as const;
+
+function DocumentationDownloadMenu() {
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
+
+  return (
+    <>
+      <Tooltip title="下载交付文档">
+        <IconButton
+          className="documentation-download-trigger"
+          size="small"
+          aria-label="下载交付文档"
+          aria-haspopup="menu"
+          aria-expanded={Boolean(anchor)}
+          onClick={(event) => setAnchor(event.currentTarget)}
+        >
+          <DownloadRounded sx={{ fontSize: 17 }} />
+        </IconButton>
+      </Tooltip>
+      <Menu
+        anchorEl={anchor}
+        open={Boolean(anchor)}
+        onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        aria-label="选择要下载的交付文档"
+      >
+        {deliveryDownloads.map((item) => (
+          <MenuItem
+            key={item.fileName}
+            onClick={() => {
+              setAnchor(null);
+              void downloadAuthorizedFile(item.path, item.fileName);
+            }}
+          >
+            <ListItemIcon>
+              <DownloadRounded fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary={item.label} secondary={item.detail} />
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+}
 
 const guideSteps = [
   {
@@ -540,44 +610,7 @@ export function DocumentationDrawer({ open, onClose, activeTaskId }: Documentati
                   <h3>按业务域查看接口</h3>
                   <p>点击任一接口，逐项核对权限、Header、Path、Query、Body、响应和持久化。</p>
                 </div>
-                <div className="documentation-download-actions">
-                  <Button
-                    size="small"
-                    startIcon={<DownloadRounded />}
-                    onClick={() =>
-                      void downloadAuthorizedFile(
-                        "/api/docs/api-contract?download=1",
-                        "BioFlow-Studio-API接口规范.md",
-                      )
-                    }
-                  >
-                    API 规范
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<DownloadRounded />}
-                    onClick={() =>
-                      void downloadAuthorizedFile(
-                        "/api/docs/database-ddl?download=1",
-                        "BioFlow-Studio-数据库设计.sql",
-                      )
-                    }
-                  >
-                    数据库 DDL
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<DownloadRounded />}
-                    onClick={() =>
-                      void downloadAuthorizedFile(
-                        "/api/research/openapi",
-                        "bioflow-research-openapi.json",
-                      )
-                    }
-                  >
-                    Worker OpenAPI
-                  </Button>
-                </div>
+                <DocumentationDownloadMenu />
               </div>
               <div className="documentation-accordion-list api-contract-groups">
                 {apiContractGroups.map((group, index) => (
@@ -625,18 +658,7 @@ export function DocumentationDrawer({ open, onClose, activeTaskId }: Documentati
                   <small>DATA / LOCAL RUNTIME AND PRODUCTION TARGET</small>
                   <h3>当前数据层与生产迁移</h3>
                 </div>
-                <Button
-                  size="small"
-                  startIcon={<DownloadRounded />}
-                  onClick={() =>
-                    void downloadAuthorizedFile(
-                      "/api/docs/database-ddl?download=1",
-                      "BioFlow-Studio-数据库设计.sql",
-                    )
-                  }
-                >
-                  下载 PostgreSQL DDL
-                </Button>
+                <DocumentationDownloadMenu />
               </div>
               {renderSections(dataSections)}
               <div className="documentation-note">

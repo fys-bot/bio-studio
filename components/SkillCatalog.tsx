@@ -5,6 +5,7 @@ import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import ArrowOutwardRounded from "@mui/icons-material/ArrowOutwardRounded";
 import CheckCircleOutlineRounded from "@mui/icons-material/CheckCircleOutlineRounded";
 import DataObjectRounded from "@mui/icons-material/DataObjectRounded";
+import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import DescriptionOutlined from "@mui/icons-material/DescriptionOutlined";
 import HubOutlined from "@mui/icons-material/HubOutlined";
 import OutputRounded from "@mui/icons-material/OutputRounded";
@@ -32,6 +33,7 @@ import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
 import type { SkillRecord } from "@/lib/domain";
 import { CatalogPagination } from "./ui/CatalogPagination";
 import { CatalogSearch } from "./ui/CatalogSearch";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { ResourceLoading } from "./ui/ResourceLoading";
 import { ResponsiveDialog } from "./ui/ResponsiveDialog";
 import { SelectControl } from "./ui/SelectControl";
@@ -255,10 +257,12 @@ function SkillCard({
   skill,
   busy,
   onToggle,
+  onDelete,
 }: {
   skill: SkillRecord;
   busy: boolean;
   onToggle: () => void;
+  onDelete: () => void;
 }) {
   return (
     <article className="skill-card">
@@ -316,6 +320,17 @@ function SkillCard({
               <ArrowOutwardRounded sx={{ fontSize: 17 }} />
             </IconButton>
           </Tooltip>
+          <Tooltip title="删除技能">
+            <IconButton
+              className="skill-delete-button"
+              size="small"
+              disabled={busy}
+              aria-label={`删除${skill.name}`}
+              onClick={onDelete}
+            >
+              <DeleteOutlineRounded sx={{ fontSize: 17 }} />
+            </IconButton>
+          </Tooltip>
         </div>
       </footer>
     </article>
@@ -347,6 +362,9 @@ export function SkillCatalog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busySkillId, setBusySkillId] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<SkillRecord | null>(null);
+  const [deletingSkillId, setDeletingSkillId] = useState("");
+  const [deleteError, setDeleteError] = useState("");
 
   const loadSkills = useCallback(async () => {
     setLoading(true);
@@ -427,6 +445,29 @@ export function SkillCatalog() {
     }
   };
 
+  const deleteSkill = async (skill: SkillRecord) => {
+    setDeletingSkillId(skill.id);
+    setDeleteError("");
+    try {
+      const result = await bioflowApi.deleteSkill(skill.id);
+      setPendingDelete(null);
+      setSkills((items) => items.filter((item) => item.id !== skill.id));
+      setTotal((current) => Math.max(0, current - 1));
+      if (skills.length === 1 && page > 1) {
+        setPage((current) => current - 1);
+      } else {
+        void loadSkills();
+      }
+      setError("");
+      return result;
+    } catch (deleteSkillError) {
+      setDeleteError(getApiErrorMessage(deleteSkillError, "技能删除失败"));
+      return undefined;
+    } finally {
+      setDeletingSkillId("");
+    }
+  };
+
   return (
     <main className="catalog-page" ref={catalogRef}>
       <div className="catalog-sticky">
@@ -484,8 +525,12 @@ export function SkillCatalog() {
             <SkillCard
               key={skill.id}
               skill={skill}
-              busy={busySkillId === skill.id}
+              busy={busySkillId === skill.id || deletingSkillId === skill.id}
               onToggle={() => void toggleSkill(skill)}
+              onDelete={() => {
+                setDeleteError("");
+                setPendingDelete(skill);
+              }}
             />
           ))}
         </section>
@@ -559,6 +604,22 @@ export function SkillCatalog() {
           </Button>
         </form>
       </ResponsiveDialog>
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={`删除技能“${pendingDelete?.name || ""}”？`}
+        description="自建技能会从当前工作区彻底删除；预置或共享技能会从当前工作区目录移除，不会破坏系统原始能力。"
+        busy={Boolean(deletingSkillId)}
+        error={deleteError}
+        onClose={() => {
+          if (deletingSkillId) return;
+          setDeleteError("");
+          setPendingDelete(null);
+        }}
+        onConfirm={() => {
+          if (!pendingDelete || deletingSkillId) return;
+          void deleteSkill(pendingDelete);
+        }}
+      />
     </main>
   );
 }

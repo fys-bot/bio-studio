@@ -134,6 +134,15 @@ const theme = createTheme({
         },
       },
     },
+    MuiBackdrop: {
+      styleOverrides: {
+        root: {
+          backgroundColor: "rgba(28, 39, 33, 0.32)",
+          backdropFilter: "blur(10px) saturate(0.9)",
+          WebkitBackdropFilter: "blur(10px) saturate(0.9)",
+        },
+      },
+    },
   },
 });
 

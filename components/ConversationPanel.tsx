@@ -141,14 +141,20 @@ export function ConversationPanel({
           <div className="message-content">
             <small>
               {message.role === "user" ? "你" : "BioFlow 智能体"} ·{" "}
-              {message.status === "sending" ? "生成中" : "刚刚"}
+              {message.status === "sending"
+                ? "检索与生成中"
+                : message.model
+                  ? `${message.model} · 刚刚`
+                  : "刚刚"}
             </small>
             <MessageBody
               message={message}
               onCitationClick={(id) => onCitationClick(id, message.traceId)}
             />
             {message.status === "sending" && (
-              <span className="message-progress">正在检索证据并绑定分析参数…</span>
+              <span className="message-progress">
+                正在检索项目材料，并等待模型返回可引用的分析文本…
+              </span>
             )}
             {message.status === "failed" && (
               <span className="message-progress">生成失败，可以重新发送。</span>

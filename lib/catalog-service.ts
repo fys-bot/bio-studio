@@ -8,6 +8,7 @@ type CatalogState = {
   enabledBySkillId: Record<string, boolean>;
   fileStatusById: Record<string, ProjectFileRecord["status"]>;
   customSkills?: SkillRecord[];
+  removedSkillIds?: string[];
 };
 
 const catalogStatePath = path.join(process.cwd(), "data", "catalog-state.json");
@@ -201,8 +202,10 @@ export function listSkills(query: {
   pageSize?: number;
 }): CatalogPage<SkillRecord> {
   const catalogState = readState();
+  const removedSkillIds = new Set(catalogState.removedSkillIds ?? []);
   const search = (query.search ?? "").trim().toLowerCase();
   const filtered = [...skillCatalog, ...(catalogState.customSkills ?? [])]
+    .filter((skill) => !removedSkillIds.has(skill.id))
     .map((skill) => ({
       ...skill,
       enabled: catalogState.enabledBySkillId[skill.id] ?? skill.enabled,
@@ -233,6 +236,7 @@ export function listSkills(query: {
 
 export function getSkill(skillId: string) {
   const catalogState = readState();
+  if (catalogState.removedSkillIds?.includes(skillId)) return undefined;
   const skill = [...skillCatalog, ...(catalogState.customSkills ?? [])].find(
     (item) => item.id === skillId,
   );
@@ -280,6 +284,31 @@ export function createSkill(input: unknown) {
   state.customSkills = [...(state.customSkills ?? []), skill];
   persistState(state);
   return skill;
+}
+
+/**
+ * 自建技能会删除配置；预置技能仅从当前工作区目录移除，避免破坏内置能力定义。
+ */
+export function deleteSkill(skillId: string) {
+  const catalogState = readState();
+  const customSkills = catalogState.customSkills ?? [];
+  const customSkill = customSkills.find((skill) => skill.id === skillId);
+  const builtInSkill = skillCatalog.find((skill) => skill.id === skillId);
+  if (!customSkill && !builtInSkill) return undefined;
+
+  if (customSkill) {
+    catalogState.customSkills = customSkills.filter((skill) => skill.id !== skillId);
+    delete catalogState.enabledBySkillId[skillId];
+    persistState(catalogState);
+    return { deletedSkillId: skillId, disposition: "deleted" as const };
+  }
+
+  catalogState.removedSkillIds = Array.from(
+    new Set([...(catalogState.removedSkillIds ?? []), skillId]),
+  );
+  delete catalogState.enabledBySkillId[skillId];
+  persistState(catalogState);
+  return { deletedSkillId: skillId, disposition: "removed" as const };
 }
 
 export function listProjectFiles(): CatalogPage<ProjectFileRecord> {

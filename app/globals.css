@@ -1575,6 +1575,9 @@ pre {
   background: var(--bg);
   color: var(--text);
 }
+.module-shell.without-module-sidebar {
+  grid-template-columns: 58px minmax(0, 1fr);
+}
 .module-shell .global-rail {
   min-height: 100vh;
   position: sticky;
@@ -5942,8 +5945,9 @@ body {
   z-index: 110;
   display: flex;
   justify-content: flex-end;
-  background: #24282038;
-  backdrop-filter: blur(2px);
+  background: rgb(29 40 33 / 0.34);
+  backdrop-filter: blur(10px) saturate(0.9);
+  -webkit-backdrop-filter: blur(10px) saturate(0.9);
 }
 .documentation-drawer {
   width: min(620px, 100vw);

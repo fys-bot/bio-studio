@@ -1036,14 +1036,14 @@ ${task?.goal || config.goal}
       {
         id: assistantMessageId,
         role: "assistant",
-        content: `已收到。我会按 **${agentMode}** 检查项目文件，检索相关证据并绑定到可审批的分析参数。`,
+        content: "正在读取任务材料、检索可引用证据，并请求模型生成分析答复…",
         createdAt,
         status: "sending",
       },
     ]);
     setMessageText("");
     void bioflowApi
-      .runRagQuery(text, activeTask, agentMode)
+      .runRagQuery(text, activeTask, agentMode, true)
       .then((response) => {
         const citations = response.trace.rerankedResults
           .filter((item) => item.kept)
@@ -1053,6 +1053,8 @@ ${task?.goal || config.goal}
             label: `证据 ${index + 1}`,
             detail: response.trace.chunks.find((chunk) => chunk.id === item.chunkId)?.text,
           }));
+        const answer = response.answer;
+        if (!answer?.content) throw new Error("大模型未返回可展示的分析答复");
         setConversationMessages((items) =>
           items.map((message) =>
             message.id === assistantMessageId
@@ -1061,19 +1063,15 @@ ${task?.goal || config.goal}
                   status: "completed",
                   traceId: response.trace.id,
                   citations,
-                  content:
-                    response.trace.indexSummary?.provider === "qdrant"
-                      ? `${response.trace.finalDecision.summary}${citations.length ? " [1]" : ""}`
-                      : `演示建议：${response.trace.finalDecision.summary} [1][2]`,
+                  content: answer.content,
+                  model: answer.model,
                 }
               : message,
           ),
         );
         setSelectedEvidenceId(citations[0]?.id || null);
         setRagTrace(response.trace);
-        setTab("evidence");
-        setMobilePanel(true);
-        notify("RAG 全链路已完成，可展开查看 Top 20 召回与参数依据");
+        notify("模型答复与 RAG Trace 已完成，可在当前消息中展开证据");
       })
       .catch((error) => {
         setConversationMessages((items) =>
@@ -1082,12 +1080,12 @@ ${task?.goal || config.goal}
               ? {
                   ...message,
                   status: "failed",
-                  content: getApiErrorMessage(error, "RAG 检索失败，请稍后重试"),
+                  content: getApiErrorMessage(error, "模型答复失败，请稍后重试"),
                 }
               : message,
           ),
         );
-        notify(getApiErrorMessage(error, "RAG 检索失败，请稍后重试"));
+        notify(getApiErrorMessage(error, "模型答复失败，请稍后重试"));
       });
   };
   const copyMessage = async (content: string) => {
@@ -1486,7 +1484,24 @@ ${task?.goal || config.goal}
             setPreviewFileId(fileId);
             return;
           }
-          setModal({ kind: "file", title: fileName, detail: fileDetail });
+          void bioflowApi
+            .listProjectFiles()
+            .then((response) => {
+              const normalizedName = fileName.replace(/^practice_/i, "");
+              const file = response.items.find(
+                (item) =>
+                  item.name === fileName ||
+                  item.name === `practice_${fileName}` ||
+                  item.name.replace(/^practice_/i, "") === normalizedName,
+              );
+              if (file) {
+                setModal(null);
+                setPreviewFileId(file.id);
+                return;
+              }
+              setModal({ kind: "file", title: fileName, detail: fileDetail });
+            })
+            .catch(() => setModal({ kind: "file", title: fileName, detail: fileDetail }));
         }}
         onResizeStart={(event) => startResize("sidebar", event)}
       />

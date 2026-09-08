@@ -80,7 +80,10 @@ export type WorkflowLayoutResponse = {
 };
 export type ConversationResponse = { messages: ConversationMessage[] };
 export type NotesResponse = { notes: string };
-export type RagTraceResponse = { trace: RagTrace };
+export type RagTraceResponse = {
+  trace: RagTrace;
+  answer?: { content: string; provider: "openai-compatible"; model: string };
+};
 export type SkillResponse = { skill: SkillRecord };
 export type ProjectFileResponse = { file: ProjectFileRecord };
 export type ManagedUser = BioflowSessionUser & {
@@ -95,6 +98,10 @@ export type DeleteFileResponse = {
   deletedFileId: string;
   deletedName: string;
   affectedTaskIds: string[];
+};
+export type DeleteSkillResponse = {
+  deletedSkillId: string;
+  disposition: "deleted" | "removed";
 };
 export type ApiStreamEvent = {
   id: number;
@@ -506,13 +513,18 @@ export const bioflowApi = {
       },
     ),
 
-  runRagQuery: (query: string, taskId?: string, mode: AgentMode = DEFAULT_AGENT_MODE) =>
+  runRagQuery: (
+    query: string,
+    taskId?: string,
+    mode: AgentMode = DEFAULT_AGENT_MODE,
+    includeAnswer = false,
+  ) =>
     requestJson<RagTraceResponse>(
       `/api/rag/query${taskId ? `?taskId=${encodeURIComponent(taskId)}` : ""}`,
       {
         method: "POST",
         headers: jsonHeaders,
-        body: JSON.stringify({ query, mode }),
+        body: JSON.stringify({ query, mode, includeAnswer }),
       },
     ),
 
@@ -573,6 +585,11 @@ export const bioflowApi = {
       method: "PATCH",
       headers: jsonHeaders,
       body: JSON.stringify({ enabled }),
+    }),
+
+  deleteSkill: (skillId: string) =>
+    requestJson<DeleteSkillResponse>(`/api/skills/${encodeURIComponent(skillId)}`, {
+      method: "DELETE",
     }),
 
   listProjectFiles: () => requestJson<CatalogPage<ProjectFileRecord>>("/api/files"),

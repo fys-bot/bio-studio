@@ -4,14 +4,9 @@ import DashboardCustomizeRounded from "@mui/icons-material/DashboardCustomizeRou
 import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import ExtensionRounded from "@mui/icons-material/ExtensionRounded";
 import FolderOutlined from "@mui/icons-material/FolderOutlined";
-import HelpOutlineRounded from "@mui/icons-material/HelpOutlineRounded";
 import InputRounded from "@mui/icons-material/InputRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
-import MenuBookRounded from "@mui/icons-material/MenuBookRounded";
 import ShareOutlined from "@mui/icons-material/ShareOutlined";
-import StreamRounded from "@mui/icons-material/StreamRounded";
-import HubOutlined from "@mui/icons-material/HubOutlined";
-import ViewInArOutlined from "@mui/icons-material/ViewInArOutlined";
 import ViewQuiltRounded from "@mui/icons-material/ViewQuiltRounded";
 import WarningAmberRounded from "@mui/icons-material/WarningAmberRounded";
 import AdminPanelSettingsRounded from "@mui/icons-material/AdminPanelSettingsRounded";
@@ -19,7 +14,7 @@ import AccountTreeRounded from "@mui/icons-material/AccountTreeRounded";
 import BuildOutlined from "@mui/icons-material/BuildOutlined";
 import PlayArrowRounded from "@mui/icons-material/PlayArrowRounded";
 import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
-import { Button } from "@mui/material";
+import { Button, Menu, MenuItem } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { ParticleLoader } from "@/components/ParticleLoader";
@@ -30,6 +25,7 @@ import {
   ClarificationAnswers,
 } from "@/components/ClarificationCard";
 import { WorkflowCanvas, type LayoutSaveState } from "@/components/WorkflowCanvas";
+import { WorkflowNodeDialog } from "@/components/WorkflowNodeDialog";
 import { TaskSidebar } from "@/components/TaskSidebar";
 import { ConversationPanel } from "@/components/ConversationPanel";
 import { InspectorDrawer, type InspectorTab } from "@/components/InspectorDrawer";
@@ -186,6 +182,15 @@ function getWorkflowBounds(
   };
 }
 
+function taskSwitcherTone(task: TaskListItem) {
+  if (task.id.includes("literature") || task.title.includes("文献")) return "evidence";
+  if (task.id.includes("structure") || task.title.includes("蛋白")) return "structure";
+  if (task.title.toLowerCase().includes("rna") || task.title.includes("差异表达")) {
+    return "rnaseq";
+  }
+  return "custom";
+}
+
 function fitWorkflowCanvas(
   nodes: WorkflowNodeState[],
   nodePositions: Record<string, { x: number; y: number }>,
@@ -320,12 +325,14 @@ export default function Home() {
   const [guideOpen, setGuideOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [taskSwitcherAnchor, setTaskSwitcherAnchor] = useState<HTMLElement | null>(null);
   const [bootAttempt, setBootAttempt] = useState(0);
   const [initializationError, setInitializationError] = useState("");
   const [taskLoading, setTaskLoading] = useState(false);
   const [taskLoadError, setTaskLoadError] = useState("");
   const [workspaceScrolled, setWorkspaceScrolled] = useState(false);
   const [ragTrace, setRagTrace] = useState<RagTrace | null>(null);
+  const [nodeDetailId, setNodeDetailId] = useState<string | null>(null);
   const guideInitializedRef = useRef(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const receivedStreamEventIdsRef = useRef<Set<string>>(new Set());
@@ -358,6 +365,7 @@ export default function Home() {
     setStreamEvents([]);
     receivedStreamEventIdsRef.current.clear();
     setRagTrace(null);
+    setNodeDetailId(null);
     setSelectedEvidenceId(null);
     setRunning(false);
     setCodeText("");
@@ -365,6 +373,7 @@ export default function Home() {
     setLiveLogs([]);
     setStreamStatus("idle");
     setProfileMenuOpen(false);
+    setTaskSwitcherAnchor(null);
     setLayoutReady(false);
     setLayoutSaveState("loading");
     lastSavedLayoutRef.current = "";
@@ -387,6 +396,7 @@ export default function Home() {
         setModal(null);
         setGuideOpen(false);
         setProfileMenuOpen(false);
+        setTaskSwitcherAnchor(null);
       }
     };
     window.addEventListener("keydown", close);
@@ -636,6 +646,24 @@ export default function Home() {
     () => task?.nodes.find((workflowNode) => workflowNode.id === selected),
     [task, selected],
   );
+  const nodeDetail = useMemo(
+    () => task?.nodes.find((workflowNode) => workflowNode.id === nodeDetailId) ?? null,
+    [nodeDetailId, task],
+  );
+  const nodeDetailNeighbors = useMemo(() => {
+    if (!task || !nodeDetail) return { upstream: [], downstream: [] };
+    const edges = [...task.edges, ...extraEdges];
+    const resolveNodes = (nodeIds: string[]) =>
+      nodeIds
+        .map((nodeId) => task.nodes.find((workflowNode) => workflowNode.id === nodeId))
+        .filter((node): node is WorkflowNodeState => Boolean(node));
+    return {
+      upstream: resolveNodes(edges.filter(([, to]) => to === nodeDetail.id).map(([from]) => from)),
+      downstream: resolveNodes(
+        edges.filter(([from]) => from === nodeDetail.id).map(([, to]) => to),
+      ),
+    };
+  }, [extraEdges, nodeDetail, task]);
   const impactNodeIds = useMemo(() => {
     if (!task || !selected) return [];
     const edges = [...task.edges, ...extraEdges];
@@ -746,6 +774,7 @@ ${task?.goal || config.goal}
     notify("Markdown 分析报告已下载");
   };
   const selectTask = (id: string, label: string, nextTab?: typeof tab) => {
+    setTaskSwitcherAnchor(null);
     router.push(`/projects/proj_a5211690a4/tasks/${id}`);
     if (id === "task_demo_rnaseq") {
       setMobilePanel(false);
@@ -1211,16 +1240,20 @@ ${task?.goal || config.goal}
       return;
     }
     setSelected(node.id);
+    event.currentTarget.setPointerCapture(event.pointerId);
     const origin = nodePositions[node.id] || { x: node.x, y: node.y };
     const start = { x: event.clientX, y: event.clientY };
     let moved = false;
     const move = (e: PointerEvent) => {
+      const offsetX = e.clientX - start.x;
+      const offsetY = e.clientY - start.y;
+      if (!moved && Math.hypot(offsetX, offsetY) < 4) return;
       moved = true;
       setNodePositions((items) => ({
         ...items,
         [node.id]: {
-          x: Math.max(0, origin.x + (e.clientX - start.x) / canvasZoom),
-          y: Math.max(0, origin.y + (e.clientY - start.y) / canvasZoom),
+          x: Math.max(0, origin.x + offsetX / canvasZoom),
+          y: Math.max(0, origin.y + offsetY / canvasZoom),
         },
       }));
     };
@@ -1228,8 +1261,7 @@ ${task?.goal || config.goal}
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       if (!moved) {
-        setTab("evidence");
-        setMobilePanel(true);
+        setNodeDetailId(node.id);
       }
     };
     window.addEventListener("pointermove", move);
@@ -1298,6 +1330,18 @@ ${task?.goal || config.goal}
     );
   }
   const taskIsStale = task.id !== routeTaskId;
+  const switcherTasks = taskList.length
+    ? taskList
+    : [
+        {
+          id: task.id,
+          title: task.title,
+          status: task.status,
+          progress: task.progress,
+          updatedAt: new Date().toISOString(),
+          hasUnreadResult: false,
+        },
+      ];
   return (
     <main
       className={`app-shell ${resizing ? "is-resizing" : ""}`}
@@ -1377,51 +1421,6 @@ ${task?.goal || config.goal}
                   </span>
                 </button>
               )}
-              <div className="account-menu-showcases" data-guide="showcase-menu">
-                <div className="account-menu-section-label">亮点实例</div>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setProfileMenuOpen(false);
-                    selectTask("task_demo_rnaseq", "RNA-seq 真实计算");
-                  }}
-                >
-                  <StreamRounded sx={{ fontSize: 16 }} />
-                  <span>
-                    <b>真实计算 + SSE</b>
-                    <small>审批、流式事件、PyDESeq2</small>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setProfileMenuOpen(false);
-                    selectTask("task_literature", "文献证据图谱", "evidence");
-                  }}
-                >
-                  <HubOutlined sx={{ fontSize: 16 }} />
-                  <span>
-                    <b>文档 RAG</b>
-                    <small>解析、召回、证据追踪</small>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setProfileMenuOpen(false);
-                    selectTask("task_structure", "蛋白质结构预览", "structure");
-                  }}
-                >
-                  <ViewInArOutlined sx={{ fontSize: 16 }} />
-                  <span>
-                    <b>3D 结构</b>
-                    <small>旋转、缩放、残基联动</small>
-                  </span>
-                </button>
-              </div>
               <button
                 type="button"
                 role="menuitem"
@@ -1434,34 +1433,6 @@ ${task?.goal || config.goal}
                 <span>
                   <b>工作区布局</b>
                   <small>调整面板与画布</small>
-                </span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                  setDocsOpen(true);
-                }}
-              >
-                <MenuBookRounded sx={{ fontSize: 16 }} />
-                <span>
-                  <b>开发文档</b>
-                  <small>接口与前端接入说明</small>
-                </span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                  setGuideOpen(true);
-                }}
-              >
-                <HelpOutlineRounded sx={{ fontSize: 16 }} />
-                <span>
-                  <b>使用指引</b>
-                  <small>从零开始完成工作流</small>
                 </span>
               </button>
               <button
@@ -1524,6 +1495,8 @@ ${task?.goal || config.goal}
             })
             .catch(() => setModal({ kind: "file", title: fileName, detail: fileDetail }));
         }}
+        onOpenDocumentation={() => setDocsOpen(true)}
+        onOpenGuide={() => setGuideOpen(true)}
         onResizeStart={(event) => startResize("sidebar", event)}
       />
       <section
@@ -1534,7 +1507,18 @@ ${task?.goal || config.goal}
           <div className="crumb">
             <span>快捷任务</span>
             <b>/</b>
-            <strong>{task.title}</strong>
+            <button
+              id="task-switcher-trigger"
+              type="button"
+              className="task-switcher-trigger"
+              aria-label={`切换当前任务，当前为${task.title}`}
+              aria-haspopup="menu"
+              aria-expanded={Boolean(taskSwitcherAnchor)}
+              onClick={(event) => setTaskSwitcherAnchor(event.currentTarget)}
+            >
+              <strong>{task.title}</strong>
+              <ExpandMoreRounded sx={{ fontSize: 16 }} aria-hidden="true" />
+            </button>
           </div>
           <div className="top-actions">
             <span className="live">
@@ -1545,6 +1529,35 @@ ${task?.goal || config.goal}
             </Button>
           </div>
         </header>
+        <Menu
+          className="task-switcher-menu"
+          anchorEl={taskSwitcherAnchor}
+          open={Boolean(taskSwitcherAnchor)}
+          onClose={() => setTaskSwitcherAnchor(null)}
+          slotProps={{ list: { "aria-labelledby": "task-switcher-trigger" } }}
+          anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+          transformOrigin={{ vertical: "top", horizontal: "left" }}
+        >
+          {switcherTasks.map((taskCard) => (
+            <MenuItem
+              key={taskCard.id}
+              className="task-switcher-item"
+              selected={taskCard.id === activeTask}
+              onClick={() => {
+                setTaskSwitcherAnchor(null);
+                selectTask(taskCard.id, taskCard.title);
+              }}
+            >
+              <i className={`task-switcher-dot ${taskSwitcherTone(taskCard)}`} aria-hidden="true" />
+              <span>
+                <b>{taskCard.title}</b>
+                <small>
+                  {statusLabel[taskCard.status] || taskCard.status} · {taskCard.progress}%
+                </small>
+              </span>
+            </MenuItem>
+          ))}
+        </Menu>
         <div className="goal-strip" data-guide="goal">
           <div>
             <small>当前研究目标 · {task.executionMode === "real" ? "真实服务" : "演示数据"}</small>
@@ -1808,6 +1821,18 @@ ${task?.goal || config.goal}
             onNodePointerDown={startNodeDrag}
           />
         </div>
+        <WorkflowNodeDialog
+          node={nodeDetail}
+          upstream={nodeDetailNeighbors.upstream}
+          downstream={nodeDetailNeighbors.downstream}
+          statusLabels={statusLabel}
+          onClose={() => setNodeDetailId(null)}
+          onOpenEvidence={() => {
+            setNodeDetailId(null);
+            setTab("evidence");
+            setMobilePanel(true);
+          }}
+        />
         {task.executionMode === "real" && (
           <RealAnalysisPanel
             key={task.id}
@@ -2001,11 +2026,7 @@ ${task?.goal || config.goal}
           saving={configSaving}
         />
       )}
-      <ProductGuide
-        open={guideOpen}
-        onClose={() => setGuideOpen(false)}
-        onShowcaseMenuChange={setProfileMenuOpen}
-      />
+      <ProductGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
       <DocumentationDrawer
         open={docsOpen}
         activeTaskId={activeTask}

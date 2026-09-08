@@ -374,6 +374,40 @@
   grid-template-columns: 27px !important;
 }
 
+/* 任务操作始终可见且只高亮图标本身，避免整列背景和无意义分隔线。 */
+.task-item-row .task-row-actions,
+.task-item-row.is-protected .task-row-actions {
+  display: grid !important;
+  width: 58px !important;
+  min-width: 58px !important;
+  grid-template-columns: repeat(2, 29px) !important;
+  align-items: center;
+  justify-items: center;
+}
+
+.task-item-row .task-favorite.MuiIconButton-root,
+.task-item-row .task-delete.MuiIconButton-root {
+  width: 26px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  align-self: center;
+  justify-self: center;
+  margin: 0;
+  padding: 4px;
+  border: 0 !important;
+  border-radius: 50% !important;
+  opacity: 1 !important;
+}
+
+.task-item-row .task-delete.MuiIconButton-root {
+  pointer-events: auto !important;
+}
+
+.task-item-row .task-delete.MuiIconButton-root.Mui-disabled {
+  color: #a5afa9;
+  opacity: 0.48 !important;
+}
+
 .task-item-row.selected .task-group-dot {
   animation: bioflow-signal-pulse 1.8s ease-in-out infinite;
 }
@@ -1154,5 +1188,372 @@
 @media (prefers-reduced-motion: reduce) {
   .task-item-row.selected .task-group-dot {
     animation: none;
+  }
+}
+
+/* 移动工作台与桌面保持同一操作模型：任务从左上角切换，工具固定在右侧中部。 */
+.app-shell .task-switcher-trigger {
+  display: inline-flex;
+  min-width: 0;
+  max-width: min(360px, 52vw);
+  align-items: center;
+  gap: 2px;
+  padding: 3px 2px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #33473d;
+  text-align: left;
+}
+
+.app-shell .task-switcher-trigger > strong {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: inherit;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell .task-switcher-trigger > svg {
+  flex: none;
+  color: #728078;
+  transition: transform 160ms ease;
+}
+
+.app-shell .task-switcher-trigger[aria-expanded="true"] {
+  border-color: #d1ddd6;
+  background: #f0f5f2;
+}
+
+.app-shell .task-switcher-trigger[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+
+.app-shell .task-switcher-trigger:hover,
+.app-shell .task-switcher-trigger:focus-visible {
+  border-color: #c5d3cb;
+  background: #f1f5f2;
+}
+
+.task-switcher-menu .MuiPaper-root {
+  width: min(340px, calc(100vw - 24px));
+  max-height: min(420px, calc(100dvh - 88px));
+  margin-top: 4px;
+  overflow-y: auto;
+  border: 1px solid #d6e0da;
+  border-radius: 7px;
+  box-shadow: 0 18px 42px #273d3026;
+}
+
+.task-switcher-menu .MuiList-root {
+  padding: 4px;
+}
+
+.task-switcher-menu .task-switcher-item.MuiMenuItem-root {
+  display: grid;
+  min-height: 46px;
+  grid-template-columns: 9px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0;
+  padding: 7px 8px;
+  border-radius: 5px;
+}
+
+.task-switcher-item .task-switcher-dot {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #85928b;
+}
+
+.task-switcher-item .task-switcher-dot.rnaseq {
+  background: #7e9316;
+}
+
+.task-switcher-item .task-switcher-dot.evidence {
+  background: #3d8878;
+}
+
+.task-switcher-item .task-switcher-dot.structure {
+  background: #587eaf;
+}
+
+.task-switcher-item .task-switcher-dot.custom {
+  background: #aa7437;
+}
+
+.task-switcher-item > span,
+.task-switcher-item b,
+.task-switcher-item small {
+  display: block;
+  min-width: 0;
+}
+
+.task-switcher-item b {
+  overflow: hidden;
+  color: #35483e;
+  font-size: 10px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-switcher-item small {
+  margin-top: 2px;
+  color: #7a877f;
+  font-size: 8px;
+}
+
+.task-switcher-menu .task-switcher-item.Mui-selected {
+  background: #eff3d4;
+}
+
+@media (max-width: 760px) {
+  .app-shell .crumb {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .app-shell .task-switcher-trigger {
+    max-width: calc(100vw - 156px);
+  }
+
+  .app-shell .task-switcher-trigger > strong {
+    max-width: calc(100vw - 184px);
+  }
+
+  .app-shell .goal-actions {
+    display: flex;
+    width: 100%;
+    max-height: 36px;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1px 8px 3px 0;
+    scrollbar-width: none;
+    white-space: nowrap;
+  }
+
+  .app-shell .goal-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-shell .goal-actions .status-pill {
+    display: none !important;
+  }
+
+  .app-shell .goal-actions .MuiButton-root,
+  .app-shell .goal-actions .primary,
+  .app-shell .goal-actions .secondary {
+    width: auto !important;
+    min-width: fit-content;
+    max-height: 32px;
+    height: 32px;
+    min-height: 32px;
+    flex: 0 0 auto !important;
+    margin-left: 0 !important;
+    padding: 4px 8px !important;
+    border-radius: 6px;
+    font-size: 9px;
+    line-height: 1;
+    scroll-snap-align: start;
+  }
+
+  .app-shell .goal-actions .MuiButton-startIcon {
+    margin-right: 3px !important;
+  }
+
+  .app-shell .workspace-tool-dock.tool-dock {
+    position: fixed;
+    z-index: 24;
+    top: 50%;
+    right: 8px;
+    bottom: auto;
+    left: auto;
+    display: grid;
+    width: 42px;
+    min-height: 0;
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+    padding: 4px;
+    border: 1px solid #d7dfda;
+    border-radius: 8px;
+    background: color-mix(in srgb, #ffffff 96%, transparent);
+    box-shadow: 0 12px 28px #31463a1a;
+    transform: translateY(-50%);
+  }
+
+  .app-shell .workspace-tool-dock .MuiIconButton-root {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    grid-template-rows: minmax(0, 1fr);
+    place-items: center;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 5px;
+  }
+
+  .app-shell .workspace-tool-dock .MuiIconButton-root.active {
+    box-shadow: inset 2px 0 #91a31d;
+  }
+
+  .app-shell .workspace-tool-dock .tool-dock-label {
+    display: none !important;
+  }
+
+  .app-shell .conversation .composer {
+    bottom: calc(66px + env(safe-area-inset-bottom));
+  }
+}
+
+/* 研究工具内部滚动时，工具身份与标签始终留在视野中。 */
+.app-shell .inspector {
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.app-shell .inspector .drawer-heading {
+  position: sticky;
+  z-index: 4;
+  top: 0;
+  flex: none;
+  background: #fff;
+  box-shadow: 0 1px 0 #dbe3df;
+}
+
+.app-shell .inspector .inspector-tabs {
+  position: sticky;
+  z-index: 3;
+  top: 64px;
+  flex: none;
+  min-height: 52px;
+  background: #fff;
+  box-shadow: 0 2px 6px #3850470a;
+}
+
+/* 长标签不应撑破工具区；小屏保留横向滑动，而不是压缩成不可读文字。 */
+.app-shell .goal-actions .MuiButton-root {
+  min-width: 0;
+  max-width: 132px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 大屏对话线程至少占满首屏余量，让输入框成为稳定的工作区底部锚点。 */
+@media (min-width: 761px) {
+  .app-shell .workspace > .dialogue-thread {
+    min-height: calc(100dvh - 128px);
+    padding-bottom: 0;
+  }
+
+  .app-shell .workspace > .dialogue-thread > .conversation {
+    margin-top: auto;
+    margin-bottom: 0;
+    padding-bottom: 12px;
+  }
+
+  .app-shell .workspace > .dialogue-thread > .conversation .composer {
+    bottom: 12px;
+  }
+}
+
+/* 画布点击详情：轻点查看上下游，拖动仍只修改布局。 */
+.workflow-node-dialog .responsive-dialog-content {
+  padding: 0 !important;
+  background: #f8faf9;
+}
+
+.workflow-node-dialog-body {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.workflow-node-dialog-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #75837b;
+  font-size: 9px;
+}
+
+.workflow-node-dialog-status > span:last-child {
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: #edf2ef;
+  color: #5c6b63;
+}
+
+.workflow-node-dialog-body > p {
+  margin: 0;
+  color: #43564c;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.workflow-node-dialog-body dl {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #dfe7e2;
+  border-radius: 6px;
+  background: #dfe7e2;
+}
+
+.workflow-node-dialog-body dl > div {
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px;
+  background: #fff;
+}
+
+.workflow-node-dialog-body dt,
+.workflow-node-dialog-body dd {
+  margin: 0;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.workflow-node-dialog-body dt {
+  color: #7c8982;
+}
+
+.workflow-node-dialog-body dd {
+  overflow-wrap: anywhere;
+  color: #405248;
+}
+
+.workflow-node-dialog-error {
+  color: #9b4035 !important;
+}
+
+@media (max-width: 760px) {
+  .app-shell .inspector .drawer-heading {
+    min-height: 58px;
+  }
+
+  .app-shell .inspector .inspector-tabs {
+    top: 58px;
+  }
+
+  .app-shell .goal-actions .MuiButton-root {
+    max-width: 108px;
+  }
+
+  .workflow-node-dialog-body {
+    padding: 12px;
   }
 }

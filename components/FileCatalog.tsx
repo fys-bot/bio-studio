@@ -283,14 +283,19 @@ export function FileCatalog() {
       </div>
 
       {error && (
-        <section className="catalog-state error">
-          <span>{error}</span>
-          <button onClick={() => void loadFiles()}>重新加载</button>
-        </section>
+        <aside className="file-service-alert" role="alert">
+          <div>
+            <b>文件服务暂不可用</b>
+            <span>{error}</span>
+          </div>
+          <Button size="small" variant="outlined" onClick={() => void loadFiles()}>
+            重新加载
+          </Button>
+        </aside>
       )}
 
       <section
-        className={`file-workspace ${selected ? "has-preview" : ""}`}
+        className={`file-workspace ${selected ? "has-preview" : ""} ${loading ? "is-loading" : ""}`}
         style={{ "--file-browser-width": `${browserWidth}px` } as CSSProperties}
       >
         <div className="file-browser-pane">
@@ -301,7 +306,7 @@ export function FileCatalog() {
             </div>
             <span>状态 / 更新</span>
           </header>
-          <div className="file-list" aria-busy={loading}>
+          <div className={`file-list ${loading ? "is-loading" : ""}`} aria-busy={loading}>
             {loading && (
               <ResourceLoading
                 variant="files"

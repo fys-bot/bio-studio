@@ -3257,6 +3257,145 @@ html {
   box-shadow: 0 0 0 2px #d7ebe5;
 }
 
+/* 工作台侧栏：高频示例、文档和指引固定可达，账户菜单不再承载任务入口。 */
+.task-sidebar .sidebar-showcases {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 5px;
+  margin: 0 0 9px;
+  padding: 5px 4px 8px;
+  border-bottom: 1px solid #e3e9e5;
+}
+
+.sidebar-showcases > span {
+  flex: none;
+  color: #78857d;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.sidebar-showcase-actions,
+.sidebar-utility-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sidebar-utility-actions {
+  margin-left: auto;
+  padding-left: 5px;
+  border-left: 1px solid #e3e9e5;
+}
+
+.sidebar-showcase-actions .MuiIconButton-root,
+.sidebar-utility-actions .MuiIconButton-root {
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  color: #617069;
+}
+
+.sidebar-showcase-actions .MuiIconButton-root:hover,
+.sidebar-utility-actions .MuiIconButton-root:hover {
+  border-color: #cbd8d1;
+  background: #f0f5f2;
+  color: #176e64;
+}
+
+.sidebar-showcase-actions .MuiIconButton-root.active {
+  border-color: #c9d88a;
+  background: #f0f5d4;
+  color: #657614;
+}
+
+/* 文件目录加载应该占据整个内容工作区，而不是只占一行列表。 */
+.file-catalog-page .file-workspace.is-loading {
+  min-height: max(360px, calc(100dvh - 236px));
+}
+
+.file-catalog-page .file-workspace.is-loading .file-browser-pane,
+.file-catalog-page .file-browser-pane .file-list.is-loading {
+  min-height: 0;
+}
+
+.file-catalog-page .file-browser-pane .file-list.is-loading {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+}
+
+.file-catalog-page .file-list.is-loading .resource-loading {
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+  background: #fbfcfb;
+}
+
+/* 文件服务错误置于最上层，避免长列表和加载区域把恢复入口推离视野。 */
+.file-service-alert {
+  position: fixed;
+  top: 12px;
+  left: 76px;
+  z-index: 1000;
+  display: flex;
+  width: min(430px, calc(100vw - 92px));
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 10px 10px 12px;
+  border: 1px solid #e3b6b0;
+  border-radius: 7px;
+  background: #fffaf9;
+  box-shadow: 0 14px 34px #492d291f;
+  color: #8d3f37;
+}
+
+.file-service-alert > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.file-service-alert b {
+  font-size: 10px;
+}
+
+.file-service-alert span {
+  overflow: hidden;
+  color: #a2554c;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-service-alert .MuiButton-root {
+  min-height: 28px;
+  flex: none;
+  border-color: #d5a19a;
+  color: #984139;
+  font-size: 9px;
+}
+
+@media (max-width: 760px) {
+  .task-sidebar .sidebar-showcases {
+    display: none;
+  }
+
+  .file-catalog-page .file-workspace.is-loading {
+    min-height: max(300px, calc(100dvh - 202px));
+  }
+
+  .file-service-alert {
+    top: 8px;
+    left: 8px;
+    width: calc(100vw - 16px);
+  }
+}
+
 @media (max-width: 760px) {
   .app-shell .topbar {
     padding: 0 12px;

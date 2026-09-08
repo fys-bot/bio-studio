@@ -5,9 +5,14 @@ import CloseRounded from "@mui/icons-material/CloseRounded";
 import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
+import HelpOutlineRounded from "@mui/icons-material/HelpOutlineRounded";
+import HubOutlined from "@mui/icons-material/HubOutlined";
+import MenuBookRounded from "@mui/icons-material/MenuBookRounded";
 import SearchRounded from "@mui/icons-material/SearchRounded";
 import StarBorderRounded from "@mui/icons-material/StarBorderRounded";
 import StarRounded from "@mui/icons-material/StarRounded";
+import StreamRounded from "@mui/icons-material/StreamRounded";
+import ViewInArOutlined from "@mui/icons-material/ViewInArOutlined";
 import { Button, IconButton, InputAdornment, TextField, Tooltip } from "@mui/material";
 import { useEffect, useMemo, useState, type PointerEvent } from "react";
 import type { DataFileProfile, TaskListItem } from "@/lib/domain";
@@ -45,6 +50,8 @@ type TaskSidebarProps = {
   onDeleteTask: (taskId: string, taskLabel: string) => Promise<void>;
   onUploadFile: () => void;
   onOpenFile: (fileName: string, detail: string, fileId?: string) => void;
+  onOpenDocumentation: () => void;
+  onOpenGuide: () => void;
   onResizeStart: (event: PointerEvent<HTMLDivElement>) => void;
 };
 
@@ -65,6 +72,8 @@ export function TaskSidebar({
   onDeleteTask,
   onUploadFile,
   onOpenFile,
+  onOpenDocumentation,
+  onOpenGuide,
   onResizeStart,
 }: TaskSidebarProps) {
   const [taskQuery, setTaskQuery] = useState("");
@@ -176,6 +185,54 @@ export function TaskSidebar({
         </div>
         <ExpandMoreRounded sx={{ fontSize: 18 }} />
       </button>
+      <section className="sidebar-showcases" aria-label="亮点实例">
+        <span>亮点实例</span>
+        <div className="sidebar-showcase-actions">
+          <Tooltip title="真实计算 + SSE">
+            <IconButton
+              className={activeTaskId === "task_demo_rnaseq" ? "active" : ""}
+              data-guide="showcase-rnaseq"
+              size="small"
+              aria-label="打开真实计算加 SSE 示例"
+              onClick={() => onSelectTask("task_demo_rnaseq", "RNA-seq 真实计算")}
+            >
+              <StreamRounded sx={{ fontSize: 17 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="文档 RAG">
+            <IconButton
+              className={activeTaskId === "task_literature" ? "active" : ""}
+              size="small"
+              aria-label="打开文档 RAG 示例"
+              onClick={() => onSelectTask("task_literature", "文献证据图谱", "evidence")}
+            >
+              <HubOutlined sx={{ fontSize: 17 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="3D 结构">
+            <IconButton
+              className={activeTaskId === "task_structure" ? "active" : ""}
+              size="small"
+              aria-label="打开 3D 结构示例"
+              onClick={() => onSelectTask("task_structure", "蛋白质结构预览", "structure")}
+            >
+              <ViewInArOutlined sx={{ fontSize: 17 }} />
+            </IconButton>
+          </Tooltip>
+        </div>
+        <div className="sidebar-utility-actions">
+          <Tooltip title="开发与验收手册">
+            <IconButton size="small" aria-label="打开开发与验收手册" onClick={onOpenDocumentation}>
+              <MenuBookRounded sx={{ fontSize: 17 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="从 0 到 1 使用指引">
+            <IconButton size="small" aria-label="打开使用指引" onClick={onOpenGuide}>
+              <HelpOutlineRounded sx={{ fontSize: 17 }} />
+            </IconButton>
+          </Tooltip>
+        </div>
+      </section>
       <div className="side-title">
         <span>
           任务 <em>{taskCards.length}</em>
@@ -274,21 +331,27 @@ export function TaskSidebar({
                           )}
                         </IconButton>
                       </Tooltip>
-                      {!protectedTask && (
-                        <Tooltip title="删除任务">
+                      <Tooltip title={protectedTask ? "默认演示任务受保护，不能删除" : "删除任务"}>
+                        <span>
                           <IconButton
                             size="small"
                             className="task-delete"
-                            aria-label={`删除${taskCard.title}`}
+                            disabled={protectedTask}
+                            aria-label={
+                              protectedTask
+                                ? `${taskCard.title}为受保护演示任务`
+                                : `删除${taskCard.title}`
+                            }
                             onClick={() => {
+                              if (protectedTask) return;
                               setDeleteError("");
                               setPendingDelete(taskCard);
                             }}
                           >
                             <DeleteOutlineRounded sx={{ fontSize: 17 }} />
                           </IconButton>
-                        </Tooltip>
-                      )}
+                        </span>
+                      </Tooltip>
                     </div>
                   </div>
                 );

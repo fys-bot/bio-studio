@@ -8,11 +8,14 @@ import LogoutRounded from "@mui/icons-material/LogoutRounded";
 import HelpOutlineRounded from "@mui/icons-material/HelpOutlineRounded";
 import MenuBookRounded from "@mui/icons-material/MenuBookRounded";
 import PersonOutlineRounded from "@mui/icons-material/PersonOutlineRounded";
+import AdminPanelSettingsRounded from "@mui/icons-material/AdminPanelSettingsRounded";
 import { ListItemIcon, Menu, MenuItem } from "@mui/material";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type MouseEvent } from "react";
 import { bioflowApi } from "@/lib/api-client";
+import { roleLabel } from "@/lib/access-control";
+import { useAuthSession } from "@/components/auth/AuthSessionGate";
 
 const items = [
   {
@@ -39,6 +42,7 @@ const items = [
 export function GlobalRail() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useAuthSession();
   const [accountAnchor, setAccountAnchor] = useState<HTMLElement | null>(null);
   const openAccount = (event: MouseEvent<HTMLButtonElement>) =>
     setAccountAnchor(event.currentTarget);
@@ -65,15 +69,25 @@ export function GlobalRail() {
           </Link>
         );
       })}
+      {user?.permissions.includes("users:manage") && (
+        <Link
+          className={`rail-btn ${pathname.startsWith("/admin") ? "active" : ""}`}
+          href="/admin/users"
+          aria-current={pathname.startsWith("/admin") ? "page" : undefined}
+        >
+          <AdminPanelSettingsRounded className="rail-icon" sx={{ fontSize: 19 }} />
+          <span>权限</span>
+        </Link>
+      )}
       <div className="rail-spacer" />
       <button
         className="avatar"
-        aria-label="当前账户：DF 研究员"
+        aria-label={`当前账户：${user?.name || "我的"}`}
         aria-haspopup="menu"
         aria-expanded={Boolean(accountAnchor)}
         onClick={openAccount}
       >
-        DF
+        {user?.name.slice(0, 2).toUpperCase() || "我的"}
       </button>
       <Menu
         anchorEl={accountAnchor}
@@ -86,7 +100,7 @@ export function GlobalRail() {
           <ListItemIcon>
             <PersonOutlineRounded fontSize="small" />
           </ListItemIcon>
-          DF 研究员
+          {user ? `${user.name} · ${roleLabel(user.role)}` : "当前账户"}
         </MenuItem>
         <MenuItem
           onClick={() => {

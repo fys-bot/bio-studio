@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAuthorized, isSameOrigin } from "@/lib/auth";
+import { authGuard, isSameOrigin } from "@/lib/auth";
 import { generateLlmPlan } from "@/lib/llm-client";
 import { researchJson, ResearchServiceError } from "@/lib/research-service";
 import { saveTaskPlan, taskSnapshot } from "@/lib/store";
@@ -257,7 +257,8 @@ function streamPlan(request: Request, body: PlanRequest) {
 }
 
 export async function POST(request: Request) {
-  if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = authGuard("runs:execute");
+  if (denied) return denied;
   if (!isSameOrigin(request))
     return NextResponse.json({ error: "Forbidden origin" }, { status: 403 });
   const input = (await request.json().catch(() => null)) as Partial<PlanRequest> | null;

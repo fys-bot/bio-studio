@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAuthorized, isSameOrigin } from "@/lib/auth";
+import { authGuard, isSameOrigin } from "@/lib/auth";
 import { attachTaskFiles, saveDataFileProfile, taskSnapshot } from "@/lib/store";
 import { profileTabularFile } from "@/lib/tabular-profile";
 import { researchJson, type ResearchDocument } from "@/lib/research-service";
@@ -7,7 +7,8 @@ import type { DataFileProfile } from "@/lib/domain";
 
 export const runtime = "nodejs";
 export async function POST(request: Request) {
-  if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = authGuard("files:write");
+  if (denied) return denied;
   if (!isSameOrigin(request))
     return NextResponse.json({ error: "Forbidden origin" }, { status: 403 });
   const taskId = new URL(request.url).searchParams.get("taskId") || "task_demo_rnaseq";

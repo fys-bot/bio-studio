@@ -12,6 +12,8 @@ import type {
   SkillRecord,
 } from "@/lib/domain";
 import type { WorkflowLayoutInput } from "@/lib/workflow-layout";
+import type { BioflowRole, BioflowSessionUser } from "@/lib/access-control";
+import type { BioflowPermission } from "@/lib/access-control";
 
 type ApiErrorPayload = {
   error?: string;
@@ -44,13 +46,13 @@ export function getApiErrorMessage(error: unknown, fallback: string) {
   return error instanceof ApiClientError ? error.message : fallback;
 }
 
-export type BioflowRole = "researcher" | "reviewer" | "admin";
+export type { BioflowRole } from "@/lib/access-control";
 
 export type LoginResponse = {
   authenticated: boolean;
   accessToken: string;
   expiresAt: number;
-  user: { name: string; role: BioflowRole };
+  user: BioflowSessionUser;
 };
 
 export type RunResponse = {
@@ -79,6 +81,12 @@ export type NotesResponse = { notes: string };
 export type RagTraceResponse = { trace: RagTrace };
 export type SkillResponse = { skill: SkillRecord };
 export type ProjectFileResponse = { file: ProjectFileRecord };
+export type ManagedUser = BioflowSessionUser & {
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+export type UsersResponse = { users: ManagedUser[]; user?: ManagedUser };
 export type DeleteTaskResponse = { deletedTaskId: string; tasks: TaskResponse["tasks"] };
 export type ApiStreamEvent = {
   id: number;
@@ -208,8 +216,10 @@ const classifyStatus = (status: number): ApiErrorCode => {
 };
 
 const toUserMessage = (code: ApiErrorCode, fallback: string) => {
-  if (code === "UNAUTHORIZED") return "登录状态已失效，请刷新页面";
-  if (code === "FORBIDDEN") return "当前操作没有权限";
+  if (code === "UNAUTHORIZED")
+    return fallback && fallback !== "Unauthorized" ? fallback : "登录状态已失效，请重新登录";
+  if (code === "FORBIDDEN")
+    return fallback && fallback !== "Forbidden" ? fallback : "当前操作没有权限";
   if (code === "NOT_FOUND") return "请求的演示资源不存在";
   if (code === "NETWORK") return "服务暂时不可用，请稍后重试";
   return fallback;
@@ -304,6 +314,35 @@ export const bioflowApi = {
       clearAccessToken();
     }
   },
+
+  listUsers: () => requestJson<UsersResponse>("/api/admin/users"),
+
+  createUser: (input: {
+    username: string;
+    password: string;
+    name: string;
+    role: BioflowRole;
+    permissions?: BioflowPermission[];
+  }) =>
+    requestJson<UsersResponse>("/api/admin/users", {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(input),
+    }),
+
+  updateUser: (input: {
+    id: string;
+    name?: string;
+    role?: BioflowRole;
+    permissions?: BioflowPermission[];
+    enabled?: boolean;
+    password?: string;
+  }) =>
+    requestJson<UsersResponse>("/api/admin/users", {
+      method: "PATCH",
+      headers: jsonHeaders,
+      body: JSON.stringify(input),
+    }),
 
   getTask: (taskId = "task_demo_rnaseq") =>
     requestJson<TaskResponse>(`/api/tasks/${encodeURIComponent(taskId)}`),

@@ -7236,6 +7236,226 @@ html {
   background: #fff;
 }
 
+.admin-users-page {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 30px 0 56px;
+}
+
+.admin-users-header {
+  position: sticky;
+  z-index: 8;
+  top: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 0 16px;
+  border-bottom: 1px solid var(--bf-line);
+  background: color-mix(in srgb, var(--bf-bg) 94%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.admin-users-header h1 {
+  margin: 5px 0 3px;
+  color: var(--bf-text);
+  font-size: 25px;
+  line-height: 1.2;
+}
+
+.admin-users-header p {
+  margin: 0;
+  color: var(--bf-text-soft);
+  font-size: 12px;
+}
+
+.admin-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--bf-accent-strong);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 18px 0;
+  overflow: hidden;
+  border: 1px solid var(--bf-line);
+  border-radius: 8px;
+  background: var(--bf-line);
+}
+
+.admin-summary div {
+  display: grid;
+  gap: 2px;
+  padding: 14px 16px;
+  background: #fff;
+}
+
+.admin-summary b {
+  color: var(--bf-text);
+  font-size: 22px;
+}
+
+.admin-summary span,
+.admin-user-card small,
+.admin-user-card footer {
+  color: var(--bf-text-soft);
+  font-size: 10px;
+}
+
+.admin-user-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.admin-user-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--bf-line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.admin-user-title {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-user-title h2 {
+  margin: 0;
+  color: var(--bf-text);
+  font-size: 14px;
+}
+
+.admin-user-avatar {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  background: #eaf1ed;
+  color: #2f6f59;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-user-avatar.reviewer {
+  background: #edf1f5;
+  color: #4d6476;
+}
+.admin-user-avatar.admin {
+  background: #f1f3d8;
+  color: #677515;
+}
+
+.admin-user-controls {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 15px 0 10px;
+}
+
+.admin-user-controls > label,
+.admin-create-user > label {
+  display: grid;
+  flex: 1;
+  gap: 5px;
+  color: var(--bf-text-soft);
+  font-size: 10px;
+}
+
+.admin-permission-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 8px;
+  padding: 8px;
+  border: 1px solid #e5eae7;
+  border-radius: 6px;
+  background: #f8faf9;
+}
+
+.admin-permission-list .MuiFormControlLabel-root {
+  min-width: 0;
+  margin: 0;
+}
+
+.admin-permission-list .MuiFormControlLabel-label {
+  overflow: hidden;
+  color: #526159;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user-card footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.admin-user-card footer span:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--bf-accent-strong);
+}
+
+.admin-users-loading {
+  padding: 48px 20px;
+  color: var(--bf-text-soft);
+  text-align: center;
+}
+
+.admin-create-user {
+  display: grid;
+  gap: 14px;
+  padding-top: 12px !important;
+}
+
+@media (max-width: 980px) {
+  .admin-users-page {
+    width: calc(100% - 28px);
+    padding-top: 12px;
+  }
+  .admin-user-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-users-page {
+    width: calc(100% - 20px);
+    padding-bottom: 90px;
+  }
+  .admin-users-header {
+    align-items: flex-start;
+    padding-top: 10px;
+  }
+  .admin-users-header p {
+    max-width: 48ch;
+  }
+  .admin-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-user-card {
+    padding: 12px;
+  }
+  .admin-permission-list {
+    grid-template-columns: 1fr;
+  }
+}
+
 .showcase-switcher > span {
   display: flex;
   align-items: center;

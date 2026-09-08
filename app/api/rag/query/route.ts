@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAuthorized, isSameOrigin } from "@/lib/auth";
+import { authGuard, isAuthorized, isSameOrigin } from "@/lib/auth";
 import { createAndStoreRagTrace, listRagTraces, saveRagTrace, taskSnapshot } from "@/lib/store";
 import { queryRealDocuments } from "@/lib/real-rag";
 
@@ -9,7 +9,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = authGuard("runs:execute");
+  if (denied) return denied;
   if (!isSameOrigin(request))
     return NextResponse.json({ error: "Forbidden origin" }, { status: 403 });
   const payload = (await request.json().catch(() => ({}))) as { query?: unknown };

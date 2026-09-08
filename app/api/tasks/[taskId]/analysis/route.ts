@@ -1,4 +1,4 @@
-import { isAuthorized, isSameOrigin } from "@/lib/auth";
+import { authGuard, isAuthorized, isSameOrigin } from "@/lib/auth";
 import { attachTaskFiles, bindAnalysisJob, syncAnalysisJob, taskSnapshot } from "@/lib/store";
 import { researchJson, type AnalysisJob, type ResearchDocument } from "@/lib/research-service";
 
@@ -177,7 +177,8 @@ export async function GET(request: Request, { params }: { params: { taskId: stri
 }
 
 export async function POST(request: Request, { params }: { params: { taskId: string } }) {
-  if (!isAuthorized()) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = authGuard("runs:execute");
+  if (denied) return denied;
   if (!isSameOrigin(request)) return Response.json({ error: "Forbidden origin" }, { status: 403 });
   const task = taskSnapshot(params.taskId);
   if (!task) return Response.json({ error: "Task not found" }, { status: 404 });

@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
-import { currentSessionToken, readSession } from "@/lib/auth";
+import { currentAuthContext, currentSessionToken } from "@/lib/auth";
 
 export async function GET() {
   const accessToken = currentSessionToken();
-  const session = readSession(accessToken);
-  if (!accessToken || !session)
+  const context = currentAuthContext();
+  if (!accessToken || !context)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   return NextResponse.json({
     authenticated: true,
     accessToken,
-    expiresAt: session.exp,
-    user: { name: session.name, role: session.role },
+    expiresAt: context.session.exp,
+    user: {
+      id: context.user.id,
+      username: context.user.username,
+      name: context.user.name,
+      role: context.user.role,
+      permissions: context.user.permissions,
+    },
   });
 }

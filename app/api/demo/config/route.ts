@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { configSnapshot, updateDemoConfig } from "@/lib/store";
-import { isAuthorized, isSameOrigin } from "@/lib/auth";
+import { authGuard, isAuthorized, isSameOrigin } from "@/lib/auth";
 
 export async function GET() {
   if (!isAuthorized()) {
@@ -10,9 +10,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!isAuthorized()) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = authGuard("tasks:write");
+  if (denied) return denied;
   if (!isSameOrigin(request)) {
     return NextResponse.json({ error: "Forbidden origin" }, { status: 403 });
   }

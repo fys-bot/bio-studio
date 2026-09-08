@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { isAuthorized, isSameOrigin } from "@/lib/auth";
+import { authGuard, isSameOrigin } from "@/lib/auth";
 import { approvePlan } from "@/lib/store";
 
 export async function POST(request: Request, { params }: { params: { taskId: string } }) {
-  if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = authGuard("tasks:write");
+  if (denied) return denied;
   if (!isSameOrigin(request))
     return NextResponse.json({ error: "Forbidden origin" }, { status: 403 });
   const task = approvePlan(params.taskId);

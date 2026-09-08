@@ -1,5 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { headers } from "next/headers";
+import type { BioflowPermission, BioflowRole } from "@/lib/access-control";
+import { findManagedUserById, type ManagedUser } from "@/lib/user-store";
 
 const authRuntimeRegistry = globalThis as typeof globalThis & {
   __bioflowSessionNonce?: string;
@@ -13,8 +15,9 @@ const secret = () =>
 
 export type SessionPayload = {
   sub: string;
+  username: string;
   name: string;
-  role: "researcher" | "reviewer" | "admin";
+  role: BioflowRole;
   exp: number;
 };
 
@@ -49,17 +52,40 @@ export function currentSessionToken() {
   return authorization?.match(/^Bearer\s+(.+)$/i)?.[1] || null;
 }
 
-export function isAuthorized() {
-  return Boolean(readSession(currentSessionToken()));
+export function isAuthorized(permission?: BioflowPermission) {
+  return !authorizationError(permission);
 }
 
-export function demoSession(name = "DF 研究员", role: SessionPayload["role"] = "researcher") {
+export function issueSession(user: ManagedUser) {
   return signedToken({
-    sub: `demo-${role}`,
-    name,
-    role,
+    sub: user.id,
+    username: user.username,
+    name: user.name,
+    role: user.role,
     exp: Date.now() + 8 * 60 * 60 * 1000,
   });
+}
+
+export function currentAuthContext(): { session: SessionPayload; user: ManagedUser } | null {
+  const session = readSession(currentSessionToken());
+  if (!session) return null;
+  const user = findManagedUserById(session.sub);
+  if (!user || !user.enabled || user.role !== session.role) return null;
+  return { session, user };
+}
+
+export function authorizationError(permission?: BioflowPermission) {
+  const context = currentAuthContext();
+  if (!context) return { status: 401 as const, error: "登录状态已失效，请重新登录" };
+  if (permission && !context.user.permissions.includes(permission)) {
+    return { status: 403 as const, error: "当前角色没有执行此操作的权限" };
+  }
+  return null;
+}
+
+export function authGuard(permission?: BioflowPermission) {
+  const error = authorizationError(permission);
+  return error ? Response.json({ error: error.error }, { status: error.status }) : null;
 }
 
 export function safeCredentialEqual(actual: string, expected: string) {

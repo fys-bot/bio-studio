@@ -19,6 +19,7 @@ import HubOutlined from "@mui/icons-material/HubOutlined";
 import ViewInArOutlined from "@mui/icons-material/ViewInArOutlined";
 import ViewQuiltRounded from "@mui/icons-material/ViewQuiltRounded";
 import WarningAmberRounded from "@mui/icons-material/WarningAmberRounded";
+import AdminPanelSettingsRounded from "@mui/icons-material/AdminPanelSettingsRounded";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { ParticleLoader } from "@/components/ParticleLoader";
@@ -38,6 +39,7 @@ import { DocumentationDrawer } from "@/components/DocumentationDrawer";
 import { RealAnalysisPanel } from "@/components/RealAnalysisPanel";
 import { ContentLoading } from "@/components/ContentLoading";
 import { FilePreview } from "@/components/FilePreview";
+import { useAuthSession } from "@/components/auth/AuthSessionGate";
 import {
   RunStreamTrace,
   type RunStreamEvent,
@@ -59,6 +61,7 @@ import type {
   TaskListItem,
   WorkflowNodeState,
 } from "@/lib/domain";
+import { roleLabel } from "@/lib/access-control";
 type WarmWorkspaceSnapshot = {
   task: ResearchTask;
   taskList: TaskListItem[];
@@ -220,6 +223,7 @@ function normalizeRestoredCanvas(
 /** BioFlow Studio 主工作台，负责领域状态编排，不承载具体工具视图实现。 */
 export default function Home() {
   const router = useRouter();
+  const { user } = useAuthSession();
   const params = useParams<{ taskId?: string }>();
   const pathname = usePathname();
   const routeTaskId = params?.taskId || "task_demo_rnaseq";
@@ -1288,6 +1292,12 @@ ${task?.goal || config.goal}
           <FolderOutlined className="rail-icon" sx={{ fontSize: 19 }} />
           <span>文件</span>
         </button>
+        {user?.permissions.includes("users:manage") && (
+          <button className="rail-btn" onClick={() => router.push("/admin/users")}>
+            <AdminPanelSettingsRounded className="rail-icon" sx={{ fontSize: 19 }} />
+            <span>权限</span>
+          </button>
+        )}
         <div className="rail-spacer" />
         <div className="rail-account" ref={profileMenuRef}>
           <button
@@ -1296,14 +1306,34 @@ ${task?.goal || config.goal}
             aria-label="打开当前账户菜单"
             aria-expanded={profileMenuOpen}
           >
-            DF
+            {user?.name.slice(0, 2).toUpperCase() || "我的"}
           </button>
           {profileMenuOpen && (
             <div className="account-menu" role="menu">
               <div className="account-menu-profile">
-                <b>DF 研究员</b>
-                <small>BioFlow 生命科学实验室</small>
+                <b>{user?.name || "当前账户"}</b>
+                <small>
+                  {user
+                    ? `${roleLabel(user.role)} · ${user.permissions.length} 项权限`
+                    : "BioFlow 生命科学实验室"}
+                </small>
               </div>
+              {user?.permissions.includes("users:manage") && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    router.push("/admin/users");
+                  }}
+                >
+                  <AdminPanelSettingsRounded sx={{ fontSize: 16 }} />
+                  <span>
+                    <b>用户与权限</b>
+                    <small>新增账号并分配角色</small>
+                  </span>
+                </button>
+              )}
               <button
                 type="button"
                 role="menuitem"

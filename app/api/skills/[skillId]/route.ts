@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAuthorized, isSameOrigin } from "@/lib/auth";
+import { authGuard, isAuthorized, isSameOrigin } from "@/lib/auth";
 import { getSkill, setSkillEnabled } from "@/lib/catalog-service";
 
 export async function GET(_: Request, { params }: { params: { skillId: string } }) {
@@ -11,7 +11,8 @@ export async function GET(_: Request, { params }: { params: { skillId: string } 
 }
 
 export async function PATCH(request: Request, { params }: { params: { skillId: string } }) {
-  if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = authGuard("skills:write");
+  if (denied) return denied;
   if (!isSameOrigin(request))
     return NextResponse.json({ error: "Forbidden origin" }, { status: 403 });
   const payload = (await request.json().catch(() => ({}))) as { enabled?: unknown };

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { isAuthorized, isSameOrigin } from "@/lib/auth";
+import { authGuard, isSameOrigin } from "@/lib/auth";
 import { documentToFile, researchJson, type ResearchDocument } from "@/lib/research-service";
 
 export async function POST(request: Request, { params }: { params: { fileId: string } }) {
-  if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = authGuard("files:write");
+  if (denied) return denied;
   if (!isSameOrigin(request))
     return NextResponse.json({ error: "Forbidden origin" }, { status: 403 });
   try {

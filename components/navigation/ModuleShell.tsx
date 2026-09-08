@@ -7,7 +7,7 @@ import { ModuleContent } from "@/components/navigation/ModuleContent";
 import { listTaskCards } from "@/lib/store";
 
 type ModuleShellProps = {
-  section: "skills" | "files" | "project";
+  section: "skills" | "files" | "project" | "admin";
   children: ReactNode;
   activeItemId?: string;
 };
@@ -28,13 +28,22 @@ function taskGroupTone(task: { id: string; title: string }) {
 /** 二级模块壳层：在页面级路由中保留项目、任务和当前模块上下文。 */
 export function ModuleShell({ section, children, activeItemId }: ModuleShellProps) {
   const recentTasks = listTaskCards().slice(-5).reverse();
-  const title = section === "skills" ? "能力中心" : section === "files" ? "文件中心" : "项目空间";
+  const title =
+    section === "skills"
+      ? "能力中心"
+      : section === "files"
+        ? "文件中心"
+        : section === "admin"
+          ? "权限管理"
+          : "项目空间";
   const description =
     section === "skills"
       ? "管理智能体可调用的科研技能"
       : section === "files"
         ? "管理数据、文档与解析状态"
-        : "查看任务与项目资源";
+        : section === "admin"
+          ? "创建用户并分配角色和原子权限"
+          : "查看任务与项目资源";
   return (
     <div className="module-shell">
       <GlobalRail />

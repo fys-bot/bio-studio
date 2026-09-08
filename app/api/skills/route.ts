@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAuthorized, isSameOrigin } from "@/lib/auth";
+import { authGuard, isAuthorized, isSameOrigin } from "@/lib/auth";
 import { createSkill, listSkills } from "@/lib/catalog-service";
 
 export async function GET(request: Request) {
@@ -18,7 +18,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = authGuard("skills:write");
+  if (denied) return denied;
   if (!isSameOrigin(request))
     return NextResponse.json({ error: "Forbidden origin" }, { status: 403 });
   try {

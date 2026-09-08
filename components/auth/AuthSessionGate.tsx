@@ -3,40 +3,63 @@
 import RefreshRounded from "@mui/icons-material/RefreshRounded";
 import { Button, CircularProgress } from "@mui/material";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ApiClientError, bioflowApi, clearAccessToken, getAccessToken } from "@/lib/api-client";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  ApiClientError,
+  bioflowApi,
+  clearAccessToken,
+  getAccessToken,
+  type LoginResponse,
+} from "@/lib/api-client";
+import type { BioflowSessionUser } from "@/lib/access-control";
 
 let sessionVerified = false;
+let verifiedUser: BioflowSessionUser | null = null;
+
+const AuthSessionContext = createContext<{ user: BioflowSessionUser | null }>({ user: null });
+
+export function useAuthSession() {
+  return useContext(AuthSessionContext);
+}
 
 export function AuthSessionGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [status, setStatus] = useState<"checking" | "ready" | "error">("checking");
+  const [user, setUser] = useState<BioflowSessionUser | null>(verifiedUser);
 
   const verifySession = useCallback(async () => {
     if (pathname === "/login") {
+      setUser(null);
       setStatus("ready");
       return;
     }
     const accessToken = getAccessToken();
     if (!accessToken) {
       sessionVerified = false;
+      verifiedUser = null;
+      setUser(null);
       setStatus("checking");
       const next = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
       router.replace(`/login${next}`);
       return;
     }
     if (sessionVerified) {
+      setUser(verifiedUser);
       setStatus("ready");
       return;
     }
     setStatus("checking");
     try {
-      await bioflowApi.restoreSession();
+      const response: LoginResponse = await bioflowApi.restoreSession();
       sessionVerified = true;
+      verifiedUser = response.user;
+      setUser(response.user);
       setStatus("ready");
     } catch (error) {
       sessionVerified = false;
+      verifiedUser = null;
+      setUser(null);
       clearAccessToken();
       if (error instanceof ApiClientError && error.status === 401) {
         const next = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
@@ -51,7 +74,9 @@ export function AuthSessionGate({ children }: { children: ReactNode }) {
     void verifySession();
   }, [verifySession]);
 
-  if (pathname === "/login" || status === "ready") return children;
+  if (pathname === "/login" || status === "ready") {
+    return <AuthSessionContext.Provider value={{ user }}>{children}</AuthSessionContext.Provider>;
+  }
 
   return (
     <main className="session-gate" role="status" aria-live="polite">

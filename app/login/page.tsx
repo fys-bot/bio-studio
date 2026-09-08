@@ -98,21 +98,21 @@ function LoginContent() {
                 <ScienceOutlined sx={{ fontSize: 16 }} />
                 <span>
                   <b>研究员</b>
-                  <small>已开放</small>
+                  <small>执行研究</small>
                 </span>
               </ToggleButton>
-              <ToggleButton value="reviewer" disabled>
+              <ToggleButton value="reviewer">
                 <FactCheckOutlined sx={{ fontSize: 16 }} />
                 <span>
                   <b>审阅者</b>
-                  <small>开发中</small>
+                  <small>只读审阅</small>
                 </span>
               </ToggleButton>
-              <ToggleButton value="admin" disabled>
+              <ToggleButton value="admin">
                 <AdminPanelSettingsOutlined sx={{ fontSize: 16 }} />
                 <span>
                   <b>管理员</b>
-                  <small>开发中</small>
+                  <small>权限管理</small>
                 </span>
               </ToggleButton>
             </ToggleButtonGroup>
@@ -173,8 +173,9 @@ function LoginContent() {
           </Button>
         </form>
         <div className="login-demo-note">
-          <b>面试演示账号已预填</b>
-          <span>账号 researcher · 密码 bioflow2026 · 服务重启后需重新登录。</span>
+          <b>研究员账号已预填</b>
+          <span>审阅者 reviewer / review2026 · 管理员 admin / admin2026</span>
+          <small>选择的身份必须与账号角色一致；服务重启后需重新登录。</small>
         </div>
       </section>
     </main>

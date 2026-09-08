@@ -13,6 +13,10 @@ import InputRounded from "@mui/icons-material/InputRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
 import MenuBookRounded from "@mui/icons-material/MenuBookRounded";
 import MemoryRounded from "@mui/icons-material/MemoryRounded";
+import ShareOutlined from "@mui/icons-material/ShareOutlined";
+import StreamRounded from "@mui/icons-material/StreamRounded";
+import HubOutlined from "@mui/icons-material/HubOutlined";
+import ViewInArOutlined from "@mui/icons-material/ViewInArOutlined";
 import ViewQuiltRounded from "@mui/icons-material/ViewQuiltRounded";
 import WarningAmberRounded from "@mui/icons-material/WarningAmberRounded";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -1392,9 +1396,38 @@ ${task?.goal || config.goal}
             <span className="live">
               <i /> 智能体 · {statusLabel[task.status] || task.status}
             </span>
-            <button onClick={shareTask}>分享</button>
+            <button onClick={shareTask}>
+              <ShareOutlined sx={{ fontSize: 15 }} /> 分享
+            </button>
           </div>
         </header>
+        <nav className="showcase-switcher" aria-label="面试演示任务">
+          <span>亮点示例</span>
+          <button
+            className={activeTask === "task_demo_rnaseq" ? "active" : ""}
+            onClick={() => selectTask("task_demo_rnaseq", "RNA-seq 真实计算")}
+          >
+            <StreamRounded sx={{ fontSize: 15 }} />
+            <b>真实计算 + SSE</b>
+            <small>审批、流式事件、PyDESeq2</small>
+          </button>
+          <button
+            className={activeTask === "task_literature" ? "active" : ""}
+            onClick={() => selectTask("task_literature", "文献证据图谱", "evidence")}
+          >
+            <HubOutlined sx={{ fontSize: 15 }} />
+            <b>文档 RAG</b>
+            <small>解析、召回、证据追踪</small>
+          </button>
+          <button
+            className={activeTask === "task_structure" ? "active" : ""}
+            onClick={() => selectTask("task_structure", "蛋白质结构预览", "structure")}
+          >
+            <ViewInArOutlined sx={{ fontSize: 15 }} />
+            <b>3D 结构</b>
+            <small>旋转、缩放、残基联动</small>
+          </button>
+        </nav>
         <div className="goal-strip" data-guide="goal">
           <div>
             <small>当前研究目标 · {task.executionMode === "real" ? "真实服务" : "演示数据"}</small>

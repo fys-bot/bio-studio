@@ -6813,6 +6813,302 @@ html {
   }
 }
 
+/* 验收工作台信息层级：顶部只承载上下文与全局动作，示例任务作为紧凑能力切换器。 */
+.app-shell .topbar {
+  width: 100%;
+  min-height: 52px;
+  height: auto;
+  gap: 14px;
+}
+
+.app-shell .crumb {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.app-shell .crumb strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell .top-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.app-shell .top-actions button {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 5px;
+}
+
+.showcase-switcher {
+  order: 1;
+  display: grid;
+  width: min(calc(100% - 56px), var(--bf-content-max));
+  max-width: var(--bf-content-max);
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 6px;
+  margin: 12px auto 0;
+  padding: 6px;
+  border: 1px solid var(--bf-line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.showcase-switcher > span {
+  display: flex;
+  align-items: center;
+  padding: 0 7px;
+  color: var(--bf-text-soft);
+  font-size: 9px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.showcase-switcher button {
+  display: grid;
+  min-width: 0;
+  min-height: 44px;
+  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: center;
+  align-items: center;
+  gap: 1px 5px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: #f5f7f5;
+  color: #607068;
+  text-align: left;
+}
+
+.showcase-switcher button > svg {
+  grid-row: 1 / 3;
+}
+
+.showcase-switcher button b,
+.showcase-switcher button small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.showcase-switcher button b {
+  color: #35473d;
+  font-size: 10px;
+}
+
+.showcase-switcher button small {
+  color: #7b877f;
+  font-size: 8px;
+}
+
+.showcase-switcher button:hover,
+.showcase-switcher button:focus-visible {
+  border-color: #bccac2;
+  background: #eef3f0;
+}
+
+.showcase-switcher button.active {
+  border-color: #c9d68c;
+  background: #f0f3d4;
+  color: #687616;
+}
+
+.app-shell .goal-strip {
+  order: 2;
+}
+
+.app-shell .dialogue-thread {
+  order: 3;
+}
+
+/* 任务操作：收藏始终可操作，删除只在 hover、键盘焦点或触控布局中出现。 */
+.task-item-row .task-row-actions {
+  display: grid;
+  width: 54px;
+  min-width: 54px;
+  grid-template-columns: repeat(2, 27px);
+  align-self: stretch;
+}
+
+/* RAG Trace 默认保持摘要密度，展开后用可扫描记录代替整块原始 JSON。 */
+.rag-stage-records {
+  display: grid;
+  gap: 1px;
+  padding: 5px;
+  background: #f4f7f5;
+}
+
+.rag-stage-records > button {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+  padding: 8px;
+  border: 0;
+  border-radius: 5px;
+  background: #fff;
+  color: #53645b;
+  text-align: left;
+}
+
+.rag-stage-records > button:not(:disabled):hover {
+  background: #eef3f0;
+}
+
+.rag-stage-records > button:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.rag-stage-records > button > span:first-child {
+  color: #879718;
+  font:
+    9px "DM Mono",
+    monospace;
+}
+
+.rag-stage-records b,
+.rag-stage-records small {
+  display: block;
+  min-width: 0;
+}
+
+.rag-stage-records b {
+  overflow: hidden;
+  color: #35463d;
+  font-size: 10px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rag-stage-records small {
+  margin-top: 3px;
+  color: #78857e;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.rag-stage-records > small {
+  padding: 6px 8px;
+}
+
+.task-item-row .task-favorite.MuiIconButton-root,
+.task-item-row .task-delete.MuiIconButton-root {
+  position: static;
+  inset: auto;
+  width: 27px;
+  height: 100%;
+  min-height: 34px;
+  border-left: 1px solid transparent;
+  border-radius: 0;
+}
+
+.task-item-row .task-favorite.MuiIconButton-root {
+  grid-column: 1;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+}
+
+.task-item-row .task-delete.MuiIconButton-root {
+  grid-column: 2;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.task-item-row.has-delete:hover .task-delete.MuiIconButton-root,
+.task-item-row.has-delete:focus-within .task-delete.MuiIconButton-root {
+  pointer-events: auto;
+  border-left-color: #d7dfda;
+  opacity: 1;
+}
+
+.task-item-row.is-protected .task-row-actions {
+  width: 27px;
+  min-width: 27px;
+  grid-template-columns: 27px;
+}
+
+/* 文件服务错误态保持为内容级反馈，不再抢占整个页面。 */
+.file-catalog-page > .catalog-state.error {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border: 1px solid #e2bdb7;
+  border-radius: 7px;
+  background: #fff8f6;
+  color: #8c4037;
+  font-size: 10px;
+}
+
+.file-catalog-page > .catalog-state.error button {
+  min-height: 30px;
+  flex: none;
+  padding: 4px 9px;
+  border: 1px solid #d1a39d;
+  border-radius: 6px;
+  background: #fff;
+  color: #83382f;
+}
+
+@media (max-width: 980px) {
+  .showcase-switcher {
+    width: calc(100% - 32px);
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+    overflow-x: auto;
+  }
+
+  .showcase-switcher > span {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell .topbar {
+    min-height: 46px;
+  }
+
+  .app-shell .top-actions .live {
+    max-width: 108px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .showcase-switcher {
+    width: calc(100% - 20px);
+    grid-template-columns: repeat(3, minmax(138px, 1fr));
+    margin-top: 8px;
+    padding: 5px;
+  }
+
+  .showcase-switcher button {
+    min-height: 40px;
+  }
+
+  .task-item-row .task-delete.MuiIconButton-root {
+    pointer-events: auto;
+    opacity: 1;
+  }
+}
+
 /* 面试验收移动端收口：减少目标区占高，修正消息宽度与双层底栏比例。 */
 @media (max-width: 760px) {
   .app-shell {

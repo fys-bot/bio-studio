@@ -62,7 +62,7 @@ export type AnalysisJob = {
 };
 
 const researchRuntimeRegistry = globalThis as typeof globalThis & {
-  __bioflowResolvedWorker?: { url: string; checkedAt: number };
+  __bioflowResolvedWorker?: { url: string; checkedAt: number; apiVersion: number };
 };
 
 function workerHeaders(headers?: HeadersInit) {
@@ -90,7 +90,9 @@ function localWorkerUrl() {
 
 async function resolvedWorkerUrl() {
   const cached = researchRuntimeRegistry.__bioflowResolvedWorker;
-  if (cached && Date.now() - cached.checkedAt < 30_000) return cached.url;
+  if (cached && cached.apiVersion >= 2 && Date.now() - cached.checkedAt < 30_000) {
+    return cached.url;
+  }
   const configured = localWorkerUrl();
   let parsed: URL;
   try {
@@ -117,7 +119,17 @@ async function resolvedWorkerUrl() {
         signal: AbortSignal.timeout(900),
       });
       if (!response.ok) continue;
-      researchRuntimeRegistry.__bioflowResolvedWorker = { url: candidate, checkedAt: Date.now() };
+      const health = (await response.json().catch(() => ({}))) as {
+        apiVersion?: number;
+        features?: string[];
+      };
+      const apiVersion = Number(health.apiVersion || 0);
+      if (apiVersion < 2 || !health.features?.includes("agent-plan")) continue;
+      researchRuntimeRegistry.__bioflowResolvedWorker = {
+        url: candidate,
+        checkedAt: Date.now(),
+        apiVersion,
+      };
       return candidate;
     } catch {
       continue;

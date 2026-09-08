@@ -30,7 +30,7 @@ export function RagTracePanel({
   onCopy,
   onChunkSelect,
 }: RagTracePanelProps) {
-  const [expanded, setExpanded] = useState<string | null>("retrievalTop20");
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [fallbackStrategy, setFallbackStrategy] = useState("");
   if (!trace)
     return (
@@ -74,7 +74,7 @@ export function RagTracePanel({
           <h3>智能体如何从问题走到工具</h3>
         </div>
         <button className="text-button" onClick={() => onCopy?.(JSON.stringify(trace, null, 2))}>
-          复制审计 JSON
+          复制 JSON
         </button>
       </header>
       <div className="rag-query">
@@ -130,7 +130,55 @@ export function RagTracePanel({
                       ))}
                     </div>
                   )}
-                  {stage.key !== "retrievalTop20" && <pre>{JSON.stringify(value, null, 2)}</pre>}
+                  {stage.key !== "retrievalTop20" && Array.isArray(value) && (
+                    <div className="rag-stage-records">
+                      {value.slice(0, 8).map((entry, entryIndex) => {
+                        const item = entry as Record<string, unknown>;
+                        const title =
+                          stage.key === "parsedDocuments"
+                            ? String(item.name || item.id || `文档 ${entryIndex + 1}`)
+                            : stage.key === "chunks"
+                              ? String(item.text || item.id || `片段 ${entryIndex + 1}`)
+                              : stage.key === "rerankedResults"
+                                ? `#${String(item.rank || entryIndex + 1)} · ${String(item.documentId || "证据片段")}`
+                                : stage.key === "graphRelations"
+                                  ? `${String(item.source || "实体")} ${String(item.relation || "关联")} ${String(item.target || "实体")}`
+                                  : stage.key === "groundingBindings"
+                                    ? `${String(item.parameter || "参数")} = ${String(item.value || "-")}`
+                                    : `${String(item.tool || "工具调用")} · ${String(item.status || "")}`;
+                        const detail =
+                          stage.key === "parsedDocuments"
+                            ? `${String(item.sourceType || "项目文件")} · ${String(item.parser || "解析器未知")} · ${String(item.status || "")}`
+                            : stage.key === "chunks"
+                              ? `${String(item.tokenCount || 0)} tokens · ${String(item.documentId || "来源未知")}`
+                              : stage.key === "rerankedResults"
+                                ? `精排 ${Number(item.rerankScore || 0).toFixed(3)} · ${String(item.rationale || "等待理由")}`
+                                : stage.key === "graphRelations"
+                                  ? `${String(item.provenance || "来源未知")} · 置信度 ${Number(item.confidence || 0).toFixed(2)}`
+                                  : stage.key === "groundingBindings"
+                                    ? `置信度 ${Number(item.confidence || 0).toFixed(2)} · ${item.required ? "必需参数" : "可选参数"}`
+                                    : String(item.purpose || "查看工具输入与输出");
+                        const chunkId = stage.key === "chunks" ? String(item.id || "") : "";
+                        return (
+                          <button
+                            type="button"
+                            key={`${stage.key}-${entryIndex}`}
+                            onClick={() => chunkId && onChunkSelect?.(chunkId)}
+                            disabled={!chunkId}
+                          >
+                            <span>{String(entryIndex + 1).padStart(2, "0")}</span>
+                            <span>
+                              <b>{title}</b>
+                              <small>{detail}</small>
+                            </span>
+                          </button>
+                        );
+                      })}
+                      {value.length > 8 && (
+                        <small>仅展示前 8 条，共 {value.length} 条；完整数据可复制 JSON。</small>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

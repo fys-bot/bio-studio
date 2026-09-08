@@ -51,7 +51,8 @@ export function RealAnalysisPanel({
       .listProjectFiles()
       .then((res) => {
         if (alive) {
-          const bound = res.items.filter((file) => task.fileIds?.includes(file.id));
+          const catalogItems = Array.isArray(res.items) ? res.items : [];
+          const bound = catalogItems.filter((file) => task.fileIds?.includes(file.id));
           setFiles(bound);
           setConfig((current) => ({
             ...current,
@@ -209,7 +210,8 @@ export function RealAnalysisPanel({
       </header>
       {task.skill && (
         <p className="bound-skill analysis-contract">
-          输入：{task.skill.inputs.join("、")} · 输出：{task.skill.outputs.join("、")}
+          输入：{task.skill.inputs?.join("、") || "等待绑定"} · 输出：
+          {task.skill.outputs?.join("、") || "等待配置"}
         </p>
       )}
       <section className="analysis-section analysis-inputs">

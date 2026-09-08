@@ -6,9 +6,11 @@ import ExtensionRounded from "@mui/icons-material/ExtensionRounded";
 export function ResourceLoading({
   variant,
   label,
+  detail,
 }: {
   variant: "skills" | "files";
   label: string;
+  detail?: string;
 }) {
   const Icon = variant === "skills" ? ExtensionRounded : DescriptionOutlined;
   return (
@@ -21,7 +23,9 @@ export function ResourceLoading({
       </span>
       <span>
         <b>{label}</b>
-        <small>{variant === "skills" ? "同步技能契约与启用状态" : "同步解析状态与索引摘要"}</small>
+        <small>
+          {detail || (variant === "skills" ? "同步技能契约与启用状态" : "同步解析状态与索引摘要")}
+        </small>
       </span>
     </section>
   );

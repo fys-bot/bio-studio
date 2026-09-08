@@ -59,6 +59,7 @@ export function FileCatalog() {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [slowLoading, setSlowLoading] = useState(false);
   const [uploadingFileName, setUploadingFileName] = useState("");
   const [error, setError] = useState("");
   const [browserWidth, setBrowserWidth] = useState(400);
@@ -66,7 +67,9 @@ export function FileCatalog() {
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
+    setSlowLoading(false);
     setError("");
+    const slowTimer = window.setTimeout(() => setSlowLoading(true), 2500);
     try {
       const items = (await bioflowApi.listProjectFiles()).items;
       setFiles(items);
@@ -86,7 +89,9 @@ export function FileCatalog() {
       setError(getApiErrorMessage(loadError, "文件目录加载失败"));
       return [];
     } finally {
+      window.clearTimeout(slowTimer);
       setLoading(false);
+      setSlowLoading(false);
     }
   }, [requestedPreviewName]);
 
@@ -279,7 +284,13 @@ export function FileCatalog() {
             <span>状态 / 更新</span>
           </header>
           <div className="file-list" aria-busy={loading}>
-            {loading && <ResourceLoading variant="files" label="正在读取文件目录" />}
+            {loading && (
+              <ResourceLoading
+                variant="files"
+                label={slowLoading ? "科研服务响应较慢" : "正在读取文件目录"}
+                detail={slowLoading ? "正在等待解析服务；超时后可直接重试" : undefined}
+              />
+            )}
             {!loading &&
               visibleFiles.map((file) => (
                 <button

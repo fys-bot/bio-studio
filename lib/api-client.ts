@@ -221,7 +221,8 @@ async function requestJson<ResponsePayload extends object>(
   init?: RequestInit,
 ): Promise<ResponsePayload> {
   const method = (init?.method || "GET").toUpperCase();
-  const maxAttempts = method === "GET" ? 2 : 1;
+  const isFileCatalogRequest = method === "GET" && path === "/api/files";
+  const maxAttempts = method === "GET" && !isFileCatalogRequest ? 2 : 1;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
@@ -236,7 +237,9 @@ async function requestJson<ResponsePayload extends object>(
               ? path.includes("/agent/plan")
                 ? 210_000
                 : 140_000
-              : 15_000,
+              : isFileCatalogRequest
+                ? 8_000
+                : 15_000,
           ),
       });
       const payload = (await response.json().catch(() => ({}))) as

@@ -1,6 +1,8 @@
 "use client";
 
 import BiotechOutlined from "@mui/icons-material/BiotechOutlined";
+import AdminPanelSettingsOutlined from "@mui/icons-material/AdminPanelSettingsOutlined";
+import FactCheckOutlined from "@mui/icons-material/FactCheckOutlined";
 import LockOutlined from "@mui/icons-material/LockOutlined";
 import PersonOutlineRounded from "@mui/icons-material/PersonOutlineRounded";
 import ScienceOutlined from "@mui/icons-material/ScienceOutlined";
@@ -13,11 +15,13 @@ import {
   IconButton,
   InputAdornment,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 import { LoginMoleculeScene } from "@/components/auth/LoginMoleculeScene";
-import { bioflowApi, getApiErrorMessage } from "@/lib/api-client";
+import { bioflowApi, getApiErrorMessage, type BioflowRole } from "@/lib/api-client";
 
 function LoginContent() {
   const router = useRouter();
@@ -25,6 +29,7 @@ function LoginContent() {
   const [username, setUsername] = useState("researcher");
   const [password, setPassword] = useState("bioflow2026");
   const [passwordVisible, setPasswordVisible] = useState(true);
+  const [role, setRole] = useState<BioflowRole>("researcher");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,7 +39,9 @@ function LoginContent() {
     setLoading(true);
     setError("");
     try {
-      await bioflowApi.login({ username, password });
+      await bioflowApi.login({ username, password, role });
+      window.localStorage.removeItem("bioflow-studio-guide-v2");
+      window.localStorage.removeItem("bioflow-studio-guide-step-v2");
       const next = searchParams.get("next");
       router.replace(
         next?.startsWith("/") ? next : "/projects/proj_a5211690a4/tasks/task_demo_rnaseq",
@@ -74,6 +81,42 @@ function LoginContent() {
           </div>
         </div>
         <form onSubmit={submit}>
+          <div className="login-role-field">
+            <div>
+              <b>进入身份</b>
+              <small>令牌会携带角色声明，接口按权限边界校验</small>
+            </div>
+            <ToggleButtonGroup
+              exclusive
+              fullWidth
+              size="small"
+              value={role}
+              onChange={(_, nextRole) => nextRole && setRole(nextRole)}
+              aria-label="选择登录角色"
+            >
+              <ToggleButton value="researcher">
+                <ScienceOutlined sx={{ fontSize: 16 }} />
+                <span>
+                  <b>研究员</b>
+                  <small>已开放</small>
+                </span>
+              </ToggleButton>
+              <ToggleButton value="reviewer" disabled>
+                <FactCheckOutlined sx={{ fontSize: 16 }} />
+                <span>
+                  <b>审阅者</b>
+                  <small>开发中</small>
+                </span>
+              </ToggleButton>
+              <ToggleButton value="admin" disabled>
+                <AdminPanelSettingsOutlined sx={{ fontSize: 16 }} />
+                <span>
+                  <b>管理员</b>
+                  <small>开发中</small>
+                </span>
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </div>
           <TextField
             label="账号"
             value={username}

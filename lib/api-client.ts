@@ -44,11 +44,13 @@ export function getApiErrorMessage(error: unknown, fallback: string) {
   return error instanceof ApiClientError ? error.message : fallback;
 }
 
+export type BioflowRole = "researcher" | "reviewer" | "admin";
+
 export type LoginResponse = {
   authenticated: boolean;
   accessToken: string;
   expiresAt: number;
-  user: { name: string; role: "researcher" };
+  user: { name: string; role: BioflowRole };
 };
 
 export type RunResponse = {
@@ -279,7 +281,7 @@ const jsonHeaders = {
 };
 
 export const bioflowApi = {
-  login: async (credentials: { username: string; password: string }) => {
+  login: async (credentials: { username: string; password: string; role: BioflowRole }) => {
     const response = await requestJson<LoginResponse>("/api/auth/login", {
       method: "POST",
       headers: jsonHeaders,

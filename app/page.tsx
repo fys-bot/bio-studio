@@ -379,7 +379,7 @@ export default function Home() {
   useEffect(() => {
     if (!authed || !task || guideInitializedRef.current) return;
     guideInitializedRef.current = true;
-    if (!window.localStorage.getItem("bioflow-studio-guide-v1")) {
+    if (!window.localStorage.getItem("bioflow-studio-guide-v2")) {
       setGuideOpen(true);
     }
   }, [authed, task]);
@@ -1401,7 +1401,7 @@ ${task?.goal || config.goal}
             </button>
           </div>
         </header>
-        <nav className="showcase-switcher" aria-label="面试演示任务">
+        <nav className="showcase-switcher" aria-label="面试演示任务" data-guide="showcases">
           <span>亮点示例</span>
           <button
             className={activeTask === "task_demo_rnaseq" ? "active" : ""}

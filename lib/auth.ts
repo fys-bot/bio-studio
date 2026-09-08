@@ -14,7 +14,7 @@ const secret = () =>
 export type SessionPayload = {
   sub: string;
   name: string;
-  role: "researcher";
+  role: "researcher" | "reviewer" | "admin";
   exp: number;
 };
 
@@ -36,7 +36,9 @@ export function readSession(token?: string | null): SessionPayload | null {
     return null;
   try {
     const session = JSON.parse(Buffer.from(payload, "base64url").toString()) as SessionPayload;
-    return session.role === "researcher" && session.exp > Date.now() ? session : null;
+    return ["researcher", "reviewer", "admin"].includes(session.role) && session.exp > Date.now()
+      ? session
+      : null;
   } catch {
     return null;
   }
@@ -51,11 +53,11 @@ export function isAuthorized() {
   return Boolean(readSession(currentSessionToken()));
 }
 
-export function demoSession(name = "DF 研究员") {
+export function demoSession(name = "DF 研究员", role: SessionPayload["role"] = "researcher") {
   return signedToken({
-    sub: "demo-researcher",
+    sub: `demo-${role}`,
     name,
-    role: "researcher",
+    role,
     exp: Date.now() + 8 * 60 * 60 * 1000,
   });
 }

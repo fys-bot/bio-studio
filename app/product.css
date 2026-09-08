@@ -488,6 +488,187 @@
   }
 }
 
+/* 登录角色与生命科学场景：角色声明进入令牌，未开放角色保持可见但不可误操作。 */
+.login-role-field {
+  display: grid;
+  gap: 8px;
+}
+
+.login-role-field > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.login-role-field > div:first-child b {
+  color: #44554c;
+  font-size: 10px;
+}
+
+.login-role-field > div:first-child small {
+  color: #849088;
+  font-size: 8px;
+  text-align: right;
+}
+
+.login-panel .login-role-field .MuiToggleButtonGroup-root {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.login-panel .login-role-field .MuiToggleButton-root {
+  display: grid;
+  min-width: 0;
+  min-height: 50px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+  padding: 6px;
+  border: 1px solid #d7dfda !important;
+  border-radius: 6px !important;
+  color: #66736b;
+  text-align: left;
+  text-transform: none;
+}
+
+.login-panel .login-role-field .MuiToggleButton-root.Mui-selected {
+  border-color: #aab86a !important;
+  background: #eef2cf;
+  color: #566510;
+}
+
+.login-panel .login-role-field .MuiToggleButton-root.Mui-disabled {
+  border-color: #e2e7e4 !important;
+  color: #9ba59f;
+  opacity: 1;
+}
+
+.login-role-field .MuiToggleButton-root span,
+.login-role-field .MuiToggleButton-root b,
+.login-role-field .MuiToggleButton-root small {
+  display: block;
+  min-width: 0;
+}
+
+.login-role-field .MuiToggleButton-root b {
+  overflow: hidden;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.login-role-field .MuiToggleButton-root small {
+  margin-top: 2px;
+  font-size: 7px;
+}
+
+/* 新版上手引导同时解释操作、前端实现和服务端边界。 */
+.product-guide-panel {
+  width: min(420px, calc(100vw - 36px));
+  max-height: min(540px, calc(100dvh - 36px));
+  overflow: auto;
+}
+
+.product-guide-capabilities {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.product-guide-capabilities article {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #dce3df;
+  border-radius: 6px;
+  background: #f7f9f8;
+}
+
+.product-guide-capabilities span,
+.product-guide-capabilities b {
+  display: block;
+}
+
+.product-guide-capabilities span {
+  color: #7c8881;
+  font-size: 8px;
+}
+
+.product-guide-capabilities b {
+  margin-top: 4px;
+  color: #405148;
+  font-size: 9px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.product-guide-panel .product-guide-next-step {
+  margin-top: 7px;
+}
+
+.product-guide-panel .product-guide-next-step b {
+  white-space: normal;
+}
+
+.product-guide-panel .product-guide-locate.MuiButton-root {
+  margin-top: 8px;
+  padding-inline: 0;
+  color: #55700f;
+  font-size: 9px;
+}
+
+.product-guide-actions .MuiButton-root {
+  min-width: 0;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 9px;
+}
+
+@media (max-width: 700px) {
+  .login-page {
+    overflow-y: auto;
+  }
+
+  .login-panel {
+    max-height: none;
+  }
+
+  .login-panel .login-role-field .MuiToggleButtonGroup-root {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .login-panel .login-role-field .MuiToggleButton-root {
+    min-height: 40px;
+    grid-template-columns: 18px minmax(0, 1fr);
+  }
+
+  .login-role-field .MuiToggleButton-root span {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .login-role-field > div:first-child small {
+    display: none;
+  }
+
+  .product-guide-panel {
+    top: auto !important;
+    right: 10px;
+    bottom: 10px;
+    left: 10px !important;
+    width: auto;
+    max-height: min(72dvh, 560px);
+  }
+
+  .product-guide-capabilities {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* 登录与会话校验：生命科学视觉保持轻量，不与工作台浅色主题割裂。 */
 .session-gate {
   display: flex;

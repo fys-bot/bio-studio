@@ -14,6 +14,7 @@ import type {
 import type { WorkflowLayoutInput } from "@/lib/workflow-layout";
 import type { BioflowRole, BioflowSessionUser } from "@/lib/access-control";
 import type { BioflowPermission } from "@/lib/access-control";
+import type { WorkspaceProject } from "@/lib/project-store";
 
 type ApiErrorPayload = {
   error?: string;
@@ -87,6 +88,7 @@ export type ManagedUser = BioflowSessionUser & {
   updatedAt: string;
 };
 export type UsersResponse = { users: ManagedUser[]; user?: ManagedUser };
+export type ProjectsResponse = { projects: WorkspaceProject[]; project?: WorkspaceProject };
 export type DeleteTaskResponse = { deletedTaskId: string; tasks: TaskResponse["tasks"] };
 export type ApiStreamEvent = {
   id: number;
@@ -342,6 +344,20 @@ export const bioflowApi = {
       method: "PATCH",
       headers: jsonHeaders,
       body: JSON.stringify(input),
+    }),
+
+  listProjects: () => requestJson<ProjectsResponse>("/api/projects"),
+
+  createProject: (name: string) =>
+    requestJson<ProjectsResponse>("/api/projects", {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify({ name }),
+    }),
+
+  deleteProject: (id: string) =>
+    requestJson<ProjectsResponse>(`/api/projects?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
     }),
 
   getTask: (taskId = "task_demo_rnaseq") =>

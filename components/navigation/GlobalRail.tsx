@@ -9,7 +9,10 @@ import HelpOutlineRounded from "@mui/icons-material/HelpOutlineRounded";
 import MenuBookRounded from "@mui/icons-material/MenuBookRounded";
 import PersonOutlineRounded from "@mui/icons-material/PersonOutlineRounded";
 import AdminPanelSettingsRounded from "@mui/icons-material/AdminPanelSettingsRounded";
-import { ListItemIcon, Menu, MenuItem } from "@mui/material";
+import HubOutlined from "@mui/icons-material/HubOutlined";
+import StreamRounded from "@mui/icons-material/StreamRounded";
+import ViewInArOutlined from "@mui/icons-material/ViewInArOutlined";
+import { Divider, ListItemIcon, ListSubheader, Menu, MenuItem } from "@mui/material";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type MouseEvent } from "react";
@@ -87,7 +90,8 @@ export function GlobalRail() {
         aria-expanded={Boolean(accountAnchor)}
         onClick={openAccount}
       >
-        {user?.name.slice(0, 2).toUpperCase() || "我的"}
+        <span className="avatar-initials">{user?.name.slice(0, 2).toUpperCase() || "我"}</span>
+        <span className="avatar-label">我的</span>
       </button>
       <Menu
         anchorEl={accountAnchor}
@@ -102,6 +106,27 @@ export function GlobalRail() {
           </ListItemIcon>
           {user ? `${user.name} · ${roleLabel(user.role)}` : "当前账户"}
         </MenuItem>
+        <Divider />
+        <ListSubheader>亮点实例</ListSubheader>
+        <MenuItem onClick={() => router.push("/projects/proj_a5211690a4/tasks/task_demo_rnaseq")}>
+          <ListItemIcon>
+            <StreamRounded fontSize="small" />
+          </ListItemIcon>
+          真实计算 + SSE
+        </MenuItem>
+        <MenuItem onClick={() => router.push("/projects/proj_a5211690a4/tasks/task_literature")}>
+          <ListItemIcon>
+            <HubOutlined fontSize="small" />
+          </ListItemIcon>
+          文档 RAG
+        </MenuItem>
+        <MenuItem onClick={() => router.push("/projects/proj_a5211690a4/tasks/task_structure")}>
+          <ListItemIcon>
+            <ViewInArOutlined fontSize="small" />
+          </ListItemIcon>
+          3D 结构
+        </MenuItem>
+        <Divider />
         <MenuItem
           onClick={() => {
             setAccountAnchor(null);

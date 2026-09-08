@@ -62,6 +62,7 @@ import type {
   WorkflowNodeState,
 } from "@/lib/domain";
 import { roleLabel } from "@/lib/access-control";
+import type { WorkspaceProject } from "@/lib/project-store";
 type WarmWorkspaceSnapshot = {
   task: ResearchTask;
   taskList: TaskListItem[];
@@ -277,6 +278,8 @@ export default function Home() {
   const [activeNav, setActiveNav] = useState<"workspace" | "skills" | "files">("workspace");
   const [activeTask, setActiveTask] = useState(routeTaskId);
   const [projectName, setProjectName] = useState("BioFlow 生命科学实验室");
+  const [activeProjectId, setActiveProjectId] = useState("proj_a5211690a4");
+  const [projects, setProjects] = useState<WorkspaceProject[]>([]);
   const [modal, setModal] = useState<WorkspaceModalState | null>(null);
   const [previewFileId, setPreviewFileId] = useState("");
   const [toast, setToast] = useState("");
@@ -300,6 +303,7 @@ export default function Home() {
   const [initializationError, setInitializationError] = useState("");
   const [taskLoading, setTaskLoading] = useState(false);
   const [taskLoadError, setTaskLoadError] = useState("");
+  const [workspaceScrolled, setWorkspaceScrolled] = useState(false);
   const [ragTrace, setRagTrace] = useState<RagTrace | null>(null);
   const guideInitializedRef = useRef(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -397,6 +401,17 @@ export default function Home() {
     if (!authed || !task) return;
     warmWorkspaceSnapshot = { task, taskList, dataProfiles };
   }, [authed, dataProfiles, task, taskList]);
+  useEffect(() => {
+    if (!authed) return;
+    void bioflowApi
+      .listProjects()
+      .then((response) => {
+        setProjects(response.projects);
+        const current = response.projects.find((project) => project.id === activeProjectId);
+        if (current) setProjectName(current.name);
+      })
+      .catch(() => undefined);
+  }, [activeProjectId, authed]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -1302,11 +1317,13 @@ ${task?.goal || config.goal}
         <div className="rail-account" ref={profileMenuRef}>
           <button
             className="avatar"
+            data-guide="showcases"
             onClick={() => setProfileMenuOpen((current) => !current)}
             aria-label="打开当前账户菜单"
             aria-expanded={profileMenuOpen}
           >
-            {user?.name.slice(0, 2).toUpperCase() || "我的"}
+            <span className="avatar-initials">{user?.name.slice(0, 2).toUpperCase() || "我"}</span>
+            <span className="avatar-label">我的</span>
           </button>
           {profileMenuOpen && (
             <div className="account-menu" role="menu">
@@ -1334,6 +1351,49 @@ ${task?.goal || config.goal}
                   </span>
                 </button>
               )}
+              <div className="account-menu-section-label">亮点实例</div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setProfileMenuOpen(false);
+                  selectTask("task_demo_rnaseq", "RNA-seq 真实计算");
+                }}
+              >
+                <StreamRounded sx={{ fontSize: 16 }} />
+                <span>
+                  <b>真实计算 + SSE</b>
+                  <small>审批、流式事件、PyDESeq2</small>
+                </span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setProfileMenuOpen(false);
+                  selectTask("task_literature", "文献证据图谱", "evidence");
+                }}
+              >
+                <HubOutlined sx={{ fontSize: 16 }} />
+                <span>
+                  <b>文档 RAG</b>
+                  <small>解析、召回、证据追踪</small>
+                </span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setProfileMenuOpen(false);
+                  selectTask("task_structure", "蛋白质结构预览", "structure");
+                }}
+              >
+                <ViewInArOutlined sx={{ fontSize: 16 }} />
+                <span>
+                  <b>3D 结构</b>
+                  <small>旋转、缩放、残基联动</small>
+                </span>
+              </button>
               <button
                 type="button"
                 role="menuitem"
@@ -1421,7 +1481,10 @@ ${task?.goal || config.goal}
         }}
         onResizeStart={(event) => startResize("sidebar", event)}
       />
-      <section className={`workspace ${taskLoading || taskIsStale ? "is-task-loading" : ""}`}>
+      <section
+        className={`workspace ${workspaceScrolled ? "is-scrolled" : ""} ${taskLoading || taskIsStale ? "is-task-loading" : ""}`}
+        onScroll={(event) => setWorkspaceScrolled(event.currentTarget.scrollTop > 86)}
+      >
         <header className="topbar">
           <div className="crumb">
             <span>快捷任务</span>
@@ -1437,33 +1500,6 @@ ${task?.goal || config.goal}
             </button>
           </div>
         </header>
-        <nav className="showcase-switcher" aria-label="面试演示任务" data-guide="showcases">
-          <span>亮点示例</span>
-          <button
-            className={activeTask === "task_demo_rnaseq" ? "active" : ""}
-            onClick={() => selectTask("task_demo_rnaseq", "RNA-seq 真实计算")}
-          >
-            <StreamRounded sx={{ fontSize: 15 }} />
-            <b>真实计算 + SSE</b>
-            <small>审批、流式事件、PyDESeq2</small>
-          </button>
-          <button
-            className={activeTask === "task_literature" ? "active" : ""}
-            onClick={() => selectTask("task_literature", "文献证据图谱", "evidence")}
-          >
-            <HubOutlined sx={{ fontSize: 15 }} />
-            <b>文档 RAG</b>
-            <small>解析、召回、证据追踪</small>
-          </button>
-          <button
-            className={activeTask === "task_structure" ? "active" : ""}
-            onClick={() => selectTask("task_structure", "蛋白质结构预览", "structure")}
-          >
-            <ViewInArOutlined sx={{ fontSize: 15 }} />
-            <b>3D 结构</b>
-            <small>旋转、缩放、残基联动</small>
-          </button>
-        </nav>
         <div className="goal-strip" data-guide="goal">
           <div>
             <small>当前研究目标 · {task.executionMode === "real" ? "真实服务" : "演示数据"}</small>
@@ -1751,6 +1787,8 @@ ${task?.goal || config.goal}
         ].map(({ key, label, Icon }) => (
           <button
             key={key}
+            title={label}
+            aria-label={`打开${label}`}
             className={tab === key && mobilePanel ? "active" : ""}
             onClick={() => {
               if (key === "docs") {
@@ -1832,16 +1870,40 @@ ${task?.goal || config.goal}
       {modal && (
         <WorkspaceModal
           modal={modal}
+          projects={projects}
+          activeProjectId={activeProjectId}
           projectName={projectName}
           dataProfiles={dataProfiles}
           uploadingFileName={uploadingFileName}
           uploadError={uploadError}
           newTaskName={newTaskName}
           onClose={() => setModal(null)}
-          onSelectProject={(nextProjectName) => {
-            setProjectName(nextProjectName);
+          onSelectProject={(project) => {
+            setActiveProjectId(project.id);
+            setProjectName(project.name);
             setModal(null);
-            notify(`已切换到${nextProjectName}`);
+            notify(`已切换到${project.name}`);
+          }}
+          onCreateProject={async (name) => {
+            const response = await bioflowApi.createProject(name);
+            setProjects(response.projects);
+            if (response.project) {
+              setActiveProjectId(response.project.id);
+              setProjectName(response.project.name);
+              notify(`已新建并切换到${response.project.name}`);
+            }
+          }}
+          onDeleteProject={async (project) => {
+            const response = await bioflowApi.deleteProject(project.id);
+            setProjects(response.projects);
+            if (activeProjectId === project.id) {
+              const fallback = response.projects[0];
+              if (fallback) {
+                setActiveProjectId(fallback.id);
+                setProjectName(fallback.name);
+              }
+            }
+            notify(`已删除${project.name}`);
           }}
           onOpenFile={(fileName, detail) => setModal({ kind: "file", title: fileName, detail })}
           onNewTaskNameChange={setNewTaskName}

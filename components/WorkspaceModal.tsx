@@ -1,7 +1,15 @@
 "use client";
 
-import type { ChangeEvent, KeyboardEvent } from "react";
+import AddRounded from "@mui/icons-material/AddRounded";
+import ArrowForwardRounded from "@mui/icons-material/ArrowForwardRounded";
+import CheckRounded from "@mui/icons-material/CheckRounded";
+import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
+import ScienceOutlined from "@mui/icons-material/ScienceOutlined";
+import { Button, IconButton, TextField, Tooltip } from "@mui/material";
+import { useState, type ChangeEvent, type KeyboardEvent } from "react";
 import type { DataFileProfile, TabularColumnProfile } from "@/lib/domain";
+import type { WorkspaceProject } from "@/lib/project-store";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { ResponsiveDialog } from "./ui/ResponsiveDialog";
 
 const columnTypeLabels: Record<TabularColumnProfile["inferredType"], string> = {
@@ -22,13 +30,17 @@ export type WorkspaceModalState = {
 
 type WorkspaceModalProps = {
   modal: WorkspaceModalState;
+  projects: WorkspaceProject[];
+  activeProjectId: string;
   projectName: string;
   dataProfiles: DataFileProfile[];
   uploadingFileName: string;
   uploadError: string;
   newTaskName: string;
   onClose: () => void;
-  onSelectProject: (projectName: string) => void;
+  onSelectProject: (project: WorkspaceProject) => void;
+  onCreateProject: (projectName: string) => Promise<void>;
+  onDeleteProject: (project: WorkspaceProject) => Promise<void>;
   onOpenFile: (fileName: string, detail: string) => void;
   onNewTaskNameChange: (taskName: string) => void;
   onCreateTask: () => void;
@@ -44,6 +56,8 @@ type WorkspaceModalProps = {
  */
 export function WorkspaceModal({
   modal,
+  projects,
+  activeProjectId,
   projectName,
   dataProfiles,
   uploadingFileName,
@@ -51,6 +65,8 @@ export function WorkspaceModal({
   newTaskName,
   onClose,
   onSelectProject,
+  onCreateProject,
+  onDeleteProject,
   onOpenFile,
   onNewTaskNameChange,
   onCreateTask,
@@ -59,6 +75,10 @@ export function WorkspaceModal({
   onApplyLayout,
   onConfirmDetail,
 }: WorkspaceModalProps) {
+  const [projectDraft, setProjectDraft] = useState("");
+  const [projectBusy, setProjectBusy] = useState(false);
+  const [projectError, setProjectError] = useState("");
+  const [pendingProjectDelete, setPendingProjectDelete] = useState<WorkspaceProject | null>(null);
   const handleUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (files.length) onUploadFiles(files);
@@ -80,25 +100,83 @@ export function WorkspaceModal({
     >
       <div className="workspace-modal-body">
         {modal.kind === "projects" && (
-          <div className="modal-list">
-            {["BioFlow 生命科学实验室", "肿瘤基因组项目", "蛋白质工程项目"].map(
-              (availableProjectName) => (
-                <button
-                  key={availableProjectName}
-                  className={projectName === availableProjectName ? "selected" : ""}
-                  onClick={() => onSelectProject(availableProjectName)}
-                >
-                  <span>◈</span>
-                  <div>
-                    <b>{availableProjectName}</b>
-                    <small>
-                      {availableProjectName === projectName ? "当前项目" : "点击切换项目"}
-                    </small>
+          <div className="project-manager">
+            <form
+              className="project-create-row"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                if (!projectDraft.trim() || projectBusy) return;
+                setProjectBusy(true);
+                setProjectError("");
+                try {
+                  await onCreateProject(projectDraft);
+                  setProjectDraft("");
+                } catch (error) {
+                  setProjectError(error instanceof Error ? error.message : "项目创建失败");
+                } finally {
+                  setProjectBusy(false);
+                }
+              }}
+            >
+              <TextField
+                size="small"
+                value={projectDraft}
+                onChange={(event) => setProjectDraft(event.target.value)}
+                label="新项目名称"
+                placeholder="例如：免疫治疗队列"
+                fullWidth
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<AddRounded />}
+                disabled={projectBusy || projectDraft.trim().length < 2}
+              >
+                新建
+              </Button>
+            </form>
+            {projectError && <p className="project-manager-error">{projectError}</p>}
+            <div className="modal-list project-list">
+              {projects.map((project) => {
+                const selected = project.id === activeProjectId || project.name === projectName;
+                return (
+                  <div className={`project-option ${selected ? "selected" : ""}`} key={project.id}>
+                    <button
+                      className="project-option-main"
+                      onClick={() => onSelectProject(project)}
+                    >
+                      <span className="project-option-icon">
+                        <ScienceOutlined sx={{ fontSize: 18 }} />
+                      </span>
+                      <div>
+                        <b>{project.name}</b>
+                        <small>{selected ? "当前项目" : project.description}</small>
+                      </div>
+                      {selected ? (
+                        <CheckRounded sx={{ fontSize: 17 }} />
+                      ) : (
+                        <ArrowForwardRounded sx={{ fontSize: 17 }} />
+                      )}
+                    </button>
+                    <Tooltip title={project.protected ? "默认演示项目不能删除" : "删除项目"}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          disabled={project.protected}
+                          aria-label={`删除${project.name}`}
+                          onClick={() => setPendingProjectDelete(project)}
+                        >
+                          <DeleteOutlineRounded sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                   </div>
-                  <em>{availableProjectName === projectName ? "✓" : "→"}</em>
-                </button>
-              ),
-            )}
+                );
+              })}
+            </div>
+            <small className="project-manager-note">
+              项目目录保存在本机运行数据中；默认演示项目受保护。
+            </small>
           </div>
         )}
         {modal.kind === "new-task" && (
@@ -274,6 +352,31 @@ export function WorkspaceModal({
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={Boolean(pendingProjectDelete)}
+        title="删除项目"
+        description={`确定删除“${pendingProjectDelete?.name || ""}”吗？项目目录记录会被移除，此操作不可撤销。`}
+        confirmLabel="确认删除"
+        busy={projectBusy}
+        error={projectError}
+        onClose={() => {
+          setPendingProjectDelete(null);
+          setProjectError("");
+        }}
+        onConfirm={async () => {
+          if (!pendingProjectDelete) return;
+          setProjectBusy(true);
+          setProjectError("");
+          try {
+            await onDeleteProject(pendingProjectDelete);
+            setPendingProjectDelete(null);
+          } catch (error) {
+            setProjectError(error instanceof Error ? error.message : "项目删除失败");
+          } finally {
+            setProjectBusy(false);
+          }
+        }}
+      />
     </ResponsiveDialog>
   );
 }

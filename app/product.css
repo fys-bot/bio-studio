@@ -7185,6 +7185,356 @@ html {
   }
 }
 
+/* 2026-09-08 面试验收收口：项目管理、紧凑操作区与多端吸顶。 */
+.login-panel .login-role-field .MuiToggleButtonGroup-root {
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+}
+
+.login-panel .login-role-field .MuiToggleButton-root::before,
+.login-panel .login-role-field .MuiToggleButton-root::after {
+  display: none;
+}
+
+.login-demo-note small {
+  color: #8c9790;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.module-shell .catalog-header .MuiButton-startIcon,
+.task-sidebar .side-title .MuiButton-startIcon,
+.project-create-row .MuiButton-startIcon {
+  margin-right: 4px;
+  margin-left: 0;
+}
+
+.module-shell .catalog-header .MuiButton-root,
+.task-sidebar .side-title .MuiButton-root,
+.project-create-row .MuiButton-root {
+  gap: 0;
+}
+
+.module-shell .catalog-selects {
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.module-shell .catalog-selects .select-control {
+  box-shadow: none;
+}
+
+.module-shell .catalog-selects .select-control .MuiSelect-select {
+  border: 0 !important;
+  outline: 0 !important;
+}
+
+.project-manager {
+  display: grid;
+  gap: 12px;
+}
+
+.project-create-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 8px;
+  padding: 2px 0 12px;
+  border-bottom: 1px solid var(--bf-line);
+}
+
+.project-create-row .MuiButton-root {
+  min-width: 86px;
+  border-radius: 6px;
+}
+
+.project-list {
+  display: grid;
+  gap: 6px;
+}
+
+.project-option {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid #dce3df;
+  border-radius: 7px;
+  background: #fff;
+}
+
+.project-option:hover {
+  border-color: #b9c8c0;
+  background: #f7f9f8;
+}
+
+.project-option.selected {
+  border-color: #bdca68;
+  background: #f1f4d5;
+}
+
+.project-option-main {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 36px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  color: #34443b;
+  text-align: left;
+}
+
+.project-option-main > div,
+.project-option-main b,
+.project-option-main small {
+  display: block;
+  min-width: 0;
+}
+
+.project-option-main b {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-option-main small {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #77847d;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-option-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 6px;
+  background: #eaf0cc;
+  color: #697718;
+}
+
+.project-option > span {
+  display: grid;
+  place-items: center;
+  border-left: 1px solid #e2e7e4;
+}
+
+.project-option > span .MuiIconButton-root {
+  color: #aa4338;
+}
+
+.project-manager-note {
+  color: #818d86;
+  font-size: 9px;
+}
+
+.project-manager-error {
+  margin: -4px 0 0;
+  color: #a33f35;
+  font-size: 10px;
+}
+
+.app-shell .task-sidebar > .project-head {
+  position: sticky;
+  z-index: 10;
+  top: -18px;
+  padding-top: 18px;
+  background: color-mix(in srgb, #f8faf9 96%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.app-shell .goal-strip {
+  position: sticky;
+  z-index: 12;
+  top: 52px;
+  width: 100%;
+  box-sizing: border-box;
+  background: color-mix(in srgb, #f7f9f7 96%, transparent);
+  transition:
+    padding 160ms ease,
+    box-shadow 160ms ease;
+  backdrop-filter: blur(12px);
+}
+
+.app-shell .workspace.is-scrolled .goal-strip {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #dce3df;
+  box-shadow: 0 8px 18px #4d62570e;
+}
+
+.app-shell .workspace.is-scrolled .goal-strip > div:first-child > small {
+  display: none;
+}
+
+.app-shell .workspace.is-scrolled .goal-strip h1 {
+  max-width: min(56vw, 760px);
+  margin: 0;
+  overflow: hidden;
+  font-size: 15px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 收藏和删除均为显式任务操作，避免桌面端依赖 hover 才能发现。 */
+.task-item-row .task-delete.MuiIconButton-root {
+  pointer-events: auto !important;
+  border-left-color: #e0e6e2;
+  opacity: 1 !important;
+}
+
+.task-item-row.has-delete:hover .task-favorite.MuiIconButton-root,
+.task-item-row.has-delete:focus-within .task-favorite.MuiIconButton-root,
+.task-item-row.selected.has-delete:hover .task-favorite,
+.task-item-row.selected.has-delete:focus-within .task-favorite {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+}
+
+.app-shell .tool-dock {
+  right: 14px;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid #d8e0db;
+  border-radius: 8px;
+  background: color-mix(in srgb, #ffffff 94%, transparent);
+  box-shadow: 0 12px 30px #31443a1c;
+  backdrop-filter: blur(14px);
+}
+
+.app-shell .tool-dock button {
+  display: grid;
+  width: 44px;
+  min-height: 43px;
+  place-items: center;
+  gap: 1px;
+  padding: 5px 2px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: #718078;
+}
+
+.app-shell .tool-dock button:hover {
+  border-color: #d7dfda;
+  background: #f1f5f2;
+  color: #385849;
+}
+
+.app-shell .tool-dock button.active {
+  border-color: #cbd788;
+  background: #eff3d2;
+  color: #5e6d13;
+  box-shadow: inset 2px 0 #94a717;
+}
+
+.app-shell .tool-dock i {
+  display: grid;
+  height: 19px;
+  place-items: center;
+  line-height: 1;
+}
+
+.app-shell .tool-dock span {
+  margin: 0;
+  font-size: 8px;
+  line-height: 1.2;
+}
+
+.account-menu-section-label {
+  padding: 7px 12px 5px;
+  border-bottom: 1px solid #edf0ee;
+  background: #f8faf9;
+  color: #849088;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.avatar-label {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .app-shell .goal-strip {
+    top: 46px;
+  }
+
+  .app-shell .workspace.is-scrolled .goal-strip {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 7px 10px;
+  }
+
+  .app-shell .workspace.is-scrolled .goal-strip h1 {
+    max-width: 100%;
+    font-size: 13px;
+  }
+
+  .app-shell .workspace.is-scrolled .goal-actions {
+    overflow-x: auto;
+  }
+
+  .app-shell .rail-account .avatar,
+  .module-shell .global-rail .avatar {
+    display: grid;
+    width: 100% !important;
+    height: 50px !important;
+    grid-template-rows: 23px auto;
+    place-items: center;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: #506158 !important;
+  }
+
+  .avatar-initials {
+    display: grid;
+    width: 23px;
+    height: 23px;
+    place-items: center;
+    border-radius: 50%;
+    background: #e6ebba;
+    color: #53620f;
+    font-size: 8px;
+    font-weight: 800;
+  }
+
+  .avatar-label {
+    display: block;
+    font-size: 9px;
+    font-weight: 600;
+  }
+
+  .project-create-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .project-create-row .MuiButton-root {
+    width: 100%;
+  }
+
+  .app-shell .rail,
+  .module-shell .global-rail {
+    display: flex;
+  }
+
+  .app-shell .rail .rail-btn,
+  .app-shell .rail-account,
+  .module-shell .global-rail .rail-btn,
+  .module-shell .global-rail .avatar {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+}
+
 /* 验收工作台信息层级：顶部只承载上下文与全局动作，示例任务作为紧凑能力切换器。 */
 .app-shell .topbar {
   width: 100%;
@@ -7359,7 +7709,7 @@ html {
 
 .admin-user-controls {
   display: flex;
-  align-items: end;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
   margin: 15px 0 10px;

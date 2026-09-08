@@ -25,18 +25,33 @@ export function LoginMoleculeScene() {
       const height = canvas.clientHeight;
       context.clearRect(0, 0, width, height);
       const compact = width < 760;
-      const centerX = compact ? width * 0.5 : width * 0.34;
-      const amplitude = Math.min(width * (compact ? 0.24 : 0.13), 112);
-      const step = Math.max(18, height / 30);
+      const anchorX = compact ? width * 0.48 : width * 0.31;
+      const anchorY = height * 0.5;
+      const angle = compact ? -0.5 : -0.42;
+      const axisX = Math.sin(angle);
+      const axisY = Math.cos(angle);
+      const normalX = Math.cos(angle);
+      const normalY = -Math.sin(angle);
+      const amplitude = Math.min(width * (compact ? 0.2 : 0.105), 94);
+      const length = Math.hypot(width, height) * 1.16;
+      const step = Math.max(20, length / 34);
       const speed = frame * 0.012;
-      const points: Array<{ y: number; left: number; right: number; phase: number }> = [];
+      const points: Array<{
+        left: { x: number; y: number };
+        right: { x: number; y: number };
+        center: { x: number; y: number };
+        phase: number;
+      }> = [];
 
-      for (let y = -step; y < height + step; y += step) {
-        const phase = y * 0.032 + speed;
+      for (let distance = -length / 2; distance < length / 2 + step; distance += step) {
+        const phase = distance * 0.034 + speed;
+        const centerX = anchorX + axisX * distance;
+        const centerY = anchorY + axisY * distance;
+        const offset = Math.sin(phase) * amplitude;
         points.push({
-          y,
-          left: centerX + Math.sin(phase) * amplitude,
-          right: centerX + Math.sin(phase + Math.PI) * amplitude,
+          center: { x: centerX, y: centerY },
+          left: { x: centerX + normalX * offset, y: centerY + normalY * offset },
+          right: { x: centerX - normalX * offset, y: centerY - normalY * offset },
           phase,
         });
       }
@@ -44,9 +59,9 @@ export function LoginMoleculeScene() {
       const drawStrand = (side: "left" | "right", color: string) => {
         context.beginPath();
         points.forEach((point, index) => {
-          const x = point[side];
-          if (index === 0) context.moveTo(x, point.y);
-          else context.lineTo(x, point.y);
+          const position = point[side];
+          if (index === 0) context.moveTo(position.x, position.y);
+          else context.lineTo(position.x, position.y);
         });
         context.strokeStyle = color;
         context.lineWidth = compact ? 1.2 : 1.6;
@@ -61,26 +76,42 @@ export function LoginMoleculeScene() {
         context.strokeStyle = `rgba(72, 110, 92, ${0.08 + depth * 0.16})`;
         context.lineWidth = 1;
         context.beginPath();
-        context.moveTo(point.left, point.y);
-        context.lineTo(point.right, point.y);
+        context.moveTo(point.left.x, point.left.y);
+        context.lineTo(point.right.x, point.right.y);
         context.stroke();
 
         const radius = 2.6 + depth * 1.8;
         context.fillStyle = `rgba(42, 119, 94, ${0.38 + depth * 0.38})`;
         context.beginPath();
-        context.arc(point.left, point.y, radius, 0, Math.PI * 2);
+        context.arc(point.left.x, point.left.y, radius, 0, Math.PI * 2);
         context.fill();
         context.fillStyle = `rgba(151, 171, 25, ${0.4 + (1 - depth) * 0.34})`;
         context.beginPath();
-        context.arc(point.right, point.y, radius, 0, Math.PI * 2);
+        context.arc(point.right.x, point.right.y, radius, 0, Math.PI * 2);
         context.fill();
 
         if (index % 7 === 0) {
-          const targetX = Math.min(point.left, point.right) - 12;
-          const targetWidth = Math.abs(point.right - point.left) + 24;
           context.setLineDash([4, 4]);
           context.strokeStyle = "rgba(74, 112, 92, 0.2)";
-          context.strokeRect(targetX, point.y - step * 0.35, targetWidth, step * 0.7);
+          context.beginPath();
+          context.moveTo(
+            point.left.x - normalX * 10 - axisX * step * 0.35,
+            point.left.y - normalY * 10 - axisY * step * 0.35,
+          );
+          context.lineTo(
+            point.right.x + normalX * 10 - axisX * step * 0.35,
+            point.right.y + normalY * 10 - axisY * step * 0.35,
+          );
+          context.lineTo(
+            point.right.x + normalX * 10 + axisX * step * 0.35,
+            point.right.y + normalY * 10 + axisY * step * 0.35,
+          );
+          context.lineTo(
+            point.left.x - normalX * 10 + axisX * step * 0.35,
+            point.left.y - normalY * 10 + axisY * step * 0.35,
+          );
+          context.closePath();
+          context.stroke();
           context.setLineDash([]);
         }
       });

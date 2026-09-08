@@ -76,6 +76,8 @@ npm run services
 npm run dev
 ```
 
+浏览器入口始终保持 `3000`。如果默认 Research Service 或 Qdrant Local 数据目录被旧进程占用，启动器会自动探测后续 Worker 端口，并使用隔离运行目录启动兼容 Worker；控制台会记录内部 Worker 地址，页面和验收 URL 不需要改动。
+
 若 8000 已有兼容 Worker，BFF 会复用；本地开发还会探测后续端口上的 `apiVersion >= 2` 服务。生产验证构建使用独立 `.next-verification`，不会覆盖开发缓存。
 
 ## 默认账号

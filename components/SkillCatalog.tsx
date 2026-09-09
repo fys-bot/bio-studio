@@ -7,6 +7,7 @@ import CheckCircleOutlineRounded from "@mui/icons-material/CheckCircleOutlineRou
 import DataObjectRounded from "@mui/icons-material/DataObjectRounded";
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import DescriptionOutlined from "@mui/icons-material/DescriptionOutlined";
+import ExtensionRounded from "@mui/icons-material/ExtensionRounded";
 import HubOutlined from "@mui/icons-material/HubOutlined";
 import OutputRounded from "@mui/icons-material/OutputRounded";
 import PlayArrowRounded from "@mui/icons-material/PlayArrowRounded";
@@ -517,7 +518,16 @@ export function SkillCatalog() {
         </section>
       )}
       {!loading && !error && skills.length === 0 && (
-        <section className="catalog-state">没有匹配的技能，请调整筛选条件。</section>
+        <section className="catalog-state skill-empty-state">
+          <ExtensionRounded sx={{ fontSize: 28 }} aria-hidden="true" />
+          <div>
+            <b>当前筛选没有技能</b>
+            <p>调整来源、分类或启用状态；也可以创建一个只属于当前研究工作区的技能契约。</p>
+          </div>
+          <Button size="small" variant="contained" startIcon={<AddRounded />} onClick={() => setCreating(true)}>
+            新建技能
+          </Button>
+        </section>
       )}
       {!loading && !error && (
         <section className="skill-grid">

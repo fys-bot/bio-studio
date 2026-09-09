@@ -30,6 +30,8 @@ os.environ.setdefault("HF_HOME", str(ROOT / "models"))
 MODEL_NAME = os.getenv("BIOFLOW_EMBED_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 COLLECTION = "bioflow_" + hashlib.sha256(MODEL_NAME.encode()).hexdigest()[:12]
 TOKEN = os.getenv("BIOFLOW_WORKER_TOKEN", "local-development-only")
+MAX_UPLOAD_BYTES = 300 * 1024 * 1024
+CONTRACT_REVISION = 3
 QDRANT_PATH = Path(os.getenv("BIOFLOW_QDRANT_PATH", str(ROOT / "qdrant"))).expanduser().resolve()
 qdrant = (
     QdrantClient(url=os.environ["QDRANT_URL"], api_key=os.getenv("QDRANT_API_KEY"))
@@ -134,8 +136,8 @@ def ingest_bytes(name, content):
     extension = Path(name).suffix.lower().lstrip(".")
     if extension not in SUPPORTED:
         raise ValueError("Unsupported type: " + extension)
-    if not content or len(content) > 10 * 1024 * 1024:
-        raise ValueError("File must be between 1 byte and 10 MB")
+    if not content or len(content) > MAX_UPLOAD_BYTES:
+        raise ValueError("File must be between 1 byte and 300 MB")
     digest = hashlib.sha256(content).hexdigest()
     identity = hashlib.sha256(name.encode() + content).hexdigest()[:32]
     target = ROOT / "objects" / (identity + "." + extension)
@@ -221,6 +223,7 @@ def ensure_samples():
 
 @asynccontextmanager
 async def lifespan(app):
+    print(f"[bioflow-worker] contract={CONTRACT_REVISION} data={ROOT} qdrant={QDRANT_PATH}", flush=True)
     for job in all_records("job"):
         if job["status"] == "running":
             job.update(status="failed", error="Worker restarted during execution; retry creates a new job")
@@ -251,12 +254,14 @@ def health():
     return {"ok": True, "vectorStore": "qdrant-server" if os.getenv("QDRANT_URL") else "qdrant-local",
             "model": MODEL_NAME, "modelLoaded": model is not None, "modelError": model_error,
             "ocrConfigured": bool(os.getenv("BIOFLOW_OCR_MODEL")), "compute": "PyDESeq2", "reranker": os.getenv("BIOFLOW_RERANK_MODEL") or None, "collection": COLLECTION,
-            "apiVersion": 2, "features": ["agent-plan", "hybrid-search", "pydeseq2"]}
+            "apiVersion": 2, "contractRevision": CONTRACT_REVISION,
+            "maxUploadBytes": MAX_UPLOAD_BYTES,
+            "features": ["agent-plan", "hybrid-search", "pydeseq2"]}
 
 
 @app.post("/documents")
 async def upload(background: BackgroundTasks, file: UploadFile = File(...)):
-    content = await file.read(10 * 1024 * 1024 + 1)
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
     try:
         # Parsing is bounded by page/expanded-content limits and kept off the ASGI event loop.
         from starlette.concurrency import run_in_threadpool

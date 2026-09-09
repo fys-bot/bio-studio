@@ -6,6 +6,7 @@ import { researchJson, type ResearchDocument } from "@/lib/research-service";
 import type { DataFileProfile } from "@/lib/domain";
 
 export const runtime = "nodejs";
+const MAX_UPLOAD_BYTES = 300 * 1024 * 1024;
 export async function POST(request: Request) {
   const denied = authGuard("files:write");
   if (denied) return denied;
@@ -19,9 +20,9 @@ export async function POST(request: Request) {
     !(file instanceof File) ||
     !/\.(csv|tsv|txt|md|xlsx|pdf|docx|png|jpe?g)$/i.test(file.name) ||
     !file.size ||
-    file.size > 10 * 1024 * 1024
+    file.size > MAX_UPLOAD_BYTES
   )
-    return NextResponse.json({ error: "请选择 10MB 以内的受支持文档" }, { status: 400 });
+    return NextResponse.json({ error: "请选择 300MB 以内的受支持文档" }, { status: 400 });
   try {
     const forwarded = new FormData();
     forwarded.append("file", file);

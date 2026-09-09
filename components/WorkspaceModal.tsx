@@ -232,7 +232,7 @@ export function WorkspaceModal({
               <small>
                 {uploadingFileName
                   ? `服务端正在解析 ${uploadingFileName}`
-                  : "CSV / TSV / Excel / PDF / DOCX / TXT / MD / 图片 · 最大 10MB"}
+                  : "CSV / TSV / Excel / PDF / DOCX / TXT / MD / 图片 · 最大 300MB"}
               </small>
             </label>
             {uploadError && (

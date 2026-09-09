@@ -21,6 +21,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useRef,
   type CSSProperties,
   type MouseEvent,
   type PointerEvent,
@@ -67,6 +68,8 @@ export function FileCatalog() {
   const [error, setError] = useState("");
   const [browserWidth, setBrowserWidth] = useState(400);
   const [sourceMenuAnchor, setSourceMenuAnchor] = useState<HTMLElement | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const recoveryAttemptsRef = useRef(0);
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -75,6 +78,7 @@ export function FileCatalog() {
     const slowTimer = window.setTimeout(() => setSlowLoading(true), 2500);
     try {
       const items = (await bioflowApi.listProjectFiles()).items;
+      recoveryAttemptsRef.current = 0;
       setFiles(items);
       setSelected((current) => {
         if (current) return items.find((item) => item.id === current.id) ?? null;
@@ -101,6 +105,15 @@ export function FileCatalog() {
   useEffect(() => {
     void loadFiles();
   }, [loadFiles]);
+
+  useEffect(() => {
+    if (!error || recoveryAttemptsRef.current >= 2) return;
+    const timer = window.setTimeout(() => {
+      recoveryAttemptsRef.current += 1;
+      void loadFiles();
+    }, 3_000);
+    return () => window.clearTimeout(timer);
+  }, [error, loadFiles]);
 
   const matchedFiles = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -190,6 +203,7 @@ export function FileCatalog() {
             >
               {uploadingFileName ? "解析中" : "上传文件"}
               <input
+                ref={uploadInputRef}
                 type="file"
                 accept=".csv,.tsv,.txt,.md,.xlsx,.pdf,.docx,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg"
                 disabled={Boolean(uploadingFileName)}
@@ -344,7 +358,32 @@ export function FileCatalog() {
                 </button>
               ))}
             {!loading && visibleFiles.length === 0 && (
-              <div className="catalog-state">当前筛选没有文件。</div>
+              <div className={`catalog-state file-empty-state ${error ? "is-degraded" : ""}`}>
+                <DatabaseOutlined sx={{ fontSize: 28 }} aria-hidden="true" />
+                <div>
+                  <b>{error ? "文件目录暂时不可达" : "当前筛选没有文件"}</b>
+                  <p>
+                    {error
+                      ? "文件管理和预览仍可从当前工作台继续使用；恢复 Worker 后可重新读取解析目录。"
+                      : "上传研究材料后，这里会显示解析、索引、版本和任务绑定状态。"}
+                  </p>
+                </div>
+                <div className="file-empty-actions">
+                  {error && (
+                    <Button size="small" variant="outlined" onClick={() => void loadFiles()}>
+                      重试连接
+                    </Button>
+                  )}
+                  <Button
+                    size="small"
+                    variant="contained"
+                    startIcon={<CloudUploadOutlined />}
+                    onClick={() => uploadInputRef.current?.click()}
+                  >
+                    上传文件
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
           {!loading && (

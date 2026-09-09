@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 type ProductGuideProps = {
   open: boolean;
   onClose: () => void;
+  onDismissForever: () => void;
 };
 
 type GuideStep = {
@@ -146,7 +147,7 @@ function measureTarget(step: GuideStep): TargetRect | null {
  * 首次访问引导：只负责定位和解释真实界面，不替用户执行危险操作。
  * 引导状态由页面控制，便于用户从顶部入口重新打开。
  */
-export function ProductGuide({ open, onClose }: ProductGuideProps) {
+export function ProductGuide({ open, onClose, onDismissForever }: ProductGuideProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
   const activeStep = guideSteps[activeIndex];
@@ -182,14 +183,16 @@ export function ProductGuide({ open, onClose }: ProductGuideProps) {
 
   if (!open) return null;
 
-  const closeGuide = () => {
-    window.localStorage.setItem("bioflow-studio-guide-v2", "dismissed");
+  const closeGuide = () => onClose();
+
+  const dismissGuideForever = () => {
+    onDismissForever();
     onClose();
   };
 
   const next = () => {
     if (activeIndex === guideSteps.length - 1) {
-      closeGuide();
+      dismissGuideForever();
       return;
     }
     setActiveIndex((index) => {
@@ -280,7 +283,10 @@ export function ProductGuide({ open, onClose }: ProductGuideProps) {
         </Button>
         <div className="product-guide-footer">
           <button className="product-guide-skip" onClick={closeGuide}>
-            以后再看
+            关闭
+          </button>
+          <button className="product-guide-dismiss" onClick={dismissGuideForever}>
+            不再提醒
           </button>
           <div className="product-guide-actions">
             <Button

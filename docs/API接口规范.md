@@ -151,7 +151,7 @@ data: {"id":7,"runId":"...","type":"analysis.running","createdAt":"...","payload
 | `id` | `string` | `documents.file_key varchar(80)` | 当前为 32 位内容标识 |
 | `name` | `string` | `documents.original_name varchar(500)` | 安全文件名 |
 | `format` | `string` | `documents.format varchar(20)` | CSV/TSV/TXT/MD/XLSX/PDF/DOCX/PNG/JPG |
-| `sizeBytes` | `number` | `documents.size_bytes bigint` | `1..10MB` |
+| `sizeBytes` | `number` | `documents.size_bytes bigint` | `1B..300MB` |
 | `sha256` | `string` | `documents.sha256 char(64)` | 原件摘要 |
 | `parser` | `string` | `documents.parser varchar(120)` | 实际解析器 |
 | `indexStatus` | `string` | `documents.index_status varchar(24)` | pending/indexing/indexed/failed/needs_ocr/empty |
@@ -409,7 +409,7 @@ curl -sS http://127.0.0.1:3000/api/files -H "Authorization: Bearer $TOKEN"
 - 权限：`files:write`；同源校验。
 - 请求：`multipart/form-data`，字段 `file`。
 - 类型：CSV、TSV、TXT、MD、XLSX、PDF、DOCX、PNG、JPG/JPEG。
-- 限制：1 字节至 10MB；任务必须存在。
+- 限制：1 字节至 300MB；任务必须存在。
 - 响应：`{"profile":<DataFileProfile>,"document":<ResearchDocument>,"task":<ResearchTask>}`。
 - 状态码：`200/400/401/403/404/422`。
 - 持久化：原文件、SQLite 文档记录、后台 Qdrant 索引、任务文件绑定。

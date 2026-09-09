@@ -311,7 +311,7 @@ export const apiGroups: ApiGroup[] = [
         "files:write；写请求同源校验。",
         requestContract(uploadHeaders, {
           query: "taskId:string 必填",
-          body: "multipart 字段 file；CSV/TSV/TXT/MD/XLSX/PDF/DOCX/PNG/JPG；1B..10MB",
+          body: "multipart 字段 file；CSV/TSV/TXT/MD/XLSX/PDF/DOCX/PNG/JPG；1B..300MB",
         }),
         "profile:DataFileProfile；document:ResearchDocument；task:ResearchTask",
         "200；400；401；403；404；422；503",

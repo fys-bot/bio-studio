@@ -62,8 +62,15 @@ export type AnalysisJob = {
 };
 
 const researchRuntimeRegistry = globalThis as typeof globalThis & {
-  __bioflowResolvedWorker?: { url: string; checkedAt: number; apiVersion: number };
+  __bioflowResolvedWorker?: {
+    url: string;
+    checkedAt: number;
+    apiVersion: number;
+    contractRevision: number;
+  };
 };
+
+const REQUIRED_WORKER_CONTRACT_REVISION = 3;
 
 function workerHeaders(headers?: HeadersInit) {
   const nextHeaders = new Headers(headers);
@@ -90,7 +97,12 @@ function localWorkerUrl() {
 
 async function resolvedWorkerUrl() {
   const cached = researchRuntimeRegistry.__bioflowResolvedWorker;
-  if (cached && cached.apiVersion >= 2 && Date.now() - cached.checkedAt < 30_000) {
+  if (
+    cached &&
+    cached.apiVersion >= 2 &&
+    cached.contractRevision >= REQUIRED_WORKER_CONTRACT_REVISION &&
+    Date.now() - cached.checkedAt < 30_000
+  ) {
     return cached.url;
   }
   const configured = localWorkerUrl();
@@ -121,14 +133,22 @@ async function resolvedWorkerUrl() {
       if (!response.ok) continue;
       const health = (await response.json().catch(() => ({}))) as {
         apiVersion?: number;
+        contractRevision?: number;
         features?: string[];
       };
       const apiVersion = Number(health.apiVersion || 0);
-      if (apiVersion < 2 || !health.features?.includes("agent-plan")) continue;
+      const contractRevision = Number(health.contractRevision || 0);
+      if (
+        apiVersion < 2 ||
+        contractRevision < REQUIRED_WORKER_CONTRACT_REVISION ||
+        !health.features?.includes("agent-plan")
+      )
+        continue;
       researchRuntimeRegistry.__bioflowResolvedWorker = {
         url: candidate,
         checkedAt: Date.now(),
         apiVersion,
+        contractRevision,
       };
       return candidate;
     } catch {

@@ -153,6 +153,13 @@ export function authorizedFetch(input: RequestInfo | URL, init?: RequestInit) {
   });
 }
 
+function reportGlobalApiError(error: ApiClientError) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("bioflow:api-error", { detail: { message: error.message } }),
+  );
+}
+
 export async function downloadAuthorizedFile(path: string, fileName: string) {
   const response = await authorizedFetch(path);
   if (!response.ok)
@@ -292,6 +299,7 @@ async function requestJson<ResponsePayload extends object>(
           ? error
           : new ApiClientError("服务暂时不可用，请稍后重试", 0, "NETWORK", true);
       if (!normalizedError.retryable || attempt === maxAttempts) {
+        reportGlobalApiError(normalizedError);
         throw normalizedError;
       }
       await wait(retryDelayMs * attempt);
@@ -518,13 +526,14 @@ export const bioflowApi = {
     taskId?: string,
     mode: AgentMode = DEFAULT_AGENT_MODE,
     includeAnswer = false,
+    conversation?: ConversationMessage[],
   ) =>
     requestJson<RagTraceResponse>(
       `/api/rag/query${taskId ? `?taskId=${encodeURIComponent(taskId)}` : ""}`,
       {
         method: "POST",
         headers: jsonHeaders,
-        body: JSON.stringify({ query, mode, includeAnswer }),
+        body: JSON.stringify({ query, mode, includeAnswer, conversation }),
       },
     ),
 

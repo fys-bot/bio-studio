@@ -9,6 +9,7 @@ data/state.json
 tsconfig.tsbuildinfo
 work/
 .venv/
+.venv-repair/
 data/runtime*/
 __pycache__/
 .pytest_cache/

@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { authGuard, isAuthorized, isSameOrigin } from "@/lib/auth";
 import type { RagTrace } from "@/lib/domain";
 import { generateLlmAnswer } from "@/lib/llm-client";
-import { createAndStoreRagTrace, listRagTraces, saveRagTrace, taskSnapshot } from "@/lib/store";
+import {
+  conversationSnapshot,
+  createAndStoreRagTrace,
+  listRagTraces,
+  saveRagTrace,
+  taskSnapshot,
+} from "@/lib/store";
 import { queryRealDocuments } from "@/lib/real-rag";
 import { normalizeAgentMode, reasoningEffortForMode } from "@/lib/agent-mode";
 
@@ -26,6 +32,32 @@ function answerEvidence(trace: RagTrace) {
   });
 }
 
+function taskConversationContext(messages: unknown, taskId: string) {
+  const supplied = Array.isArray(messages)
+    ? messages
+        .filter(
+          (message): message is { role: "user" | "assistant"; content: string; status?: string } =>
+            Boolean(
+              message &&
+                typeof message === "object" &&
+                (message.role === "user" || message.role === "assistant") &&
+                typeof message.content === "string" &&
+                message.content.trim(),
+            ),
+        )
+        .filter((message) => message.status !== "failed" && message.status !== "cancelled")
+    : conversationSnapshot(taskId) ?? [];
+  return supplied
+    .filter((message) => message.status === "completed")
+    .slice(-8)
+    .map(
+      (message) =>
+        `${message.role === "user" ? "研究员" : "智能体"}：${message.content.trim().slice(0, 1_500)}`,
+    )
+    .join("\n")
+    .slice(-3_600);
+}
+
 export async function GET() {
   if (!isAuthorized()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   return NextResponse.json({ traces: listRagTraces() });
@@ -40,6 +72,7 @@ export async function POST(request: Request) {
     query?: unknown;
     mode?: unknown;
     includeAnswer?: unknown;
+    conversation?: unknown;
   };
   const query = typeof payload.query === "string" ? payload.query.trim() : "";
   if (!query || query.length > 2000) {
@@ -59,6 +92,15 @@ export async function POST(request: Request) {
         reasoningEffort,
       });
     } else {
+      if (payload.includeAnswer === true) {
+        return NextResponse.json(
+          {
+            error:
+              "请先绑定至少一份已索引项目文件。为避免把静态演示 Trace 包装成真实模型对话，当前不会对无材料任务请求 LLM。",
+          },
+          { status: 409 },
+        );
+      }
       if (task.executionMode === "real")
         return NextResponse.json({ error: "请先上传或绑定项目文件" }, { status: 409 });
       trace = createAndStoreRagTrace(query, taskId, { agentMode, reasoningEffort });
@@ -78,6 +120,20 @@ export async function POST(request: Request) {
       taskGoal: task.goal,
       mode: agentMode,
       evidence: answerEvidence(trace),
+      taskContext: [
+        `任务名称：${task.title}`,
+        `执行状态：${task.status}`,
+        `澄清条件：${Object.entries(task.clarification?.answers ?? {})
+          .filter(([, value]) => Boolean(value))
+          .map(([key, value]) => `${key}=${value}`)
+          .join("；") || "未完整填写"}`,
+        task.plan?.summary ? `已审批/生成计划摘要：${task.plan.summary}` : "",
+        taskConversationContext(payload.conversation, task.id)
+          ? `最近对话：\n${taskConversationContext(payload.conversation, task.id)}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
     });
     return NextResponse.json({ trace, answer });
   } catch (error) {

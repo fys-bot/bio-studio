@@ -15,7 +15,11 @@ from openpyxl import load_workbook
 from PIL import Image
 from pypdf import PdfReader
 
-MAX_TEXT = 500_000
+# A 300 MB original does not imply 300 MB of useful text. Keep a bounded extraction budget while
+# allowing normal publisher PDFs with a few dense vector-figure pages to remain searchable.
+MAX_TEXT = 1_500_000
+MAX_PDF_PAGE_STREAM = 32_000_000
+COMPLEX_PDF_PAGE_STREAM = 8_000_000
 SUPPORTED = {"csv", "tsv", "txt", "md", "pdf", "xlsx", "docx", "png", "jpg", "jpeg"}
 
 
@@ -120,10 +124,15 @@ def parse_file(path: Path, extension: str):
             raise ValueError("PDF exceeds 100 pages")
         for index, page in enumerate(reader.pages):
             content = page.get_contents()
-            if content is not None and len(content.get_data()) > 8_000_000:
+            content_size = len(content.get_data()) if content is not None else 0
+            if content_size > MAX_PDF_PAGE_STREAM:
                 raise ValueError("PDF page content exceeds parser memory limit")
             text = (page.extract_text(extraction_mode="layout") or "") if content is not None else ""
             route = "native-pdf"
+            if content_size > COMPLEX_PDF_PAGE_STREAM:
+                warnings.append(
+                    f"Page {index + 1}: complex vector content ({content_size // 1_000_000} MB); native text extraction retained"
+                )
             if len(text.strip()) < 40:
                 if os.getenv("BIOFLOW_OCR_MODEL"):
                     import pypdfium2 as pdfium

@@ -8,6 +8,7 @@ import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import HelpOutlineRounded from "@mui/icons-material/HelpOutlineRounded";
 import HubOutlined from "@mui/icons-material/HubOutlined";
 import MenuBookRounded from "@mui/icons-material/MenuBookRounded";
+import LockOutlined from "@mui/icons-material/LockOutlined";
 import SearchRounded from "@mui/icons-material/SearchRounded";
 import StarBorderRounded from "@mui/icons-material/StarBorderRounded";
 import StarRounded from "@mui/icons-material/StarRounded";
@@ -348,7 +349,11 @@ export function TaskSidebar({
                               setPendingDelete(taskCard);
                             }}
                           >
-                            <DeleteOutlineRounded sx={{ fontSize: 17 }} />
+                            {protectedTask ? (
+                              <LockOutlined sx={{ fontSize: 16 }} />
+                            ) : (
+                              <DeleteOutlineRounded sx={{ fontSize: 17 }} />
+                            )}
                           </IconButton>
                         </span>
                       </Tooltip>

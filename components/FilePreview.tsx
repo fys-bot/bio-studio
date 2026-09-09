@@ -171,26 +171,84 @@ function DocxPreview({ document }: { document: ResearchDocument }) {
   );
 }
 
-function DocumentRenderer({ document }: { document: ResearchDocument }) {
-  const format = `${document.format} ${document.name}`.toLowerCase();
-  const originalUrl = `/api/files/${encodeURIComponent(document.id)}/original`;
+function AuthorizedBinaryPreview({
+  document,
+  kind,
+}: {
+  document: ResearchDocument;
+  kind: "image" | "pdf";
+}) {
+  const [objectUrl, setObjectUrl] = useState("");
+  const [loadError, setLoadError] = useState("");
 
-  if (/docx/.test(format)) return <DocxPreview document={document} />;
-  if (/pdf/.test(format)) {
+  useEffect(() => {
+    let disposed = false;
+    let url = "";
+
+    const load = async () => {
+      setObjectUrl("");
+      setLoadError("");
+      try {
+        // Native iframe/img requests cannot include our Bearer header. Fetch the bytes first,
+        // then render a short-lived local Blob URL so protected originals remain previewable.
+        const response = await authorizedFetch(
+          `/api/files/${encodeURIComponent(document.id)}/original`,
+        );
+        if (!response.ok) {
+          const body = (await response.json().catch(() => ({}))) as { error?: string };
+          throw new Error(body.error || `原文件读取失败（${response.status}）`);
+        }
+        url = URL.createObjectURL(await response.blob());
+        if (!disposed) setObjectUrl(url);
+      } catch (error) {
+        if (!disposed)
+          setLoadError(error instanceof Error ? error.message : "原文件读取失败");
+      }
+    };
+
+    void load();
+    return () => {
+      disposed = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [document.id]);
+
+  if (loadError) {
+    return (
+      <div className="document-render-fallback">
+        <p>{loadError}，已切换到服务端解析正文。</p>
+        <StructuredPreview document={document} />
+      </div>
+    );
+  }
+
+  if (!objectUrl)
+    return <div className="document-render-state">正在以授权方式读取原文件…</div>;
+
+  if (kind === "pdf") {
     return (
       <div className="document-native-preview document-pdf-preview">
-        <iframe title={`${document.name} PDF 预览`} src={`${originalUrl}#view=FitH&toolbar=1`} />
+        <iframe title={`${document.name} PDF 预览`} src={`${objectUrl}#view=FitH&toolbar=1`} />
       </div>
     );
   }
-  if (/png|jpe?g|image/.test(format)) {
-    return (
-      <div className="document-native-preview document-image-preview">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={originalUrl} alt={document.name} />
-      </div>
-    );
-  }
+
+  return (
+    <div className="document-native-preview document-image-preview">
+      {/* Blob URL is generated from an authorized request. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={objectUrl} alt={document.name} />
+    </div>
+  );
+}
+
+function DocumentRenderer({ document }: { document: ResearchDocument }) {
+  const format = `${document.format} ${document.name}`.toLowerCase();
+
+  if (/docx/.test(format)) return <DocxPreview document={document} />;
+  if (/pdf/.test(format)) return <AuthorizedBinaryPreview document={document} kind="pdf" />;
+  if (/png|jpe?g|image/.test(format))
+    return <AuthorizedBinaryPreview document={document} kind="image" />;
   return <StructuredPreview document={document} />;
 }
 

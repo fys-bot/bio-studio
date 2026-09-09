@@ -4,6 +4,7 @@ import "./ui-contract.css";
 import type { Metadata } from "next";
 import { AuthSessionGate } from "@/components/auth/AuthSessionGate";
 import { BioFlowThemeProvider } from "@/components/ui/BioFlowThemeProvider";
+import { GlobalApiFeedback } from "@/components/ui/GlobalApiFeedback";
 
 export const metadata: Metadata = {
   title: "BioFlow Studio",
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <BioFlowThemeProvider>
           <AuthSessionGate>{children}</AuthSessionGate>
+          <GlobalApiFeedback />
         </BioFlowThemeProvider>
       </body>
     </html>

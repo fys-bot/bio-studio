@@ -12,9 +12,12 @@ import WarningAmberRounded from "@mui/icons-material/WarningAmberRounded";
 import AdminPanelSettingsRounded from "@mui/icons-material/AdminPanelSettingsRounded";
 import AccountTreeRounded from "@mui/icons-material/AccountTreeRounded";
 import BuildOutlined from "@mui/icons-material/BuildOutlined";
+import HubOutlined from "@mui/icons-material/HubOutlined";
 import PlayArrowRounded from "@mui/icons-material/PlayArrowRounded";
 import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
-import { Button, Menu, MenuItem } from "@mui/material";
+import StreamRounded from "@mui/icons-material/StreamRounded";
+import ViewInArOutlined from "@mui/icons-material/ViewInArOutlined";
+import { Button, IconButton, Menu, MenuItem, Tooltip } from "@mui/material";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { ParticleLoader } from "@/components/ParticleLoader";
@@ -308,7 +311,9 @@ export default function Home() {
   const [projects, setProjects] = useState<WorkspaceProject[]>([]);
   const [modal, setModal] = useState<WorkspaceModalState | null>(null);
   const [previewFileId, setPreviewFileId] = useState("");
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(
+    null,
+  );
   const [agentMode, setAgentMode] = useState<AgentMode>(DEFAULT_AGENT_MODE);
   const [taskList, setTaskList] = useState<TaskListItem[]>(
     () => warmWorkspaceSnapshot?.taskList ?? [],
@@ -412,11 +417,11 @@ export default function Home() {
   }, [guideOpen, profileMenuOpen]);
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(""), 2200);
+    const timer = setTimeout(() => setToast(null), toast.tone === "error" ? 5200 : 2200);
     return () => clearTimeout(timer);
   }, [toast]);
   useEffect(() => {
-    if (!authed || !task || guideInitializedRef.current) return;
+    if (!authed || !task || !user || guideInitializedRef.current) return;
     guideInitializedRef.current = true;
     const params = new URLSearchParams(window.location.search);
     if (params.has("docs")) {
@@ -424,10 +429,15 @@ export default function Home() {
       setDocsOpen(true);
       return;
     }
-    if (params.has("guide") || !window.localStorage.getItem("bioflow-studio-guide-v2")) {
+    const guideDismissedKey = `bioflow-studio-guide-dismissed:${user.id}`;
+    const guideSeenKey = `bioflow-studio-guide-seen:${user.id}`;
+    if (
+      params.has("guide") ||
+      (!window.localStorage.getItem(guideDismissedKey) && !window.localStorage.getItem(guideSeenKey))
+    ) {
       setGuideOpen(true);
     }
-  }, [authed, task]);
+  }, [authed, task, user]);
   useEffect(() => {
     if (!authed || !task) return;
     warmWorkspaceSnapshot = { task, taskList, dataProfiles };
@@ -508,7 +518,10 @@ export default function Home() {
         if (task) setTaskLoadError(message);
         else setInitializationError(message);
         setTaskLoading(false);
-        setToast(getApiErrorMessage(error, "工作区初始化失败，请检查服务状态"));
+        setToast({
+          message: getApiErrorMessage(error, "工作区初始化失败，请检查服务状态"),
+          tone: "error",
+        });
       }
     })();
     return () => {
@@ -686,7 +699,12 @@ export default function Home() {
       notify(`已选择残基 ${selectedResidue}，证据与代码上下文已关联`);
     }
   }, [selectedResidue]);
-  const notify = (message: string) => setToast(message);
+  const notify = (message: string) => {
+    const tone = /失败|异常|错误|不可用|未连接|超时|无权限|失效|不存在|请先/i.test(message)
+      ? "error"
+      : "success";
+    setToast({ message, tone });
+  };
   const saveConfig = async () => {
     setConfigSaving(true);
     try {
@@ -770,8 +788,11 @@ ${task?.goal || config.goal}
       setMobilePanel(false);
       notify("已切换到 RNA-seq 差异表达分析");
     } else if (nextTab) {
-      openTool(nextTab);
-      notify(`已打开${label}`);
+      // Route loading owns panel hydration. Opening the inspector before the new task arrives
+      // briefly rendered stale content and caused a visible right-side flash.
+      setTab(nextTab);
+      setMobilePanel(false);
+      notify(`已切换到${label}`);
     } else notify(`已切换到${label}`);
   };
   const createTask = async () => {
@@ -1083,7 +1104,22 @@ ${task?.goal || config.goal}
     ]);
     setMessageText("");
     void bioflowApi
-      .runRagQuery(text, activeTask, agentMode, true)
+      .runRagQuery(
+        text,
+        activeTask,
+        agentMode,
+        true,
+        [
+          ...conversationMessages,
+          {
+            id: userMessageId,
+            role: "user",
+            content: text,
+            createdAt,
+            status: "completed",
+          },
+        ],
+      )
       .then((response) => {
         const citations = response.trace.rerankedResults
           .filter((item) => item.kept)
@@ -1572,6 +1608,33 @@ ${task?.goal || config.goal}
               </small>
               <h1>{task.goal}</h1>
             </div>
+            <div className="mobile-showcase-actions" aria-label="亮点实例">
+              <Tooltip title="真实计算与 SSE">
+                <IconButton
+                  data-guide="showcase-rnaseq"
+                  aria-label="打开 RNA-seq 真实计算示例"
+                  onClick={() => selectTask("task_demo_rnaseq", "RNA-seq 真实计算")}
+                >
+                  <StreamRounded sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="文档 RAG">
+                <IconButton
+                  aria-label="打开文档 RAG 示例"
+                  onClick={() => selectTask("task_literature", "文献证据图谱", "evidence")}
+                >
+                  <HubOutlined sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="3D 结构">
+                <IconButton
+                  aria-label="打开 3D 结构示例"
+                  onClick={() => selectTask("task_structure", "蛋白质结构预览", "structure")}
+                >
+                  <ViewInArOutlined sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+            </div>
             <div className="goal-actions">
               <span className={`status-pill ${task.status}`}>
                 ● {statusLabel[task.status] || task.status}
@@ -1673,9 +1736,11 @@ ${task?.goal || config.goal}
           <div className="agent-message">
             <div className="assistant-avatar">✦</div>
             <div>
-              <small>BioFlow 智能体</small>
+              <small>工作区提示</small>
               <p>
-                可以。我会先检查项目文件，再确认数据格式、实验设计和交付要求，然后生成一份可审批的分析计划。
+                {task.fileIds?.length
+                  ? `当前任务已绑定 ${task.fileIds.length} 份材料。可以直接提问，系统会把任务目标、澄清条件、最近对话和可引用片段一起交给模型。`
+                  : "请先上传并绑定至少一份项目材料。为避免把静态演示内容伪装成模型结论，无材料任务不会请求大模型。"}
               </p>
               <RunStreamTrace
                 events={streamEvents}
@@ -2020,9 +2085,9 @@ ${task?.goal || config.goal}
       )}
       {previewFileId && <FilePreview fileId={previewFileId} onClose={() => setPreviewFileId("")} />}
       {toast && (
-        <div className="ui-toast" role="status">
-          <span>✓</span>
-          {toast}
+        <div className={`ui-toast ${toast.tone}`} role="status" aria-live="assertive">
+          <span>{toast.tone === "error" ? "!" : "✓"}</span>
+          {toast.message}
         </div>
       )}
       {configOpen && (
@@ -2034,7 +2099,16 @@ ${task?.goal || config.goal}
           saving={configSaving}
         />
       )}
-      <ProductGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
+      <ProductGuide
+        open={guideOpen}
+        onClose={() => {
+          if (user) window.localStorage.setItem(`bioflow-studio-guide-seen:${user.id}`, "1");
+          setGuideOpen(false);
+        }}
+        onDismissForever={() => {
+          if (user) window.localStorage.setItem(`bioflow-studio-guide-dismissed:${user.id}`, "1");
+        }}
+      />
       <DocumentationDrawer
         open={docsOpen}
         activeTaskId={activeTask}

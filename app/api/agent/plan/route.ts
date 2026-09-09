@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { authGuard, isSameOrigin } from "@/lib/auth";
 import { generateLlmPlan } from "@/lib/llm-client";
-import { researchJson, ResearchServiceError } from "@/lib/research-service";
+import { researchJson } from "@/lib/research-service";
 import { saveTaskPlan, taskSnapshot } from "@/lib/store";
 import { normalizeAgentMode, reasoningEffortForMode, type AgentMode } from "@/lib/agent-mode";
 
@@ -98,12 +98,11 @@ async function generateAndPersistPlan(body: PlanRequest, emit: PlanEventEmitter)
       totalSteps: 5,
       progress: 30,
       detail: workerFailure,
-      fallback: !(workerError instanceof ResearchServiceError && workerError.status === 502),
+      // Worker-side Python HTTP clients can time out against a compatible LLM gateway while the
+      // BFF's server-side fetch succeeds. Keep this visible in the trace, then retry through the
+      // same configured model adapter instead of ending a healthy SSE session prematurely.
+      fallback: true,
     });
-
-    if (workerError instanceof ResearchServiceError && workerError.status === 502) {
-      throw new PlanGenerationError(workerFailure, attempts);
-    }
     try {
       emit("llm.started", {
         stage: "direct-llm",

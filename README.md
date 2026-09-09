@@ -107,7 +107,7 @@ npm run dev
 
 ### 主线 B：上传真实文档 + RAG
 
-1. 打开文件中心，上传自己的 PDF、DOCX、XLSX、CSV、TSV、TXT、MD、PNG 或 JPG，单文件不超过 10MB。
+1. 打开文件中心，上传自己的 PDF、DOCX、XLSX、CSV、TSV、TXT、MD、PNG 或 JPG，单文件不超过 300MB。
 2. 在并排预览区核对原始版式/正文、解析器、字符数、分块数、SHA-256 和索引状态。
 3. 从文件预览创建分析任务，或在任务中绑定该文件。
 4. 提问文档中特有内容，打开 Trace 核对命中文本、文件、页码/工作表、BM25/cosine/RRF 分数和最终参数绑定。
